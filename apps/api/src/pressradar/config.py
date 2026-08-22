@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Annotated, Literal
 
-from pydantic import AnyHttpUrl, Field, StringConstraints, model_validator
+from pydantic import AnyHttpUrl, Field, SecretStr, StringConstraints, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,6 +19,14 @@ class Settings(BaseSettings):
     media_provider: Literal["simulated"] = "simulated"
     ai_provider: Literal["fake", "ollama"] = "ollama"
     pitch_sender: Literal["simulated"] = "simulated"
+    notification_provider: Literal["fake", "twilio"] = "fake"
+    crm_provider: Literal["fake", "hubspot"] = "fake"
+    twilio_account_sid: str | None = None
+    twilio_auth_token: SecretStr | None = None
+    twilio_from_number: str | None = None
+    twilio_to_number: str | None = None
+    hubspot_access_token: SecretStr | None = None
+    external_provider_timeout_seconds: float = Field(default=10, gt=0, le=60)
     ollama_base_url: AnyHttpUrl = AnyHttpUrl("http://localhost:11434")
     ollama_model: Annotated[
         str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)
@@ -33,6 +41,27 @@ class Settings(BaseSettings):
     def validate_web_origin(self) -> "Settings":
         if self.app_mode == "gcp" and not self.web_origin.startswith("https://"):
             raise ValueError("WEB_ORIGIN must use HTTPS in gcp mode")
+        return self
+
+    @model_validator(mode="after")
+    def validate_optional_providers(self) -> "Settings":
+        twilio_values = (
+            self.twilio_account_sid or "",
+            "" if self.twilio_auth_token is None else self.twilio_auth_token.get_secret_value(),
+            self.twilio_from_number or "",
+            self.twilio_to_number or "",
+        )
+        if self.notification_provider == "twilio" and not all(
+            value.strip() for value in twilio_values
+        ):
+            raise ValueError("Twilio credentials and phone numbers are required")
+        hubspot_token = (
+            ""
+            if self.hubspot_access_token is None
+            else self.hubspot_access_token.get_secret_value()
+        )
+        if self.crm_provider == "hubspot" and not hubspot_token.strip():
+            raise ValueError("HUBSPOT_ACCESS_TOKEN is required")
         return self
 
 
