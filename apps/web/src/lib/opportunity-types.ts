@@ -19,6 +19,9 @@ export type Opportunity = {
   published_at: string;
   deadline: string | null;
   matched_topics: string[];
+  relevance_score: number | null;
+  relevance_reason: string | null;
+  analysis_error: string | null;
   status: OpportunityStatus;
   detected_at: string;
 };

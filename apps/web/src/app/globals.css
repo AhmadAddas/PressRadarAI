@@ -192,6 +192,17 @@ nav {
   color: #a12222;
 }
 
+.relevance {
+  margin: 1rem 0;
+  padding: 0.85rem;
+  border-radius: 0.5rem;
+  background: #f4f7ff;
+}
+
+.relevance p {
+  margin-bottom: 0;
+}
+
 .opportunity-action {
   text-align: right;
 }

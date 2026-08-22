@@ -82,6 +82,15 @@ export default async function ApplicationPage() {
                       Deadline {formatTime(opportunity.deadline)}
                     </strong>
                   ) : null}
+                  {opportunity.relevance_score !== null ? (
+                    <div className="relevance">
+                      <strong>{opportunity.relevance_score}% relevant</strong>
+                      <p>{opportunity.relevance_reason}</p>
+                    </div>
+                  ) : null}
+                  {opportunity.analysis_error ? (
+                    <p role="alert">{opportunity.analysis_error}</p>
+                  ) : null}
                   <div className="opportunity-footer">
                     <div className="topics">
                       {opportunity.matched_topics.map((topic) => (
