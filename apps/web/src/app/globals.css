@@ -149,6 +149,62 @@ nav {
   list-style: none;
 }
 
+.opportunity-list {
+  display: grid;
+  gap: 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.opportunity-list li {
+  padding: 1.25rem;
+  border: 1px solid #dce1e7;
+  border-radius: 0.75rem;
+}
+
+.opportunity-list li.urgent {
+  border-left: 0.35rem solid #c0392b;
+}
+
+.opportunity-heading,
+.opportunity-footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.opportunity-heading h3 {
+  margin-top: 0;
+}
+
+.status {
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  background: #eef3ff;
+  color: #244ca7;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.deadline {
+  color: #a12222;
+}
+
+.opportunity-action {
+  text-align: right;
+}
+
+.opportunity-action button {
+  background: #59636e;
+}
+
+.opportunity-action p {
+  margin-bottom: 0;
+  font-size: 0.8rem;
+}
+
 .media-list li {
   padding: 1.25rem;
   border: 1px solid #dce1e7;
