@@ -6,15 +6,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from pressradar.application.auth import AuthService
 from pressradar.application.clients import ClientService
 from pressradar.application.media import MediaIngestionService
+from pressradar.application.opportunities import OpportunityService
 from pressradar.config import Settings, get_settings
 from pressradar.infrastructure.security import PasswordHasher, SessionTokens
 from pressradar.infrastructure.simulated_media import SimulatedMediaProvider
 from pressradar.infrastructure.sqlite_auth import SQLiteAuthRepository
 from pressradar.infrastructure.sqlite_clients import SQLiteClientRepository
 from pressradar.infrastructure.sqlite_media import SQLiteMediaRepository
+from pressradar.infrastructure.sqlite_opportunities import SQLiteOpportunityRepository
 from pressradar.presentation.auth import create_auth_router, require_identity
 from pressradar.presentation.clients import create_clients_router
 from pressradar.presentation.media import create_media_router
+from pressradar.presentation.opportunities import create_opportunities_router
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -36,12 +39,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     media_service = MediaIngestionService(
         media_providers[settings.media_provider], media_repository
     )
+    opportunity_repository = SQLiteOpportunityRepository(settings.database_path)
+    opportunity_repository.initialize()
+    opportunity_service = OpportunityService(
+        client_repository, media_repository, opportunity_repository
+    )
     application = FastAPI(title="PressRadar API", version="0.1.0")
     application.add_middleware(
         CORSMiddleware,
         allow_origins=[settings.web_origin],
         allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT"],
+        allow_methods=["GET", "POST", "PUT", "PATCH"],
         allow_headers=["Content-Type"],
     )
     application.include_router(
@@ -54,7 +62,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.include_router(
         create_clients_router(client_service, require_identity(auth_service))
     )
-    application.include_router(create_media_router(media_service, require_identity(auth_service)))
+    identity_dependency = require_identity(auth_service)
+    application.include_router(
+        create_media_router(media_service, opportunity_service, identity_dependency)
+    )
+    application.include_router(
+        create_opportunities_router(opportunity_service, identity_dependency)
+    )
 
     @application.get("/health", tags=["system"])
     def health() -> dict[str, str]:

@@ -114,3 +114,19 @@ async def test_client_updates_are_allowed_from_the_configured_web_origin(tmp_pat
 
     assert response.status_code == 200
     assert "PUT" in response.headers["access-control-allow-methods"]
+
+
+async def test_opportunity_updates_are_allowed_from_the_configured_web_origin(
+    tmp_path: Path,
+) -> None:
+    async with create_test_client(tmp_path / "clients.db") as client:
+        response = await client.options(
+            "/opportunities/opportunity-id/status",
+            headers={
+                "Origin": "http://localhost:3000",
+                "Access-Control-Request-Method": "PATCH",
+            },
+        )
+
+    assert response.status_code == 200
+    assert "PATCH" in response.headers["access-control-allow-methods"]

@@ -1,0 +1,73 @@
+from collections.abc import Callable
+from datetime import datetime
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, ConfigDict
+
+from pressradar.application.opportunities import (
+    InvalidOpportunityTransitionError,
+    OpportunityNotFoundError,
+    OpportunityService,
+)
+from pressradar.domain.auth import Identity
+from pressradar.domain.opportunities import Opportunity, OpportunityStatus
+
+
+class OpportunityResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    client_id: str
+    client_name: str
+    client_company: str
+    media_item_id: str
+    source: str
+    headline: str
+    journalist: str | None
+    published_at: datetime
+    deadline: datetime | None
+    matched_topics: tuple[str, ...]
+    status: OpportunityStatus
+    detected_at: datetime
+
+
+class OpportunityStatusRequest(BaseModel):
+    status: OpportunityStatus
+
+
+def create_opportunities_router(
+    opportunities: OpportunityService,
+    current_identity: Callable[..., Identity],
+) -> APIRouter:
+    router = APIRouter(prefix="/opportunities", tags=["opportunities"])
+
+    @router.get("", response_model=list[OpportunityResponse])
+    def list_opportunities(
+        identity: Annotated[Identity, Depends(current_identity)],
+    ) -> list[Opportunity]:
+        return opportunities.list(workspace_id=identity.workspace_id)
+
+    @router.patch("/{opportunity_id}/status", response_model=OpportunityResponse)
+    def transition_opportunity(
+        opportunity_id: str,
+        request: OpportunityStatusRequest,
+        identity: Annotated[Identity, Depends(current_identity)],
+    ) -> Opportunity:
+        try:
+            return opportunities.transition(
+                workspace_id=identity.workspace_id,
+                opportunity_id=opportunity_id,
+                new_status=request.status,
+            )
+        except OpportunityNotFoundError as error:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Opportunity not found"
+            ) from error
+        except InvalidOpportunityTransitionError as error:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Invalid opportunity status transition",
+            ) from error
+
+    return router

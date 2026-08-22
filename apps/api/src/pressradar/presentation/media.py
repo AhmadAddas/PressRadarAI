@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict
 
 from pressradar.application.media import InvalidMediaItemError, MediaIngestionService
+from pressradar.application.opportunities import OpportunityService
 from pressradar.domain.auth import Identity
 from pressradar.domain.media import IngestionResult, MediaItem, MediaSourceType
 
@@ -35,16 +36,19 @@ class IngestionResponse(BaseModel):
 
 def create_media_router(
     media_service: MediaIngestionService,
+    opportunity_service: OpportunityService,
     current_identity: Callable[..., Identity],
 ) -> APIRouter:
     router = APIRouter(prefix="/media", tags=["media"])
 
     @router.post("/ingest", response_model=IngestionResponse)
     def ingest_media(
-        _identity: Annotated[Identity, Depends(current_identity)],
+        identity: Annotated[Identity, Depends(current_identity)],
     ) -> IngestionResult:
         try:
-            return media_service.ingest()
+            result = media_service.ingest()
+            opportunity_service.detect(workspace_id=identity.workspace_id)
+            return result
         except InvalidMediaItemError as error:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
