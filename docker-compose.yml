@@ -58,6 +58,8 @@ services:
     build:
       context: ./apps/web
       target: development
+    volumes:
+      - ./apps/web/src:/app/src
 
 volumes:
   api-data:
