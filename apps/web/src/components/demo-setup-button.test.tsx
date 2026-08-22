@@ -41,4 +41,17 @@ describe("DemoSetupButton", () => {
     );
     expect(refresh).toHaveBeenCalledOnce();
   });
+
+  it("renders a ready workspace without flashing the unloaded state", () => {
+    render(<DemoSetupButton initiallyReady />);
+
+    const toggle = screen.getByRole("button", {
+      name: "Demo workspace loaded",
+    });
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    expect(toggle).toBeDisabled();
+    expect(
+      screen.queryByRole("button", { name: "Load demo workspace" }),
+    ).not.toBeInTheDocument();
+  });
 });

@@ -23,7 +23,7 @@ export default async function MediaPage() {
             <p className="eyebrow">Simulated source</p>
             <h1>Media feed</h1>
           </div>
-          <div className="actions">
+          <div className="actions media-header-actions">
             <Link className="button button-secondary" href="/app">
               Clients
             </Link>

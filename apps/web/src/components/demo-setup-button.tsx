@@ -5,10 +5,12 @@ import { useState } from "react";
 
 import { publicApiUrl } from "@/lib/api";
 
-export function DemoSetupButton() {
+export function DemoSetupButton({
+  initiallyReady = false,
+}: Readonly<{ initiallyReady?: boolean }>) {
   const router = useRouter();
   const [error, setError] = useState("");
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(initiallyReady);
   const [working, setWorking] = useState(false);
 
   async function setup() {
@@ -40,12 +42,18 @@ export function DemoSetupButton() {
         onClick={setup}
         disabled={working || ready}
         aria-pressed={ready}
+        aria-label={
+          working
+            ? "Preparing demo workspace"
+            : ready
+              ? "Demo workspace loaded"
+              : "Load demo workspace"
+        }
       >
-        {working
-          ? "Preparing demo…"
-          : ready
-            ? "Demo workspace loaded"
-            : "Load demo workspace"}
+        <span className="toggle-switch" aria-hidden="true">
+          <span />
+        </span>
+        <span>Demo workspace</span>
       </button>
       {error ? <p role="alert">{error}</p> : null}
     </div>

@@ -55,7 +55,7 @@ export default async function ApplicationPage() {
             <h1>Opportunity dashboard</h1>
           </div>
           <div className="actions">
-            <DemoSetupButton />
+            <DemoSetupButton initiallyReady={isDemoWorkspaceReady(clients)} />
             <Link className="button button-secondary" href="/app/media">
               Media feed
             </Link>
@@ -197,6 +197,20 @@ export default async function ApplicationPage() {
       </section>
     </main>
   );
+}
+
+function isDemoWorkspaceReady(clients: Client[]): boolean {
+  const demoClients = new Set([
+    "nadia rahman|vertexai labs",
+    "mariam al noor|gulffin advisory",
+    "samir qureshi|launchbridge",
+  ]);
+  const clientKeys = new Set(
+    clients.map((client) =>
+      `${client.name}|${client.company}`.toLocaleLowerCase(),
+    ),
+  );
+  return [...demoClients].every((demoClient) => clientKeys.has(demoClient));
 }
 
 function formatTime(value: string): string {
