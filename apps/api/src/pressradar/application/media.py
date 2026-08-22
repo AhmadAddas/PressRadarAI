@@ -12,11 +12,13 @@ class MediaProvider(Protocol):
 
 
 class MediaRepository(Protocol):
-    def ingest(self, items: tuple[IncomingMediaItem, ...]) -> IngestionResult: ...
+    def ingest(
+        self, *, workspace_id: str, items: tuple[IncomingMediaItem, ...]
+    ) -> IngestionResult: ...
 
-    def list(self, *, limit: int) -> list[MediaItem]: ...
+    def list(self, *, workspace_id: str, limit: int) -> list[MediaItem]: ...
 
-    def get(self, *, media_item_id: str) -> MediaItem | None: ...
+    def get(self, *, workspace_id: str, media_item_id: str) -> MediaItem | None: ...
 
 
 class InvalidMediaItemError(Exception):
@@ -28,13 +30,14 @@ class MediaIngestionService:
         self._provider = provider
         self._repository = repository
 
-    def ingest(self) -> IngestionResult:
+    def ingest(self, *, workspace_id: str) -> IngestionResult:
         return self._repository.ingest(
-            tuple(self._normalize(item) for item in self._provider.fetch_items())
+            workspace_id=workspace_id,
+            items=tuple(self._normalize(item) for item in self._provider.fetch_items()),
         )
 
-    def list(self, *, limit: int = 100) -> list[MediaItem]:
-        return self._repository.list(limit=limit)
+    def list(self, *, workspace_id: str, limit: int = 100) -> list[MediaItem]:
+        return self._repository.list(workspace_id=workspace_id, limit=limit)
 
     @staticmethod
     def dedupe_key(item: IncomingMediaItem) -> str:

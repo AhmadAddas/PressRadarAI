@@ -37,7 +37,7 @@ class DemoSetupService:
                 existing.add(key)
                 clients_created += 1
 
-        ingestion = self._media.ingest()
+        ingestion = self._media.ingest(workspace_id=workspace_id)
         opportunities_created = self._opportunities.detect(workspace_id=workspace_id)
         return DemoSetupResult(
             clients_created=clients_created,

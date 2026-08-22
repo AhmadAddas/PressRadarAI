@@ -46,7 +46,7 @@ def create_media_router(
         identity: Annotated[Identity, Depends(current_identity)],
     ) -> IngestionResult:
         try:
-            result = media_service.ingest()
+            result = media_service.ingest(workspace_id=identity.workspace_id)
             opportunity_service.detect(workspace_id=identity.workspace_id)
             return result
         except InvalidMediaItemError as error:
@@ -57,9 +57,9 @@ def create_media_router(
 
     @router.get("", response_model=list[MediaItemResponse])
     def list_media(
-        _identity: Annotated[Identity, Depends(current_identity)],
+        identity: Annotated[Identity, Depends(current_identity)],
         limit: Annotated[int, Query(ge=1, le=100)] = 100,
     ) -> list[MediaItem]:
-        return media_service.list(limit=limit)
+        return media_service.list(workspace_id=identity.workspace_id, limit=limit)
 
     return router

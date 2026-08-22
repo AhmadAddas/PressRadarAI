@@ -153,7 +153,7 @@ class OpportunityService:
         matches = tuple(
             match
             for client in self._clients.list(workspace_id=workspace_id)
-            for item in self._media.list(limit=100)
+            for item in self._media.list(workspace_id=workspace_id, limit=100)
             if (match := _match(client, item)) is not None
         )
         created = self._opportunities.create_matches(matches)
@@ -182,7 +182,9 @@ class OpportunityService:
             if claimed is None:
                 continue
             client = self._clients.get(workspace_id=workspace_id, client_id=opportunity.client_id)
-            media_item = self._media.get(media_item_id=opportunity.media_item_id)
+            media_item = self._media.get(
+                workspace_id=workspace_id, media_item_id=opportunity.media_item_id
+            )
             if client is None or media_item is None:
                 self._opportunities.fail_analysis(
                     workspace_id=workspace_id, opportunity_id=opportunity.id

@@ -53,6 +53,26 @@ async def test_media_routes_require_authentication(tmp_path: Path) -> None:
     assert media.status_code == 401
 
 
+async def test_media_is_isolated_between_workspaces(tmp_path: Path) -> None:
+    database = tmp_path / "isolated-media.db"
+    async with create_test_client(database) as first:
+        await sign_up(first)
+        assert (await first.post("/media/ingest")).json()["created"] == 3
+
+    async with create_test_client(database) as second:
+        response = await second.post(
+            "/auth/signup",
+            json={
+                "email": "second-media-owner@example.com",
+                "name": "Second Media Owner",
+                "password": "secure-passphrase",
+            },
+        )
+        assert response.status_code == 201
+        assert (await second.get("/media")).json() == []
+        assert (await second.post("/media/ingest")).json()["created"] == 3
+
+
 async def test_media_list_limit_is_validated(tmp_path: Path) -> None:
     async with create_test_client(tmp_path / "media.db") as client:
         await sign_up(client)
@@ -92,4 +112,4 @@ def test_normalization_rejects_untrusted_provider_urls(tmp_path: Path) -> None:
     repository.initialize()
 
     with pytest.raises(InvalidMediaItemError):
-        MediaIngestionService(UnsafeProvider(), repository).ingest()
+        MediaIngestionService(UnsafeProvider(), repository).ingest(workspace_id="workspace")

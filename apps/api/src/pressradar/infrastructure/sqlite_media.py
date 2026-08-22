@@ -15,10 +15,17 @@ class SQLiteMediaRepository:
     def initialize(self) -> None:
         Path(self._database_path).parent.mkdir(parents=True, exist_ok=True)
         with self._connect() as connection:
+            columns = {
+                str(row["name"])
+                for row in connection.execute("PRAGMA table_info(media_items)").fetchall()
+            }
+            if columns and "workspace_id" not in columns:
+                self._migrate_workspace_media(connection)
             connection.executescript(
                 """
                 CREATE TABLE IF NOT EXISTS media_items (
                     id TEXT PRIMARY KEY,
+                    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
                     source TEXT NOT NULL,
                     source_type TEXT NOT NULL,
                     author TEXT,
@@ -30,25 +37,65 @@ class SQLiteMediaRepository:
                     deadline TEXT,
                     topics TEXT NOT NULL,
                     external_id TEXT,
-                    dedupe_key TEXT NOT NULL UNIQUE,
+                    dedupe_key TEXT NOT NULL,
                     ingested_at TEXT NOT NULL
                 );
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_media_workspace_dedupe
+                    ON media_items(workspace_id, dedupe_key);
                 CREATE INDEX IF NOT EXISTS idx_media_published ON media_items(published_at DESC);
                 """
             )
 
-    def ingest(self, items: tuple[IncomingMediaItem, ...]) -> IngestionResult:
+    @staticmethod
+    def _migrate_workspace_media(connection: sqlite3.Connection) -> None:
+        connection.executescript(
+            """
+            ALTER TABLE media_items RENAME TO legacy_media_items;
+            CREATE TABLE media_items (
+                id TEXT PRIMARY KEY,
+                workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+                source TEXT NOT NULL,
+                source_type TEXT NOT NULL,
+                author TEXT,
+                journalist TEXT,
+                headline TEXT NOT NULL,
+                body TEXT NOT NULL,
+                url TEXT,
+                published_at TEXT NOT NULL,
+                deadline TEXT,
+                topics TEXT NOT NULL,
+                external_id TEXT,
+                dedupe_key TEXT NOT NULL,
+                ingested_at TEXT NOT NULL
+            );
+            INSERT INTO media_items (
+                id, workspace_id, source, source_type, author, journalist, headline, body,
+                url, published_at, deadline, topics, external_id, dedupe_key, ingested_at
+            )
+            SELECT w.id || ':' || m.id, w.id, m.source, m.source_type, m.author,
+                m.journalist, m.headline, m.body, m.url, m.published_at, m.deadline,
+                m.topics, m.external_id, m.dedupe_key, m.ingested_at
+            FROM legacy_media_items AS m CROSS JOIN workspaces AS w;
+            UPDATE opportunities
+            SET media_item_id = workspace_id || ':' || media_item_id;
+            DROP TABLE legacy_media_items;
+            """
+        )
+
+    def ingest(self, *, workspace_id: str, items: tuple[IncomingMediaItem, ...]) -> IngestionResult:
         created = 0
         ingested_at = datetime.now(UTC).isoformat()
         with self._connect() as connection:
             for item in items:
                 cursor = connection.execute(
                     """INSERT OR IGNORE INTO media_items (
-                        id, source, source_type, author, journalist, headline, body, url,
+                        id, workspace_id, source, source_type, author, journalist,
+                        headline, body, url,
                         published_at, deadline, topics, external_id, dedupe_key, ingested_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     (
                         str(uuid4()),
+                        workspace_id,
                         item.source,
                         item.source_type.value,
                         item.author,
@@ -67,17 +114,20 @@ class SQLiteMediaRepository:
                 created += cursor.rowcount
         return IngestionResult(created=created, duplicates=len(items) - created)
 
-    def list(self, *, limit: int) -> list[MediaItem]:
+    def list(self, *, workspace_id: str, limit: int) -> list[MediaItem]:
         with self._connect() as connection:
             rows = connection.execute(
-                "SELECT * FROM media_items ORDER BY published_at DESC, id LIMIT ?", (limit,)
+                """SELECT * FROM media_items WHERE workspace_id = ?
+                ORDER BY published_at DESC, id LIMIT ?""",
+                (workspace_id, limit),
             ).fetchall()
         return [self._media_item(row) for row in rows]
 
-    def get(self, *, media_item_id: str) -> MediaItem | None:
+    def get(self, *, workspace_id: str, media_item_id: str) -> MediaItem | None:
         with self._connect() as connection:
             row = connection.execute(
-                "SELECT * FROM media_items WHERE id = ?", (media_item_id,)
+                "SELECT * FROM media_items WHERE id = ? AND workspace_id = ?",
+                (media_item_id, workspace_id),
             ).fetchone()
         return None if row is None else self._media_item(row)
 

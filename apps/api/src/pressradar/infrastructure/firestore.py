@@ -108,14 +108,17 @@ class FirestoreRepository:
         reference.update(_client_details(details))
         return _client(client_id, {"workspace_id": workspace_id, **_client_details(details)})
 
-    def ingest(self, items: tuple[IncomingMediaItem, ...]) -> IngestionResult:
+    def ingest(self, *, workspace_id: str, items: tuple[IncomingMediaItem, ...]) -> IngestionResult:
         created = 0
         for item in items:
             dedupe_key = MediaIngestionService.dedupe_key(item)
-            reference = self._db.collection("media_items").document(dedupe_key)
+            reference = self._db.collection("media_items").document(
+                _key(f"{workspace_id}:{dedupe_key}")
+            )
             try:
                 reference.create(
                     {
+                        "workspace_id": workspace_id,
                         "source": item.source,
                         "source_type": item.source_type.value,
                         "author": item.author,
@@ -135,22 +138,28 @@ class FirestoreRepository:
                 pass
         return IngestionResult(created=created, duplicates=len(items) - created)
 
-    def list_media(self, *, limit: int) -> list[MediaItem]:
+    def list_media(self, *, workspace_id: str, limit: int) -> list[MediaItem]:
         items = [
             _media(document.id, _data(document))
-            for document in self._db.collection("media_items").stream()
+            for document in self._db.collection("media_items")
+            .where("workspace_id", "==", workspace_id)
+            .stream()
         ]
         return sorted(items, key=lambda item: (item.published_at, item.id), reverse=True)[:limit]
 
-    def get_media(self, *, media_item_id: str) -> MediaItem | None:
+    def get_media(self, *, workspace_id: str, media_item_id: str) -> MediaItem | None:
         document = self._db.collection("media_items").document(media_item_id).get()
-        return None if not document.exists else _media(document.id, _data(document))
+        if not document.exists or document.get("workspace_id") != workspace_id:
+            return None
+        return _media(document.id, _data(document))
 
     def create_matches(self, matches: tuple[OpportunityMatch, ...]) -> int:
         created = 0
         for match in matches:
             client = self.get_client(workspace_id=match.workspace_id, client_id=match.client_id)
-            media = self.get_media(media_item_id=match.media_item_id)
+            media = self.get_media(
+                workspace_id=match.workspace_id, media_item_id=match.media_item_id
+            )
             if client is None or media is None:
                 continue
             opportunity_id = _key(f"{match.client_id}:{match.media_item_id}")
@@ -490,14 +499,14 @@ class FirestoreMediaRepository:
     def __init__(self, repository: FirestoreRepository) -> None:
         self._repository = repository
 
-    def ingest(self, items: tuple[IncomingMediaItem, ...]) -> IngestionResult:
-        return self._repository.ingest(items)
+    def ingest(self, *, workspace_id: str, items: tuple[IncomingMediaItem, ...]) -> IngestionResult:
+        return self._repository.ingest(workspace_id=workspace_id, items=items)
 
-    def list(self, *, limit: int) -> list[MediaItem]:
-        return self._repository.list_media(limit=limit)
+    def list(self, *, workspace_id: str, limit: int) -> list[MediaItem]:
+        return self._repository.list_media(workspace_id=workspace_id, limit=limit)
 
-    def get(self, *, media_item_id: str) -> MediaItem | None:
-        return self._repository.get_media(media_item_id=media_item_id)
+    def get(self, *, workspace_id: str, media_item_id: str) -> MediaItem | None:
+        return self._repository.get_media(workspace_id=workspace_id, media_item_id=media_item_id)
 
 
 class FirestoreOpportunityRepository:
