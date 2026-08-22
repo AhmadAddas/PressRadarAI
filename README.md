@@ -1,6 +1,6 @@
 # PressRadar
 
-PressRadar helps PR teams detect relevant media opportunities and turn them into timely pitches. This repository currently contains the project foundation for the MVP: a FastAPI backend and a Next.js frontend in a modular monorepo.
+PressRadar helps PR teams detect relevant media opportunities and turn them into timely pitches. The MVP runs locally with SQLite and can be deployed to Google Cloud Run with Firestore and BigQuery.
 
 ## Prerequisites
 
@@ -38,6 +38,7 @@ make lint
 make typecheck
 make test
 make build
+make infra-validate
 ```
 
 All commands run inside containers, so host installations of Python and Node.js are not required.
@@ -48,6 +49,9 @@ All commands run inside containers, so host installations of Python and Node.js 
 apps/api/   FastAPI backend
 apps/web/   Next.js frontend
 docs/       Engineering guidance
+infra/      Terraform and production deployment guidance
 ```
+
+See [infra/terraform/README.md](infra/terraform/README.md) for the production deployment and rollback runbook.
 
 Product requirements live in `PROJECT.md`, technology decisions in `TECHSTACK.md`, and agent workflow rules in `AGENTS.md`.

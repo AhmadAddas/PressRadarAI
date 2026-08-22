@@ -1,4 +1,4 @@
-.PHONY: dev test lint typecheck build validate
+.PHONY: dev test lint typecheck build infra-validate validate
 
 dev:
 	docker compose up --build
@@ -21,4 +21,9 @@ build:
 	docker compose run --rm web npm run build
 	docker compose build
 
-validate: lint typecheck test build
+infra-validate:
+	docker run --rm -v $(CURDIR)/infra/terraform:/workspace -w /workspace hashicorp/terraform:1.13 fmt -check
+	docker run --rm -v $(CURDIR)/infra/terraform:/workspace -w /workspace hashicorp/terraform:1.13 init -backend=false
+	docker run --rm -v $(CURDIR)/infra/terraform:/workspace -w /workspace hashicorp/terraform:1.13 validate
+
+validate: lint typecheck test build infra-validate
