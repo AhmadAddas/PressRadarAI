@@ -4,6 +4,14 @@ from typing import Protocol
 
 from pressradar.application.clients import ClientRepository
 from pressradar.application.delivery import PitchSender, PitchSendError
+from pressradar.application.integrations import (
+    CRMIntegration,
+    CRMSyncError,
+    NotificationError,
+    NotificationSender,
+    OpportunityAlert,
+    SentOpportunityActivity,
+)
 from pressradar.application.media import MediaRepository
 from pressradar.application.pitches import (
     PitchGenerationError,
@@ -43,6 +51,9 @@ class PitchApprovalError(Exception):
 
 class PitchDeliveryError(Exception):
     """Raised when an approved pitch could not be delivered."""
+
+
+HIGH_PRIORITY_RELEVANCE_SCORE = 90
 
 
 class OpportunityRepository(Protocol):
@@ -107,6 +118,10 @@ class OpportunityRepository(Protocol):
         self, *, workspace_id: str, opportunity_id: str
     ) -> builtins.list[AuditEvent]: ...
 
+    def record_integration_failure(
+        self, *, workspace_id: str, opportunity_id: str, detail: str
+    ) -> None: ...
+
 
 class OpportunityService:
     def __init__(
@@ -117,6 +132,8 @@ class OpportunityService:
         relevance_analyzer: RelevanceAnalyzer,
         pitch_generator: PitchGenerator,
         pitch_sender: PitchSender,
+        notification_sender: NotificationSender,
+        crm_integration: CRMIntegration,
     ) -> None:
         self._clients = clients
         self._media = media
@@ -124,6 +141,8 @@ class OpportunityService:
         self._relevance_analyzer = relevance_analyzer
         self._pitch_generator = pitch_generator
         self._pitch_sender = pitch_sender
+        self._notification_sender = notification_sender
+        self._crm_integration = crm_integration
 
     def detect(self, *, workspace_id: str) -> int:
         matches = tuple(
@@ -176,6 +195,7 @@ class OpportunityService:
                 analysis=analysis,
             )
             if ready is not None:
+                self._notify_if_urgent(ready)
                 self._generate_pitch(client=client, media_item=media_item, opportunity=ready)
 
     def list(self, *, workspace_id: str) -> list[Opportunity]:
@@ -241,6 +261,7 @@ class OpportunityService:
         )
         if sent is None:
             raise PitchDeliveryError
+        self._sync_sent_opportunity(sent)
         return sent
 
     def list_audit(self, *, workspace_id: str, opportunity_id: str) -> builtins.list[AuditEvent]:
@@ -269,6 +290,49 @@ class OpportunityService:
             opportunity_id=opportunity.id,
             pitch=pitch,
         )
+
+    def _notify_if_urgent(self, opportunity: Opportunity) -> None:
+        if (
+            opportunity.deadline is None
+            or opportunity.relevance_score is None
+            or opportunity.relevance_score < HIGH_PRIORITY_RELEVANCE_SCORE
+        ):
+            return
+        try:
+            self._notification_sender.send(
+                OpportunityAlert(
+                    opportunity_id=opportunity.id,
+                    client_company=opportunity.client_company,
+                    relevance_score=opportunity.relevance_score,
+                    deadline=opportunity.deadline,
+                )
+            )
+        except NotificationError:
+            self._opportunities.record_integration_failure(
+                workspace_id=opportunity.workspace_id,
+                opportunity_id=opportunity.id,
+                detail="Notification delivery failed",
+            )
+
+    def _sync_sent_opportunity(self, opportunity: Opportunity) -> None:
+        if opportunity.delivery is None:
+            return
+        try:
+            self._crm_integration.record_sent(
+                SentOpportunityActivity(
+                    opportunity_id=opportunity.id,
+                    client_name=opportunity.client_name,
+                    client_company=opportunity.client_company,
+                    headline=opportunity.headline,
+                    sent_at=opportunity.delivery.sent_at,
+                )
+            )
+        except CRMSyncError:
+            self._opportunities.record_integration_failure(
+                workspace_id=opportunity.workspace_id,
+                opportunity_id=opportunity.id,
+                detail="CRM synchronization failed",
+            )
 
     def transition(
         self,

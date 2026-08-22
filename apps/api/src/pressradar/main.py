@@ -7,13 +7,19 @@ from pressradar.application.auth import AuthService
 from pressradar.application.clients import ClientService
 from pressradar.application.delivery import PitchSender
 from pressradar.application.demo import DemoSetupService
+from pressradar.application.integrations import CRMIntegration, NotificationSender
 from pressradar.application.media import MediaIngestionService
 from pressradar.application.opportunities import OpportunityService
 from pressradar.application.pitches import PitchGenerator
 from pressradar.application.relevance import RelevanceAnalyzer
 from pressradar.config import Settings, get_settings
+from pressradar.infrastructure.fake_integrations import (
+    FakeCRMIntegration,
+    FakeNotificationSender,
+)
 from pressradar.infrastructure.fake_pitch import FakePitchGenerator
 from pressradar.infrastructure.fake_relevance import FakeRelevanceAnalyzer
+from pressradar.infrastructure.hubspot_crm import HubSpotCRMIntegration
 from pressradar.infrastructure.ollama_pitch import OllamaPitchGenerator
 from pressradar.infrastructure.ollama_relevance import OllamaRelevanceAnalyzer
 from pressradar.infrastructure.security import PasswordHasher, SessionTokens
@@ -23,6 +29,7 @@ from pressradar.infrastructure.sqlite_auth import SQLiteAuthRepository
 from pressradar.infrastructure.sqlite_clients import SQLiteClientRepository
 from pressradar.infrastructure.sqlite_media import SQLiteMediaRepository
 from pressradar.infrastructure.sqlite_opportunities import SQLiteOpportunityRepository
+from pressradar.infrastructure.twilio_notifications import TwilioNotificationSender
 from pressradar.presentation.auth import create_auth_router, require_identity
 from pressradar.presentation.clients import create_clients_router
 from pressradar.presentation.demo import create_demo_router
@@ -35,6 +42,8 @@ def create_app(
     relevance_analyzer: RelevanceAnalyzer | None = None,
     pitch_generator: PitchGenerator | None = None,
     pitch_sender: PitchSender | None = None,
+    notification_sender: NotificationSender | None = None,
+    crm_integration: CRMIntegration | None = None,
 ) -> FastAPI:
     settings = settings or get_settings()
     auth_repository = SQLiteAuthRepository(settings.database_path)
@@ -79,6 +88,35 @@ def create_app(
     if pitch_sender is None:
         pitch_senders = {"simulated": SimulatedPitchSender()}
         pitch_sender = pitch_senders[settings.pitch_sender]
+    if notification_sender is None:
+        notification_sender = (
+            FakeNotificationSender()
+            if settings.notification_provider == "fake"
+            else TwilioNotificationSender(
+                account_sid=settings.twilio_account_sid or "",
+                auth_token=(
+                    ""
+                    if settings.twilio_auth_token is None
+                    else settings.twilio_auth_token.get_secret_value()
+                ),
+                from_number=settings.twilio_from_number or "",
+                to_number=settings.twilio_to_number or "",
+                timeout_seconds=settings.external_provider_timeout_seconds,
+            )
+        )
+    if crm_integration is None:
+        crm_integration = (
+            FakeCRMIntegration()
+            if settings.crm_provider == "fake"
+            else HubSpotCRMIntegration(
+                access_token=(
+                    ""
+                    if settings.hubspot_access_token is None
+                    else settings.hubspot_access_token.get_secret_value()
+                ),
+                timeout_seconds=settings.external_provider_timeout_seconds,
+            )
+        )
     opportunity_service = OpportunityService(
         client_repository,
         media_repository,
@@ -86,6 +124,8 @@ def create_app(
         relevance_analyzer,
         pitch_generator,
         pitch_sender,
+        notification_sender,
+        crm_integration,
     )
     demo_opportunity_service = OpportunityService(
         client_repository,
@@ -94,6 +134,8 @@ def create_app(
         FakeRelevanceAnalyzer(),
         FakePitchGenerator(),
         SimulatedPitchSender(),
+        FakeNotificationSender(),
+        FakeCRMIntegration(),
     )
     application = FastAPI(title="PressRadar API", version="0.1.0")
     application.add_middleware(

@@ -14,6 +14,7 @@ class AuditAction(StrEnum):
     OPPORTUNITY_DISMISSED = "opportunity_dismissed"
     PROCESSING_FAILED = "processing_failed"
     SEND_FAILED = "send_failed"
+    INTEGRATION_SYNC_FAILED = "integration_sync_failed"
 
 
 @dataclass(frozen=True)

@@ -421,6 +421,23 @@ class SQLiteOpportunityRepository:
             for row in rows
         ]
 
+    def record_integration_failure(
+        self, *, workspace_id: str, opportunity_id: str, detail: str
+    ) -> None:
+        with self._connect() as connection:
+            visible = connection.execute(
+                "SELECT 1 FROM opportunities WHERE id = ? AND workspace_id = ?",
+                (opportunity_id, workspace_id),
+            ).fetchone()
+            if visible is not None:
+                self._audit(
+                    connection,
+                    workspace_id=workspace_id,
+                    opportunity_id=opportunity_id,
+                    action=AuditAction.INTEGRATION_SYNC_FAILED,
+                    detail=detail,
+                )
+
     @staticmethod
     def _opportunity(row: sqlite3.Row) -> Opportunity:
         return Opportunity(
