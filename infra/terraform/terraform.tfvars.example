@@ -1,0 +1,6 @@
+project_id      = "your-gcp-project"
+region          = "me-central1"
+api_image       = "me-central1-docker.pkg.dev/your-gcp-project/pressradar/api@sha256:replace-me"
+web_image       = "me-central1-docker.pkg.dev/your-gcp-project/pressradar/web@sha256:replace-me"
+web_origin      = "https://pressradar.example.com"
+ollama_base_url = "https://ollama.example.com"

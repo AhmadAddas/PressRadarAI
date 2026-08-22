@@ -13,4 +13,11 @@ node_modules/
 .next/
 coverage/
 
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+
 .DS_Store
