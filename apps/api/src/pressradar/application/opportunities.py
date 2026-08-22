@@ -3,6 +3,11 @@ from typing import Protocol
 
 from pressradar.application.clients import ClientRepository
 from pressradar.application.media import MediaRepository
+from pressradar.application.pitches import (
+    PitchGenerationError,
+    PitchGenerator,
+    validate_generated_pitch,
+)
 from pressradar.application.relevance import RelevanceAnalysisError, RelevanceAnalyzer
 from pressradar.domain.clients import Client
 from pressradar.domain.media import MediaItem
@@ -12,6 +17,7 @@ from pressradar.domain.opportunities import (
     OpportunityMatch,
     OpportunityStatus,
 )
+from pressradar.domain.pitches import GeneratedPitch
 from pressradar.domain.relevance import RelevanceAnalysis
 
 
@@ -21,6 +27,10 @@ class OpportunityNotFoundError(Exception):
 
 class InvalidOpportunityTransitionError(Exception):
     """Raised when an opportunity state transition is not allowed."""
+
+
+class PitchNotEditableError(Exception):
+    """Raised when an opportunity cannot accept pitch edits in its current state."""
 
 
 class OpportunityRepository(Protocol):
@@ -49,6 +59,24 @@ class OpportunityRepository(Protocol):
 
     def fail_analysis(self, *, workspace_id: str, opportunity_id: str) -> None: ...
 
+    def save_generated_pitch(
+        self,
+        *,
+        workspace_id: str,
+        opportunity_id: str,
+        pitch: GeneratedPitch,
+    ) -> Opportunity | None: ...
+
+    def fail_pitch_generation(self, *, workspace_id: str, opportunity_id: str) -> None: ...
+
+    def update_pitch(
+        self,
+        *,
+        workspace_id: str,
+        opportunity_id: str,
+        content: str,
+    ) -> Opportunity | None: ...
+
 
 class OpportunityService:
     def __init__(
@@ -57,11 +85,13 @@ class OpportunityService:
         media: MediaRepository,
         opportunities: OpportunityRepository,
         relevance_analyzer: RelevanceAnalyzer,
+        pitch_generator: PitchGenerator,
     ) -> None:
         self._clients = clients
         self._media = media
         self._opportunities = opportunities
         self._relevance_analyzer = relevance_analyzer
+        self._pitch_generator = pitch_generator
 
     def detect(self, *, workspace_id: str) -> int:
         matches = tuple(
@@ -108,14 +138,55 @@ class OpportunityService:
                     workspace_id=workspace_id, opportunity_id=opportunity.id
                 )
                 continue
-            self._opportunities.complete_analysis(
+            ready = self._opportunities.complete_analysis(
                 workspace_id=workspace_id,
                 opportunity_id=opportunity.id,
                 analysis=analysis,
             )
+            if ready is not None:
+                self._generate_pitch(client=client, media_item=media_item, opportunity=ready)
 
     def list(self, *, workspace_id: str) -> list[Opportunity]:
         return self._opportunities.list(workspace_id=workspace_id)
+
+    def update_pitch(self, *, workspace_id: str, opportunity_id: str, content: str) -> Opportunity:
+        pitch = GeneratedPitch(content=content.strip())
+        opportunity = self._opportunities.get(
+            workspace_id=workspace_id, opportunity_id=opportunity_id
+        )
+        if opportunity is None:
+            raise OpportunityNotFoundError
+        if opportunity.status is not OpportunityStatus.READY:
+            raise PitchNotEditableError
+        updated = self._opportunities.update_pitch(
+            workspace_id=workspace_id,
+            opportunity_id=opportunity_id,
+            content=pitch.content,
+        )
+        if updated is None:
+            raise PitchNotEditableError
+        return updated
+
+    def _generate_pitch(
+        self, *, client: Client, media_item: MediaItem, opportunity: Opportunity
+    ) -> None:
+        try:
+            pitch = validate_generated_pitch(
+                self._pitch_generator.generate(client=client, media_item=media_item),
+                client=client,
+                media_item=media_item,
+            )
+        except PitchGenerationError:
+            self._opportunities.fail_pitch_generation(
+                workspace_id=opportunity.workspace_id,
+                opportunity_id=opportunity.id,
+            )
+            return
+        self._opportunities.save_generated_pitch(
+            workspace_id=opportunity.workspace_id,
+            opportunity_id=opportunity.id,
+            pitch=pitch,
+        )
 
     def transition(
         self,

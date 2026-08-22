@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 
+from pressradar.domain.pitches import Pitch
+
 
 class OpportunityStatus(StrEnum):
     NEW = "new"
@@ -41,6 +43,8 @@ class Opportunity:
     relevance_score: int | None
     relevance_reason: str | None
     analysis_error: str | None
+    pitch: Pitch | None
+    pitch_error: str | None
     status: OpportunityStatus
     detected_at: datetime
 

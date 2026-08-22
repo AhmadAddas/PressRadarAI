@@ -178,7 +178,11 @@ def test_existing_opportunity_table_receives_additive_relevance_columns(tmp_path
 
     with sqlite3.connect(database) as connection:
         columns = {row[1] for row in connection.execute("PRAGMA table_info(opportunities)")}
-    assert {"relevance_score", "relevance_reason", "analysis_error"} <= columns
+        pitch_table = connection.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'pitches'"
+        ).fetchone()
+    assert {"relevance_score", "relevance_reason", "analysis_error", "pitch_error"} <= columns
+    assert pitch_table == ("pitches",)
 
 
 def _client() -> Client:

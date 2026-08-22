@@ -54,6 +54,7 @@ async def test_ingestion_creates_idempotent_matching_opportunity(tmp_path: Path)
     assert opportunity["status"] == "ready"
     assert opportunity["relevance_score"] == 91
     assert "Nadia Rahman" in opportunity["relevance_reason"]
+    assert opportunity["pitch"] is not None
 
 
 async def test_excluded_keyword_prevents_opportunity(tmp_path: Path) -> None:

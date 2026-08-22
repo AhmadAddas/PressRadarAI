@@ -5,6 +5,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from pressradar.domain.opportunities import Opportunity, OpportunityMatch, OpportunityStatus
+from pressradar.domain.pitches import GeneratedPitch, Pitch
 from pressradar.domain.relevance import RelevanceAnalysis
 
 
@@ -26,12 +27,21 @@ class SQLiteOpportunityRepository:
                     relevance_score INTEGER,
                     relevance_reason TEXT,
                     analysis_error TEXT,
+                    pitch_error TEXT,
                     status TEXT NOT NULL,
                     detected_at TEXT NOT NULL,
                     UNIQUE(client_id, media_item_id)
                 );
                 CREATE INDEX IF NOT EXISTS idx_opportunities_workspace
                 ON opportunities(workspace_id, detected_at DESC);
+                CREATE TABLE IF NOT EXISTS pitches (
+                    id TEXT PRIMARY KEY,
+                    opportunity_id TEXT NOT NULL UNIQUE
+                        REFERENCES opportunities(id) ON DELETE CASCADE,
+                    content TEXT NOT NULL,
+                    generated_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
                 """
             )
             self._add_relevance_columns(connection)
@@ -136,6 +146,79 @@ class SQLiteOpportunityRepository:
                 ),
             )
 
+    def save_generated_pitch(
+        self,
+        *,
+        workspace_id: str,
+        opportunity_id: str,
+        pitch: GeneratedPitch,
+    ) -> Opportunity | None:
+        now = datetime.now(UTC).isoformat()
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """INSERT OR IGNORE INTO pitches (
+                    id, opportunity_id, content, generated_at, updated_at
+                ) SELECT ?, o.id, ?, ?, ? FROM opportunities o
+                WHERE o.id = ? AND o.workspace_id = ? AND o.status = ?""",
+                (
+                    str(uuid4()),
+                    pitch.content,
+                    now,
+                    now,
+                    opportunity_id,
+                    workspace_id,
+                    OpportunityStatus.READY.value,
+                ),
+            )
+            if cursor.rowcount == 0:
+                return None
+        return self.get(workspace_id=workspace_id, opportunity_id=opportunity_id)
+
+    def fail_pitch_generation(self, *, workspace_id: str, opportunity_id: str) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                """UPDATE opportunities SET pitch_error = ?
+                WHERE id = ? AND workspace_id = ? AND status = ?
+                AND NOT EXISTS (
+                    SELECT 1 FROM pitches WHERE opportunity_id = opportunities.id
+                )""",
+                (
+                    "Pitch generation is temporarily unavailable.",
+                    opportunity_id,
+                    workspace_id,
+                    OpportunityStatus.READY.value,
+                ),
+            )
+
+    def update_pitch(
+        self,
+        *,
+        workspace_id: str,
+        opportunity_id: str,
+        content: str,
+    ) -> Opportunity | None:
+        now = datetime.now(UTC).isoformat()
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            opportunity = connection.execute(
+                "SELECT status FROM opportunities WHERE id = ? AND workspace_id = ?",
+                (opportunity_id, workspace_id),
+            ).fetchone()
+            if opportunity is None or opportunity["status"] != OpportunityStatus.READY.value:
+                return None
+            connection.execute(
+                """INSERT INTO pitches (id, opportunity_id, content, generated_at, updated_at)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(opportunity_id) DO UPDATE
+                SET content = excluded.content, updated_at = excluded.updated_at""",
+                (str(uuid4()), opportunity_id, content, now, now),
+            )
+            connection.execute(
+                "UPDATE opportunities SET pitch_error = NULL WHERE id = ?",
+                (opportunity_id,),
+            )
+        return self.get(workspace_id=workspace_id, opportunity_id=opportunity_id)
+
     @staticmethod
     def _opportunity(row: sqlite3.Row) -> Opportunity:
         return Opportunity(
@@ -160,6 +243,18 @@ class SQLiteOpportunityRepository:
                 None if row["relevance_reason"] is None else str(row["relevance_reason"])
             ),
             analysis_error=(None if row["analysis_error"] is None else str(row["analysis_error"])),
+            pitch=(
+                None
+                if row["pitch_id"] is None
+                else Pitch(
+                    id=str(row["pitch_id"]),
+                    opportunity_id=str(row["id"]),
+                    content=str(row["pitch_content"]),
+                    generated_at=datetime.fromisoformat(str(row["pitch_generated_at"])),
+                    updated_at=datetime.fromisoformat(str(row["pitch_updated_at"])),
+                )
+            ),
+            pitch_error=None if row["pitch_error"] is None else str(row["pitch_error"]),
             status=OpportunityStatus(str(row["status"])),
             detected_at=datetime.fromisoformat(str(row["detected_at"])),
         )
@@ -180,6 +275,7 @@ class SQLiteOpportunityRepository:
             "relevance_score": "INTEGER",
             "relevance_reason": "TEXT",
             "analysis_error": "TEXT",
+            "pitch_error": "TEXT",
         }
         for name, data_type in additions.items():
             if name not in columns:
@@ -187,7 +283,10 @@ class SQLiteOpportunityRepository:
 
 
 _SELECT = """SELECT o.*, c.name AS client_name, c.company AS client_company,
-    m.source, m.headline, m.journalist, m.published_at, m.deadline
+    m.source, m.headline, m.journalist, m.published_at, m.deadline,
+    p.id AS pitch_id, p.content AS pitch_content,
+    p.generated_at AS pitch_generated_at, p.updated_at AS pitch_updated_at
     FROM opportunities o
     JOIN clients c ON c.id = o.client_id
-    JOIN media_items m ON m.id = o.media_item_id"""
+    JOIN media_items m ON m.id = o.media_item_id
+    LEFT JOIN pitches p ON p.opportunity_id = o.id"""
