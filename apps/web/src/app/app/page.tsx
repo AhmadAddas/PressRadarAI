@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 
 import { SignOutButton } from "@/components/signout-button";
 import { DismissOpportunityButton } from "@/components/dismiss-opportunity-button";
+import { AuditTrail } from "@/components/audit-trail";
+import { OpportunityWorkflowActions } from "@/components/opportunity-workflow-actions";
 import { PitchEditor } from "@/components/pitch-editor";
 import { internalApiUrl } from "@/lib/api";
 import type { Client } from "@/lib/client-types";
@@ -99,6 +101,21 @@ export default async function ApplicationPage() {
                       generationError={opportunity.pitch_error}
                     />
                   ) : null}
+                  {opportunity.status !== "ready" && opportunity.pitch ? (
+                    <div className="pitch-readonly">
+                      <strong>Pitch</strong>
+                      <p>{opportunity.pitch.content}</p>
+                    </div>
+                  ) : null}
+                  {opportunity.send_error ? (
+                    <p role="alert">{opportunity.send_error}</p>
+                  ) : null}
+                  {opportunity.delivery ? (
+                    <p className="delivery-status">
+                      Sent via {opportunity.delivery.provider} on{" "}
+                      {formatTime(opportunity.delivery.sent_at)}
+                    </p>
+                  ) : null}
                   <div className="opportunity-footer">
                     <div className="topics">
                       {opportunity.matched_topics.map((topic) => (
@@ -111,7 +128,13 @@ export default async function ApplicationPage() {
                         opportunityId={opportunity.id}
                       />
                     ) : null}
+                    <OpportunityWorkflowActions
+                      opportunityId={opportunity.id}
+                      status={opportunity.status}
+                      hasPitch={opportunity.pitch !== null}
+                    />
                   </div>
+                  <AuditTrail opportunityId={opportunity.id} />
                 </li>
               ))}
             </ul>

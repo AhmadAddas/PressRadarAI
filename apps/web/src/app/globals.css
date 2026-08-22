@@ -223,6 +223,44 @@ nav {
   margin: 0;
 }
 
+.pitch-readonly {
+  margin: 1rem 0;
+  padding: 1rem;
+  border-left: 0.25rem solid #3264d6;
+  background: #f6f7f9;
+}
+
+.pitch-readonly p,
+.workflow-action p {
+  margin-bottom: 0;
+}
+
+.delivery-status {
+  color: #247044;
+  font-weight: 700;
+}
+
+.audit-trail {
+  margin-top: 1rem;
+}
+
+.audit-trail ol {
+  display: grid;
+  gap: 0.4rem;
+  padding-left: 1.5rem;
+}
+
+.audit-trail li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  text-transform: capitalize;
+}
+
+.audit-trail small {
+  grid-column: 1 / -1;
+}
+
 .opportunity-action {
   text-align: right;
 }

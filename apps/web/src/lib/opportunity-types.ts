@@ -3,6 +3,7 @@ export type OpportunityStatus =
   | "analyzing"
   | "ready"
   | "approved"
+  | "sending"
   | "sent"
   | "dismissed"
   | "failed";
@@ -30,6 +31,12 @@ export type Opportunity = {
     updated_at: string;
   } | null;
   pitch_error: string | null;
+  delivery: {
+    provider: string;
+    reference: string;
+    sent_at: string;
+  } | null;
+  send_error: string | null;
   status: OpportunityStatus;
   detected_at: string;
 };
