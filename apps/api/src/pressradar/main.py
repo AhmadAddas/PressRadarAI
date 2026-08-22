@@ -5,12 +5,16 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from pressradar.application.auth import AuthService
 from pressradar.application.clients import ClientService
+from pressradar.application.media import MediaIngestionService
 from pressradar.config import Settings, get_settings
 from pressradar.infrastructure.security import PasswordHasher, SessionTokens
+from pressradar.infrastructure.simulated_media import SimulatedMediaProvider
 from pressradar.infrastructure.sqlite_auth import SQLiteAuthRepository
 from pressradar.infrastructure.sqlite_clients import SQLiteClientRepository
+from pressradar.infrastructure.sqlite_media import SQLiteMediaRepository
 from pressradar.presentation.auth import create_auth_router, require_identity
 from pressradar.presentation.clients import create_clients_router
+from pressradar.presentation.media import create_media_router
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -26,6 +30,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     client_repository = SQLiteClientRepository(settings.database_path)
     client_repository.initialize()
     client_service = ClientService(client_repository)
+    media_repository = SQLiteMediaRepository(settings.database_path)
+    media_repository.initialize()
+    media_providers = {"simulated": SimulatedMediaProvider()}
+    media_service = MediaIngestionService(
+        media_providers[settings.media_provider], media_repository
+    )
     application = FastAPI(title="PressRadar API", version="0.1.0")
     application.add_middleware(
         CORSMiddleware,
@@ -44,6 +54,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.include_router(
         create_clients_router(client_service, require_identity(auth_service))
     )
+    application.include_router(create_media_router(media_service, require_identity(auth_service)))
 
     @application.get("/health", tags=["system"])
     def health() -> dict[str, str]:

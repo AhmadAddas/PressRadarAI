@@ -9,6 +9,7 @@ def test_settings_use_safe_local_defaults() -> None:
 
     assert settings.app_mode == "local"
     assert settings.api_port == 8000
+    assert settings.media_provider == "simulated"
 
 
 def test_settings_reject_unknown_runtime_mode() -> None:

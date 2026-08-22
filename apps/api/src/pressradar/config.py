@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     database_path: str = "data/pressradar.db"
     session_ttl_hours: int = Field(default=168, ge=1, le=720)
     web_origin: str = "http://localhost:3000"
+    media_provider: Literal["simulated"] = "simulated"
 
     @property
     def secure_cookies(self) -> bool:
