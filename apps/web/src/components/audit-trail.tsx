@@ -27,6 +27,7 @@ export function AuditTrail({ opportunityId }: { opportunityId: string }) {
       return;
     }
     setError("");
+    setExpanded(true);
     setLoading(true);
     try {
       const response = await fetch(
@@ -35,12 +36,13 @@ export function AuditTrail({ opportunityId }: { opportunityId: string }) {
       );
       if (!response.ok) {
         setError("Unable to load history.");
+        setExpanded(false);
         return;
       }
       setEvents((await response.json()) as AuditEvent[]);
-      setExpanded(true);
     } catch {
       setError("PressRadar is temporarily unavailable.");
+      setExpanded(false);
     } finally {
       setLoading(false);
     }
@@ -57,25 +59,26 @@ export function AuditTrail({ opportunityId }: { opportunityId: string }) {
         aria-expanded={expanded}
         aria-controls={panelId}
       >
-        {loading
-          ? "Loading history…"
-          : expanded
-            ? "Hide history"
-            : "Show history"}
+        {expanded ? "Hide history" : "Show history"}
       </button>
       {error ? <p role="alert">{error}</p> : null}
-      {events && expanded ? (
-        <ol id={panelId}>
-          {events.map((event) => (
-            <li key={event.id}>
-              <span>{event.action.replaceAll("_", " ")}</span>
-              <time dateTime={event.occurred_at}>
-                {formatTime(event.occurred_at)}
-              </time>
-              {event.detail ? <small>{event.detail}</small> : null}
-            </li>
-          ))}
-        </ol>
+      {expanded ? (
+        <div className="audit-panel" id={panelId}>
+          {loading ? <p role="status">Loading history…</p> : null}
+          {events && !loading ? (
+            <ol>
+              {events.map((event) => (
+                <li key={event.id}>
+                  <span>{event.action.replaceAll("_", " ")}</span>
+                  <time dateTime={event.occurred_at}>
+                    {formatTime(event.occurred_at)}
+                  </time>
+                  {event.detail ? <small>{event.detail}</small> : null}
+                </li>
+              ))}
+            </ol>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

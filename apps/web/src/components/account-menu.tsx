@@ -16,12 +16,7 @@ export function AccountMenu({ name, email }: Readonly<AccountMenuProps>) {
         <span className="avatar" aria-hidden="true">
           {initials(name)}
         </span>
-        <span className="account-trigger">
-          <span className="account-name">{name}</span>
-          <span className="account-chevron" aria-hidden="true">
-            ▾
-          </span>
-        </span>
+        <span className="account-name">{name}</span>
       </summary>
       <div className="account-popover">
         <div className="account-identity">

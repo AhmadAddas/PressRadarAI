@@ -12,10 +12,7 @@ describe("AccountMenu", () => {
     render(<AccountMenu name="Amina Rahman" email="amina@example.com" />);
 
     const menu = screen.getByLabelText("Open account menu for Amina Rahman");
-    expect(menu.querySelector(".avatar")).toHaveTextContent("AR");
-    expect(menu.querySelector(".account-trigger")).toHaveTextContent(
-      "Amina Rahman",
-    );
+    expect(menu).toHaveTextContent("ARAmina Rahman");
     expect(screen.getByText("amina@example.com")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View profile" })).toHaveAttribute(
       "href",

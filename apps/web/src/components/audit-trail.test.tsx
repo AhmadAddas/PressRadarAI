@@ -26,15 +26,15 @@ describe("AuditTrail", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Show history" }));
 
+    expect(
+      screen.getByRole("button", { name: "Hide history" }),
+    ).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("status")).toHaveTextContent("Loading history…");
     expect(await screen.findByText("pitch approved")).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining("/opportunities/opportunity-1/audit"),
       expect.objectContaining({ credentials: "include" }),
     );
-    expect(
-      screen.getByRole("button", { name: "Hide history" }),
-    ).toHaveAttribute("aria-expanded", "true");
-
     fireEvent.click(screen.getByRole("button", { name: "Hide history" }));
     expect(screen.queryByText("pitch approved")).not.toBeInTheDocument();
 
