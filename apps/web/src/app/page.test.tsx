@@ -8,12 +8,12 @@ describe("Home", () => {
     render(<Home />);
 
     expect(
-      screen.getByRole("heading", { name: "PressRadar" }),
+      screen.getByRole("heading", {
+        name: "Turn media opportunities into timely pitches.",
+      }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "Turn media opportunities into timely, relevant pitches.",
-      ),
-    ).toBeInTheDocument();
+      screen.getByRole("link", { name: "Create account" }),
+    ).toHaveAttribute("href", "/signup");
   });
 });

@@ -1,8 +1,19 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
     <main>
-      <h1>PressRadar</h1>
-      <p>Turn media opportunities into timely, relevant pitches.</p>
+      <section className="card">
+        <p className="eyebrow">PressRadar</p>
+        <h1>Turn media opportunities into timely pitches.</h1>
+        <p>Sign in to your workspace or create one to get started.</p>
+        <nav aria-label="Account">
+          <Link className="button" href="/signup">
+            Create account
+          </Link>
+          <Link href="/signin">Sign in</Link>
+        </nav>
+      </section>
     </main>
   );
 }
