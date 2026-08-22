@@ -3,6 +3,7 @@ from typing import Protocol
 
 from pressradar.application.clients import ClientRepository
 from pressradar.application.media import MediaRepository
+from pressradar.application.relevance import RelevanceAnalysisError, RelevanceAnalyzer
 from pressradar.domain.clients import Client
 from pressradar.domain.media import MediaItem
 from pressradar.domain.opportunities import (
@@ -11,6 +12,7 @@ from pressradar.domain.opportunities import (
     OpportunityMatch,
     OpportunityStatus,
 )
+from pressradar.domain.relevance import RelevanceAnalysis
 
 
 class OpportunityNotFoundError(Exception):
@@ -37,6 +39,16 @@ class OpportunityRepository(Protocol):
         new_status: OpportunityStatus,
     ) -> Opportunity | None: ...
 
+    def complete_analysis(
+        self,
+        *,
+        workspace_id: str,
+        opportunity_id: str,
+        analysis: RelevanceAnalysis,
+    ) -> Opportunity | None: ...
+
+    def fail_analysis(self, *, workspace_id: str, opportunity_id: str) -> None: ...
+
 
 class OpportunityService:
     def __init__(
@@ -44,10 +56,12 @@ class OpportunityService:
         clients: ClientRepository,
         media: MediaRepository,
         opportunities: OpportunityRepository,
+        relevance_analyzer: RelevanceAnalyzer,
     ) -> None:
         self._clients = clients
         self._media = media
         self._opportunities = opportunities
+        self._relevance_analyzer = relevance_analyzer
 
     def detect(self, *, workspace_id: str) -> int:
         matches = tuple(
@@ -56,7 +70,49 @@ class OpportunityService:
             for item in self._media.list(limit=100)
             if (match := _match(client, item)) is not None
         )
-        return self._opportunities.create_matches(matches)
+        created = self._opportunities.create_matches(matches)
+        self.analyze_pending(workspace_id=workspace_id)
+        return created
+
+    def analyze_pending(self, *, workspace_id: str) -> None:
+        pending = tuple(
+            opportunity
+            for opportunity in self._opportunities.list(workspace_id=workspace_id)
+            if opportunity.status is OpportunityStatus.NEW
+        )
+        for opportunity in pending:
+            claimed = self._opportunities.update_status(
+                workspace_id=workspace_id,
+                opportunity_id=opportunity.id,
+                current_status=OpportunityStatus.NEW,
+                new_status=OpportunityStatus.ANALYZING,
+            )
+            if claimed is None:
+                continue
+            client = self._clients.get(workspace_id=workspace_id, client_id=opportunity.client_id)
+            media_item = self._media.get(media_item_id=opportunity.media_item_id)
+            if client is None or media_item is None:
+                self._opportunities.fail_analysis(
+                    workspace_id=workspace_id, opportunity_id=opportunity.id
+                )
+                continue
+            try:
+                analysis = self._relevance_analyzer.analyze(
+                    client=client,
+                    media_item=media_item,
+                    matched_topics=opportunity.matched_topics,
+                )
+                _validate_grounded_topics(analysis, client, media_item)
+            except RelevanceAnalysisError:
+                self._opportunities.fail_analysis(
+                    workspace_id=workspace_id, opportunity_id=opportunity.id
+                )
+                continue
+            self._opportunities.complete_analysis(
+                workspace_id=workspace_id,
+                opportunity_id=opportunity.id,
+                analysis=analysis,
+            )
 
     def list(self, *, workspace_id: str) -> list[Opportunity]:
         return self._opportunities.list(workspace_id=workspace_id)
@@ -122,3 +178,22 @@ def _contains(normalized_content: str, term: str) -> bool:
 
 def _normalize(value: str) -> str:
     return " ".join(re.findall(r"[\w]+", value.casefold()))
+
+
+def _validate_grounded_topics(
+    analysis: RelevanceAnalysis, client: Client, media_item: MediaItem
+) -> None:
+    known_topics = {
+        _normalize(topic)
+        for topic in (
+            *client.monitoring_rules,
+            *client.keywords,
+            *client.preferred_topics,
+            *client.expertise,
+            *media_item.topics,
+            *((client.location,) if client.location else ()),
+            *((client.industry,) if client.industry else ()),
+        )
+    }
+    if any(_normalize(topic) not in known_topics for topic in analysis.matched_topics):
+        raise RelevanceAnalysisError("Relevance analysis returned an ungrounded topic")

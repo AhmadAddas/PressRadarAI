@@ -1,7 +1,7 @@
 from functools import lru_cache
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import Field, model_validator
+from pydantic import AnyHttpUrl, Field, StringConstraints, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,6 +17,12 @@ class Settings(BaseSettings):
     session_ttl_hours: int = Field(default=168, ge=1, le=720)
     web_origin: str = "http://localhost:3000"
     media_provider: Literal["simulated"] = "simulated"
+    ai_provider: Literal["fake", "ollama"] = "ollama"
+    ollama_base_url: AnyHttpUrl = AnyHttpUrl("http://localhost:11434")
+    ollama_model: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)
+    ] = "llama3.2:3b"
+    ollama_timeout_seconds: float = Field(default=30, gt=0, le=300)
 
     @property
     def secure_cookies(self) -> bool:

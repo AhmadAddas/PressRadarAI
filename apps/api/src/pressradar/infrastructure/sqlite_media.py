@@ -74,6 +74,13 @@ class SQLiteMediaRepository:
             ).fetchall()
         return [self._media_item(row) for row in rows]
 
+    def get(self, *, media_item_id: str) -> MediaItem | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM media_items WHERE id = ?", (media_item_id,)
+            ).fetchone()
+        return None if row is None else self._media_item(row)
+
     @staticmethod
     def _media_item(row: sqlite3.Row) -> MediaItem:
         return MediaItem(

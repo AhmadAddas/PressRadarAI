@@ -7,7 +7,10 @@ from pressradar.application.auth import AuthService
 from pressradar.application.clients import ClientService
 from pressradar.application.media import MediaIngestionService
 from pressradar.application.opportunities import OpportunityService
+from pressradar.application.relevance import RelevanceAnalyzer
 from pressradar.config import Settings, get_settings
+from pressradar.infrastructure.fake_relevance import FakeRelevanceAnalyzer
+from pressradar.infrastructure.ollama_relevance import OllamaRelevanceAnalyzer
 from pressradar.infrastructure.security import PasswordHasher, SessionTokens
 from pressradar.infrastructure.simulated_media import SimulatedMediaProvider
 from pressradar.infrastructure.sqlite_auth import SQLiteAuthRepository
@@ -20,7 +23,10 @@ from pressradar.presentation.media import create_media_router
 from pressradar.presentation.opportunities import create_opportunities_router
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    relevance_analyzer: RelevanceAnalyzer | None = None,
+) -> FastAPI:
     settings = settings or get_settings()
     auth_repository = SQLiteAuthRepository(settings.database_path)
     auth_repository.initialize()
@@ -41,8 +47,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     opportunity_repository = SQLiteOpportunityRepository(settings.database_path)
     opportunity_repository.initialize()
+    if relevance_analyzer is None:
+        relevance_analyzer = (
+            FakeRelevanceAnalyzer()
+            if settings.ai_provider == "fake"
+            else OllamaRelevanceAnalyzer(
+                base_url=str(settings.ollama_base_url),
+                model=settings.ollama_model,
+                timeout_seconds=settings.ollama_timeout_seconds,
+            )
+        )
     opportunity_service = OpportunityService(
-        client_repository, media_repository, opportunity_repository
+        client_repository, media_repository, opportunity_repository, relevance_analyzer
     )
     application = FastAPI(title="PressRadar API", version="0.1.0")
     application.add_middleware(

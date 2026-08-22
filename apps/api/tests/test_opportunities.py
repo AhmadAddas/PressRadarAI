@@ -7,7 +7,7 @@ from pressradar.main import create_app
 
 
 def create_test_client(database_path: Path) -> httpx.AsyncClient:
-    app = create_app(Settings(database_path=str(database_path)))
+    app = create_app(Settings(database_path=str(database_path), ai_provider="fake"))
     return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
 
 
@@ -51,7 +51,9 @@ async def test_ingestion_creates_idempotent_matching_opportunity(tmp_path: Path)
     assert opportunity["client_name"] == "Nadia Rahman"
     assert opportunity["headline"] == "Dubai AI founders wanted for governance commentary"
     assert opportunity["matched_topics"] == ["AI governance", "Dubai"]
-    assert opportunity["status"] == "new"
+    assert opportunity["status"] == "ready"
+    assert opportunity["relevance_score"] == 91
+    assert "Nadia Rahman" in opportunity["relevance_reason"]
 
 
 async def test_excluded_keyword_prevents_opportunity(tmp_path: Path) -> None:

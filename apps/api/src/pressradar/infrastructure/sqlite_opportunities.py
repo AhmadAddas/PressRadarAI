@@ -5,6 +5,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from pressradar.domain.opportunities import Opportunity, OpportunityMatch, OpportunityStatus
+from pressradar.domain.relevance import RelevanceAnalysis
 
 
 class SQLiteOpportunityRepository:
@@ -22,6 +23,9 @@ class SQLiteOpportunityRepository:
                     client_id TEXT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
                     media_item_id TEXT NOT NULL REFERENCES media_items(id) ON DELETE CASCADE,
                     matched_topics TEXT NOT NULL,
+                    relevance_score INTEGER,
+                    relevance_reason TEXT,
+                    analysis_error TEXT,
                     status TEXT NOT NULL,
                     detected_at TEXT NOT NULL,
                     UNIQUE(client_id, media_item_id)
@@ -30,6 +34,7 @@ class SQLiteOpportunityRepository:
                 ON opportunities(workspace_id, detected_at DESC);
                 """
             )
+            self._add_relevance_columns(connection)
 
     def create_matches(self, matches: tuple[OpportunityMatch, ...]) -> int:
         created = 0
@@ -58,7 +63,8 @@ class SQLiteOpportunityRepository:
         with self._connect() as connection:
             rows = connection.execute(
                 f"{_SELECT} WHERE o.workspace_id = ? "
-                "ORDER BY (m.deadline IS NULL), m.deadline, o.detected_at DESC, o.id",
+                "ORDER BY (m.deadline IS NULL), m.deadline, "
+                "o.relevance_score DESC, o.detected_at DESC, o.id",
                 (workspace_id,),
             ).fetchall()
         return [self._opportunity(row) for row in rows]
@@ -89,6 +95,47 @@ class SQLiteOpportunityRepository:
                 return None
         return self.get(workspace_id=workspace_id, opportunity_id=opportunity_id)
 
+    def complete_analysis(
+        self,
+        *,
+        workspace_id: str,
+        opportunity_id: str,
+        analysis: RelevanceAnalysis,
+    ) -> Opportunity | None:
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """UPDATE opportunities
+                SET relevance_score = ?, relevance_reason = ?, matched_topics = ?,
+                    analysis_error = NULL, status = ?
+                WHERE id = ? AND workspace_id = ? AND status = ?""",
+                (
+                    analysis.score,
+                    analysis.reason,
+                    json.dumps(analysis.matched_topics),
+                    OpportunityStatus.READY.value,
+                    opportunity_id,
+                    workspace_id,
+                    OpportunityStatus.ANALYZING.value,
+                ),
+            )
+            if cursor.rowcount == 0:
+                return None
+        return self.get(workspace_id=workspace_id, opportunity_id=opportunity_id)
+
+    def fail_analysis(self, *, workspace_id: str, opportunity_id: str) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                """UPDATE opportunities SET status = ?, analysis_error = ?
+                WHERE id = ? AND workspace_id = ? AND status = ?""",
+                (
+                    OpportunityStatus.FAILED.value,
+                    "Relevance analysis is temporarily unavailable.",
+                    opportunity_id,
+                    workspace_id,
+                    OpportunityStatus.ANALYZING.value,
+                ),
+            )
+
     @staticmethod
     def _opportunity(row: sqlite3.Row) -> Opportunity:
         return Opportunity(
@@ -106,6 +153,13 @@ class SQLiteOpportunityRepository:
                 None if row["deadline"] is None else datetime.fromisoformat(str(row["deadline"]))
             ),
             matched_topics=tuple(json.loads(row["matched_topics"])),
+            relevance_score=(
+                None if row["relevance_score"] is None else int(row["relevance_score"])
+            ),
+            relevance_reason=(
+                None if row["relevance_reason"] is None else str(row["relevance_reason"])
+            ),
+            analysis_error=(None if row["analysis_error"] is None else str(row["analysis_error"])),
             status=OpportunityStatus(str(row["status"])),
             detected_at=datetime.fromisoformat(str(row["detected_at"])),
         )
@@ -115,6 +169,21 @@ class SQLiteOpportunityRepository:
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA foreign_keys = ON")
         return connection
+
+    @staticmethod
+    def _add_relevance_columns(connection: sqlite3.Connection) -> None:
+        columns = {
+            str(row["name"])
+            for row in connection.execute("PRAGMA table_info(opportunities)").fetchall()
+        }
+        additions = {
+            "relevance_score": "INTEGER",
+            "relevance_reason": "TEXT",
+            "analysis_error": "TEXT",
+        }
+        for name, data_type in additions.items():
+            if name not in columns:
+                connection.execute(f"ALTER TABLE opportunities ADD COLUMN {name} {data_type}")
 
 
 _SELECT = """SELECT o.*, c.name AS client_name, c.company AS client_company,

@@ -16,6 +16,8 @@ class MediaRepository(Protocol):
 
     def list(self, *, limit: int) -> list[MediaItem]: ...
 
+    def get(self, *, media_item_id: str) -> MediaItem | None: ...
+
 
 class InvalidMediaItemError(Exception):
     """Raised when a provider returns unsafe or incomplete media data."""

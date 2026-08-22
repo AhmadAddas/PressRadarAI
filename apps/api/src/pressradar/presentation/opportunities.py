@@ -28,6 +28,9 @@ class OpportunityResponse(BaseModel):
     published_at: datetime
     deadline: datetime | None
     matched_topics: tuple[str, ...]
+    relevance_score: int | None
+    relevance_reason: str | None
+    analysis_error: str | None
     status: OpportunityStatus
     detected_at: datetime
 
