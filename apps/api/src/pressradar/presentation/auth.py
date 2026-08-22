@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from typing import Annotated
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
@@ -37,15 +38,7 @@ def create_auth_router(
 ) -> APIRouter:
     router = APIRouter(prefix="/auth", tags=["authentication"])
 
-    def current_identity(
-        session_token: Annotated[str | None, Cookie(alias=SESSION_COOKIE)] = None,
-    ) -> Identity:
-        identity = auth_service.authenticate(session_token) if session_token else None
-        if identity is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required"
-            )
-        return identity
+    current_identity = require_identity(auth_service)
 
     @router.post("/signup", response_model=IdentityResponse, status_code=status.HTTP_201_CREATED)
     def sign_up(request: SignUpRequest, response: Response) -> Identity:
@@ -85,6 +78,20 @@ def create_auth_router(
         return identity
 
     return router
+
+
+def require_identity(auth_service: AuthService) -> Callable[..., Identity]:
+    def dependency(
+        session_token: Annotated[str | None, Cookie(alias=SESSION_COOKIE)] = None,
+    ) -> Identity:
+        identity = auth_service.authenticate(session_token) if session_token else None
+        if identity is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required"
+            )
+        return identity
+
+    return dependency
 
 
 def _set_session_cookie(response: Response, token: str, *, secure: bool, max_age: int) -> None:
