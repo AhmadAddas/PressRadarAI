@@ -4,22 +4,29 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from pressradar.application.analytics import AnalyticsError, AnalyticsService, AnalyticsStore
-from pressradar.application.auth import AuthService
-from pressradar.application.clients import ClientService
+from pressradar.application.auth import AuthRepository, AuthService
+from pressradar.application.clients import ClientRepository, ClientService
 from pressradar.application.delivery import PitchSender
 from pressradar.application.demo import DemoSetupService
 from pressradar.application.integrations import CRMIntegration, NotificationSender
-from pressradar.application.media import MediaIngestionService
-from pressradar.application.opportunities import OpportunityService
+from pressradar.application.media import MediaIngestionService, MediaRepository
+from pressradar.application.opportunities import OpportunityRepository, OpportunityService
 from pressradar.application.pitches import PitchGenerator
 from pressradar.application.relevance import RelevanceAnalyzer
 from pressradar.config import Settings, get_settings
+from pressradar.infrastructure.bigquery_analytics import BigQueryAnalyticsStore
 from pressradar.infrastructure.fake_integrations import (
     FakeCRMIntegration,
     FakeNotificationSender,
 )
 from pressradar.infrastructure.fake_pitch import FakePitchGenerator
 from pressradar.infrastructure.fake_relevance import FakeRelevanceAnalyzer
+from pressradar.infrastructure.firestore import (
+    FirestoreClientRepository,
+    FirestoreMediaRepository,
+    FirestoreOpportunityRepository,
+    FirestoreRepository,
+)
 from pressradar.infrastructure.hubspot_crm import HubSpotCRMIntegration
 from pressradar.infrastructure.noop_analytics import NoOpAnalyticsStore
 from pressradar.infrastructure.ollama_pitch import OllamaPitchGenerator
@@ -51,25 +58,42 @@ def create_app(
     analytics_store: AnalyticsStore | None = None,
 ) -> FastAPI:
     settings = settings or get_settings()
-    auth_repository = SQLiteAuthRepository(settings.database_path)
-    auth_repository.initialize()
+    auth_repository: AuthRepository
+    client_repository: ClientRepository
+    media_repository: MediaRepository
+    opportunity_repository: OpportunityRepository
+    if settings.operational_provider == "firestore":
+        firestore_repository = FirestoreRepository(
+            project=settings.gcp_project_id or "", database=settings.firestore_database
+        )
+        auth_repository = firestore_repository
+        client_repository = FirestoreClientRepository(firestore_repository)
+        media_repository = FirestoreMediaRepository(firestore_repository)
+        opportunity_repository = FirestoreOpportunityRepository(firestore_repository)
+    else:
+        sqlite_auth = SQLiteAuthRepository(settings.database_path)
+        sqlite_auth.initialize()
+        auth_repository = sqlite_auth
+        sqlite_clients = SQLiteClientRepository(settings.database_path)
+        sqlite_clients.initialize()
+        client_repository = sqlite_clients
+        sqlite_media = SQLiteMediaRepository(settings.database_path)
+        sqlite_media.initialize()
+        media_repository = sqlite_media
+        sqlite_opportunities = SQLiteOpportunityRepository(settings.database_path)
+        sqlite_opportunities.initialize()
+        opportunity_repository = sqlite_opportunities
     auth_service = AuthService(
         auth_repository,
         PasswordHasher(),
         SessionTokens(),
         timedelta(hours=settings.session_ttl_hours),
     )
-    client_repository = SQLiteClientRepository(settings.database_path)
-    client_repository.initialize()
     client_service = ClientService(client_repository)
-    media_repository = SQLiteMediaRepository(settings.database_path)
-    media_repository.initialize()
     media_providers = {"simulated": SimulatedMediaProvider()}
     media_service = MediaIngestionService(
         media_providers[settings.media_provider], media_repository
     )
-    opportunity_repository = SQLiteOpportunityRepository(settings.database_path)
-    opportunity_repository.initialize()
     if analytics_store is None:
         if settings.analytics_provider == "sqlite":
             sqlite_analytics = SQLiteAnalyticsStore(settings.analytics_database_path)
@@ -78,6 +102,12 @@ def create_app(
             except AnalyticsError:
                 pass
             analytics_store = sqlite_analytics
+        elif settings.analytics_provider == "bigquery":
+            analytics_store = BigQueryAnalyticsStore(
+                project=settings.gcp_project_id or "",
+                dataset=settings.bigquery_dataset,
+                table=settings.bigquery_events_table,
+            )
         else:
             analytics_store = NoOpAnalyticsStore()
     analytics_service = AnalyticsService(analytics_store)

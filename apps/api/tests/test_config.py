@@ -15,6 +15,7 @@ def test_settings_use_safe_local_defaults() -> None:
     assert settings.notification_provider == "fake"
     assert settings.crm_provider == "fake"
     assert settings.analytics_provider == "sqlite"
+    assert settings.operational_provider == "sqlite"
 
 
 def test_settings_reject_unknown_runtime_mode() -> None:
@@ -52,3 +53,20 @@ def test_settings_accept_explicit_real_provider_credentials() -> None:
 def test_settings_require_separate_operational_and_analytics_databases() -> None:
     with pytest.raises(ValidationError):
         Settings(database_path="data/shared.db", analytics_database_path="data/shared.db")
+
+
+def test_gcp_mode_requires_cloud_persistence_and_project() -> None:
+    with pytest.raises(ValidationError):
+        Settings(app_mode="gcp", web_origin="https://pressradar.example")
+
+    settings = Settings(
+        app_mode="gcp",
+        web_origin="https://pressradar.example",
+        gcp_project_id="pressradar-prod",
+        operational_provider="firestore",
+        analytics_provider="bigquery",
+    )
+
+    assert settings.secure_cookies is True
+    assert settings.firestore_database == "(default)"
+    assert settings.bigquery_dataset == "pressradar_analytics"

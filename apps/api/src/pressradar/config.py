@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = Field(default=8000, ge=1, le=65535)
     database_path: str = "data/pressradar.db"
+    operational_provider: Literal["sqlite", "firestore"] = "sqlite"
     analytics_database_path: str = "data/analytics.db"
     session_ttl_hours: int = Field(default=168, ge=1, le=720)
     web_origin: str = "http://localhost:3000"
@@ -22,7 +23,11 @@ class Settings(BaseSettings):
     pitch_sender: Literal["simulated"] = "simulated"
     notification_provider: Literal["fake", "twilio"] = "fake"
     crm_provider: Literal["fake", "hubspot"] = "fake"
-    analytics_provider: Literal["none", "sqlite"] = "sqlite"
+    analytics_provider: Literal["none", "sqlite", "bigquery"] = "sqlite"
+    gcp_project_id: str | None = None
+    firestore_database: str = "(default)"
+    bigquery_dataset: str = "pressradar_analytics"
+    bigquery_events_table: str = "product_events"
     twilio_account_sid: str | None = None
     twilio_auth_token: SecretStr | None = None
     twilio_from_number: str | None = None
@@ -69,6 +74,13 @@ class Settings(BaseSettings):
         )
         if self.crm_provider == "hubspot" and not hubspot_token.strip():
             raise ValueError("HUBSPOT_ACCESS_TOKEN is required")
+        if self.app_mode == "gcp":
+            if not self.gcp_project_id or not self.gcp_project_id.strip():
+                raise ValueError("GCP_PROJECT_ID is required in gcp mode")
+            if self.operational_provider != "firestore":
+                raise ValueError("OPERATIONAL_PROVIDER must be firestore in gcp mode")
+            if self.analytics_provider != "bigquery":
+                raise ValueError("ANALYTICS_PROVIDER must be bigquery in gcp mode")
         return self
 
 
