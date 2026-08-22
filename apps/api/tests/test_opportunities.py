@@ -17,6 +17,9 @@ async def sign_up(client: httpx.AsyncClient, email: str = "owner@example.com") -
         json={"email": email, "name": "Owner", "password": "secure-passphrase"},
     )
     assert response.status_code == 201
+    assert (
+        await client.post("/auth/workspace", json={"workspace_kind": "demo"})
+    ).status_code == 200
 
 
 async def create_nadia(client: httpx.AsyncClient, *, excluded: list[str] | None = None) -> None:

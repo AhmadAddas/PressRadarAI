@@ -47,6 +47,7 @@ async def test_provider_failure_marks_opportunity_failed_without_failing_ingesti
                 "password": "secure-passphrase",
             },
         )
+        await client.post("/auth/workspace", json={"workspace_kind": "demo"})
         await client.post(
             "/clients",
             json={
@@ -82,6 +83,7 @@ async def test_ungrounded_provider_topics_are_rejected(tmp_path: Path) -> None:
                 "password": "secure-passphrase",
             },
         )
+        await client.post("/auth/workspace", json={"workspace_kind": "demo"})
         await client.post(
             "/clients",
             json={

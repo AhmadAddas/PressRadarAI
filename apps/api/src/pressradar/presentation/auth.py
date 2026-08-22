@@ -9,9 +9,10 @@ from pressradar.application.auth import (
     DuplicateEmailError,
     InvalidCredentialsError,
 )
-from pressradar.domain.auth import Identity
+from pressradar.domain.auth import Identity, WorkspaceKind
 
 SESSION_COOKIE = "pressradar_session"
+WORKSPACE_COOKIE = "pressradar_workspace"
 DisplayName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
 
 
@@ -31,6 +32,11 @@ class IdentityResponse(BaseModel):
     workspace_id: str
     email: str
     name: str
+    workspace_kind: WorkspaceKind
+
+
+class WorkspaceSelectionRequest(BaseModel):
+    workspace_kind: WorkspaceKind
 
 
 def create_auth_router(
@@ -72,6 +78,35 @@ def create_auth_router(
         if session_token:
             auth_service.sign_out(session_token)
         response.delete_cookie(SESSION_COOKIE, httponly=True, samesite="lax", secure=secure_cookies)
+        response.delete_cookie(
+            WORKSPACE_COOKIE, httponly=True, samesite="lax", secure=secure_cookies
+        )
+
+    @router.post("/workspace", response_model=IdentityResponse)
+    def select_workspace(
+        request: WorkspaceSelectionRequest,
+        response: Response,
+        session_token: Annotated[str | None, Cookie(alias=SESSION_COOKIE)] = None,
+    ) -> Identity:
+        identity = (
+            auth_service.authenticate(session_token, request.workspace_kind)
+            if session_token
+            else None
+        )
+        if identity is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required"
+            )
+        response.set_cookie(
+            WORKSPACE_COOKIE,
+            request.workspace_kind.value,
+            httponly=True,
+            secure=secure_cookies,
+            samesite="lax",
+            max_age=session_max_age,
+            path="/",
+        )
+        return identity
 
     @router.get("/me", response_model=IdentityResponse)
     def me(identity: Annotated[Identity, Depends(current_identity)]) -> Identity:
@@ -83,8 +118,15 @@ def create_auth_router(
 def require_identity(auth_service: AuthService) -> Callable[..., Identity]:
     def dependency(
         session_token: Annotated[str | None, Cookie(alias=SESSION_COOKIE)] = None,
+        workspace: Annotated[str | None, Cookie(alias=WORKSPACE_COOKIE)] = None,
     ) -> Identity:
-        identity = auth_service.authenticate(session_token) if session_token else None
+        try:
+            workspace_kind = WorkspaceKind(workspace or WorkspaceKind.PROD)
+        except ValueError:
+            workspace_kind = WorkspaceKind.PROD
+        identity = (
+            auth_service.authenticate(session_token, workspace_kind) if session_token else None
+        )
         if identity is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required"

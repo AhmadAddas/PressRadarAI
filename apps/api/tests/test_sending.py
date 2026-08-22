@@ -49,6 +49,9 @@ async def prepare_opportunity(client: httpx.AsyncClient, email: str = "sender@ex
         json={"email": email, "name": "Owner", "password": "secure-passphrase"},
     )
     assert signup.status_code == 201
+    assert (
+        await client.post("/auth/workspace", json={"workspace_kind": "demo"})
+    ).status_code == 200
     created = await client.post(
         "/clients",
         json={

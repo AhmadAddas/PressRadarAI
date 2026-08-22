@@ -39,6 +39,7 @@ async def test_product_events_feed_workspace_scoped_summary(tmp_path: Path) -> N
     analytics = tmp_path / "analytics.db"
     async with create_test_client(operational, analytics) as owner:
         await sign_up(owner, "analytics-owner@example.com")
+        await owner.post("/auth/workspace", json={"workspace_kind": "demo"})
         assert (await owner.post("/demo/setup")).status_code == 200
         assert (await owner.post("/demo/setup")).status_code == 200
         opportunities = (await owner.get("/opportunities")).json()
@@ -109,6 +110,7 @@ async def test_analytics_failure_does_not_block_opportunity_workflow(tmp_path: P
         FailingAnalyticsStore(),
     ) as client:
         await sign_up(client, "analytics-failure@example.com")
+        await client.post("/auth/workspace", json={"workspace_kind": "demo"})
         await client.post(
             "/clients",
             json={

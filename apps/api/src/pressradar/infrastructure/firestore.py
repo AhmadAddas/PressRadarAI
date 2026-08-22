@@ -10,7 +10,7 @@ from google.cloud import firestore
 from pressradar.application.auth import DuplicateEmailError
 from pressradar.application.media import MediaIngestionService
 from pressradar.domain.audit import AuditAction, AuditEvent
-from pressradar.domain.auth import Identity
+from pressradar.domain.auth import Identity, WorkspaceKind
 from pressradar.domain.clients import Client, ClientDetails
 from pressradar.domain.delivery import Delivery, DeliveryReceipt
 from pressradar.domain.media import IncomingMediaItem, IngestionResult, MediaItem, MediaSourceType
@@ -26,7 +26,7 @@ class FirestoreRepository:
         self._db = firestore.Client(project=project, database=database)
 
     def create_identity(self, *, email: str, name: str, password_hash: str) -> Identity:
-        user_id, workspace_id = str(uuid4()), str(uuid4())
+        user_id, workspace_id, demo_workspace_id = str(uuid4()), str(uuid4()), str(uuid4())
         email_ref = self._db.collection("user_emails").document(_key(email))
         transaction = self._db.transaction()
         try:
@@ -34,12 +34,17 @@ class FirestoreRepository:
                 raise DuplicateEmailError
             transaction.create(
                 self._db.collection("workspaces").document(workspace_id),
-                {"name": f"{name}'s workspace"},
+                {"name": f"{name}'s Prod workspace", "kind": WorkspaceKind.PROD.value},
+            )
+            transaction.create(
+                self._db.collection("workspaces").document(demo_workspace_id),
+                {"name": f"{name}'s Demo workspace", "kind": WorkspaceKind.DEMO.value},
             )
             transaction.create(
                 self._db.collection("users").document(user_id),
                 {
                     "workspace_id": workspace_id,
+                    "demo_workspace_id": demo_workspace_id,
                     "email": email,
                     "name": name,
                     "password_hash": password_hash,
@@ -66,12 +71,25 @@ class FirestoreRepository:
             {"user_id": user_id, "expires_at": expires_at}
         )
 
-    def find_identity_by_session(self, *, token_hash: str, now: datetime) -> Identity | None:
+    def find_identity_by_session(
+        self, *, token_hash: str, now: datetime, workspace_kind: WorkspaceKind
+    ) -> Identity | None:
         session = self._db.collection("sessions").document(token_hash).get()
         if not session.exists or _datetime(session.get("expires_at")) <= now:
             return None
         user = self._db.collection("users").document(str(session.get("user_id"))).get()
-        return None if not user.exists else _identity(user.id, _data(user))
+        if not user.exists:
+            return None
+        data = _data(user)
+        workspace_id = str(data["workspace_id"])
+        if workspace_kind is WorkspaceKind.DEMO:
+            workspace_id = str(data.get("demo_workspace_id") or f"{user.id}-demo")
+            if "demo_workspace_id" not in data:
+                self._db.collection("workspaces").document(workspace_id).set(
+                    {"name": f"{data['name']}'s Demo workspace", "kind": "demo"}
+                )
+                user.reference.update({"demo_workspace_id": workspace_id})
+        return _identity(user.id, data, workspace_id=workspace_id, workspace_kind=workspace_kind)
 
     def delete_session(self, token_hash: str) -> None:
         self._db.collection("sessions").document(token_hash).delete()
@@ -532,12 +550,19 @@ def _datetime(value: object) -> datetime:
     return value.astimezone(UTC)
 
 
-def _identity(user_id: str, data: dict[str, Any]) -> Identity:
+def _identity(
+    user_id: str,
+    data: dict[str, Any],
+    *,
+    workspace_id: str | None = None,
+    workspace_kind: WorkspaceKind = WorkspaceKind.PROD,
+) -> Identity:
     return Identity(
         user_id=user_id,
-        workspace_id=str(data["workspace_id"]),
+        workspace_id=workspace_id or str(data["workspace_id"]),
         email=str(data["email"]),
         name=str(data["name"]),
+        workspace_kind=workspace_kind,
     )
 
 

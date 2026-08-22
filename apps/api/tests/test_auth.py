@@ -47,6 +47,29 @@ async def test_each_signup_receives_an_isolated_workspace(tmp_path: Path) -> Non
     assert first.json()["workspace_id"] != second.json()["workspace_id"]
 
 
+async def test_user_can_switch_between_isolated_prod_and_demo_workspaces(
+    tmp_path: Path,
+) -> None:
+    async with create_test_client(tmp_path / "workspace-switch.db") as client:
+        prod = await client.post(
+            "/auth/signup",
+            json={
+                "email": "switch@example.com",
+                "name": "Workspace Owner",
+                "password": "secure-passphrase",
+            },
+        )
+        demo = await client.post("/auth/workspace", json={"workspace_kind": "demo"})
+        current_demo = await client.get("/auth/me")
+        returned_prod = await client.post("/auth/workspace", json={"workspace_kind": "prod"})
+
+    assert prod.json()["workspace_kind"] == "prod"
+    assert demo.json()["workspace_kind"] == "demo"
+    assert demo.json()["workspace_id"] != prod.json()["workspace_id"]
+    assert current_demo.json() == demo.json()
+    assert returned_prod.json()["workspace_id"] == prod.json()["workspace_id"]
+
+
 async def test_duplicate_email_is_rejected(tmp_path: Path) -> None:
     payload = {
         "email": "owner@example.com",

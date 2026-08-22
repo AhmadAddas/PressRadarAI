@@ -62,6 +62,9 @@ async def prepare_urgent_opportunity(client: httpx.AsyncClient) -> str:
         )
     ).status_code == 201
     assert (
+        await client.post("/auth/workspace", json={"workspace_kind": "demo"})
+    ).status_code == 200
+    assert (
         await client.post(
             "/clients",
             json={

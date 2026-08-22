@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict
 
 from pressradar.application.media import InvalidMediaItemError, MediaIngestionService
 from pressradar.application.opportunities import OpportunityService
-from pressradar.domain.auth import Identity
+from pressradar.domain.auth import Identity, WorkspaceKind
 from pressradar.domain.media import IngestionResult, MediaItem, MediaSourceType
 
 
@@ -45,6 +45,11 @@ def create_media_router(
     def ingest_media(
         identity: Annotated[Identity, Depends(current_identity)],
     ) -> IngestionResult:
+        if identity.workspace_kind is not WorkspaceKind.DEMO:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Simulated ingestion is only available in the Demo workspace",
+            )
         try:
             result = media_service.ingest(workspace_id=identity.workspace_id)
             opportunity_service.detect(workspace_id=identity.workspace_id)

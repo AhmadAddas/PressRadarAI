@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Protocol
 
-from pressradar.domain.auth import Identity
+from pressradar.domain.auth import Identity, WorkspaceKind
 
 
 class DuplicateEmailError(Exception):
@@ -20,7 +20,9 @@ class AuthRepository(Protocol):
 
     def create_session(self, *, token_hash: str, user_id: str, expires_at: datetime) -> None: ...
 
-    def find_identity_by_session(self, *, token_hash: str, now: datetime) -> Identity | None: ...
+    def find_identity_by_session(
+        self, *, token_hash: str, now: datetime, workspace_kind: WorkspaceKind
+    ) -> Identity | None: ...
 
     def delete_session(self, token_hash: str) -> None: ...
 
@@ -74,9 +76,13 @@ class AuthService:
             raise InvalidCredentialsError
         return self._start_session(identity)
 
-    def authenticate(self, token: str) -> Identity | None:
+    def authenticate(
+        self, token: str, workspace_kind: WorkspaceKind = WorkspaceKind.PROD
+    ) -> Identity | None:
         return self._repository.find_identity_by_session(
-            token_hash=self._session_tokens.hash(token), now=datetime.now(UTC)
+            token_hash=self._session_tokens.hash(token),
+            now=datetime.now(UTC),
+            workspace_kind=workspace_kind,
         )
 
     def sign_out(self, token: str) -> None:

@@ -1,4 +1,10 @@
 from dataclasses import dataclass
+from enum import StrEnum
+
+
+class WorkspaceKind(StrEnum):
+    PROD = "prod"
+    DEMO = "demo"
 
 
 @dataclass(frozen=True)
@@ -7,3 +13,4 @@ class Identity:
     workspace_id: str
     email: str
     name: str
+    workspace_kind: WorkspaceKind = WorkspaceKind.PROD

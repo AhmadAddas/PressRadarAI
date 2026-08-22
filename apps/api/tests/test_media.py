@@ -27,6 +27,8 @@ async def sign_up(client: httpx.AsyncClient) -> None:
         },
     )
     assert response.status_code == 201
+    switched = await client.post("/auth/workspace", json={"workspace_kind": "demo"})
+    assert switched.status_code == 200
 
 
 async def test_simulated_ingestion_is_deterministic_and_deduplicated(tmp_path: Path) -> None:
@@ -70,6 +72,7 @@ async def test_media_is_isolated_between_workspaces(tmp_path: Path) -> None:
         )
         assert response.status_code == 201
         assert (await second.get("/media")).json() == []
+        await second.post("/auth/workspace", json={"workspace_kind": "demo"})
         assert (await second.post("/media/ingest")).json()["created"] == 3
 
 

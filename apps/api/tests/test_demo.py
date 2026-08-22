@@ -23,6 +23,7 @@ async def test_demo_setup_builds_ranked_workspace_and_is_idempotent(tmp_path: Pa
                 "password": "secure-passphrase",
             },
         )
+        switched = await client.post("/auth/workspace", json={"workspace_kind": "demo"})
         first = await client.post("/demo/setup")
         second = await client.post("/demo/setup")
         clients = await client.get("/clients")
@@ -40,6 +41,7 @@ async def test_demo_setup_builds_ranked_workspace_and_is_idempotent(tmp_path: Pa
         recency_ranked = await client.get("/opportunities")
 
     assert signup.status_code == 201
+    assert switched.status_code == 200
     assert first.json() == {
         "clients_created": 3,
         "media_created": 3,
