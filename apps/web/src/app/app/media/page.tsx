@@ -24,7 +24,9 @@ export default async function MediaPage() {
             <h1>Media feed</h1>
           </div>
           <div className="actions">
-            <Link href="/app">Clients</Link>
+            <Link className="button button-secondary" href="/app">
+              Clients
+            </Link>
             <IngestMediaButton />
           </div>
         </header>

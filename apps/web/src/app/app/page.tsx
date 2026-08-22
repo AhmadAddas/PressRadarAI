@@ -56,7 +56,9 @@ export default async function ApplicationPage() {
           </div>
           <div className="actions">
             <DemoSetupButton />
-            <Link href="/app/media">Media feed</Link>
+            <Link className="button button-secondary" href="/app/media">
+              Media feed
+            </Link>
             <Link className="button" href="/app/clients/new">
               Add client
             </Link>

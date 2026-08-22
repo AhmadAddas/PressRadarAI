@@ -15,5 +15,9 @@ describe("Home", () => {
     expect(
       screen.getByRole("link", { name: "Create account" }),
     ).toHaveAttribute("href", "/signup");
+    expect(screen.getByRole("link", { name: "Sign in" })).toHaveClass(
+      "button",
+      "button-secondary",
+    );
   });
 });

@@ -33,6 +33,14 @@ body {
   box-shadow: 0 1rem 3rem rgb(23 32 42 / 8%);
 }
 
+.landing-shell {
+  place-items: center;
+}
+
+.landing-shell .card {
+  width: min(100%, 46rem);
+}
+
 .eyebrow {
   color: #3264d6;
   font-size: 0.75rem;
@@ -112,6 +120,16 @@ input:focus-visible,
 textarea:focus-visible {
   outline: 0.2rem solid #88aaff;
   outline-offset: 0.15rem;
+}
+
+.button-secondary {
+  border: 1px solid #3264d6;
+  background: #fff;
+  color: #244ca7;
+}
+
+.button-secondary:hover {
+  background: #eef3ff;
 }
 
 button:disabled {

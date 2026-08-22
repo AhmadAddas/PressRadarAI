@@ -11,7 +11,9 @@ export default function Home() {
           <Link className="button" href="/signup">
             Create account
           </Link>
-          <Link href="/signin">Sign in</Link>
+          <Link className="button button-secondary" href="/signin">
+            Sign in
+          </Link>
         </nav>
       </section>
     </main>
