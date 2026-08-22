@@ -9,6 +9,10 @@ PressRadar helps PR teams detect relevant media opportunities and turn them into
 
 No cloud or paid-provider credentials are required for local development.
 
+Each account has isolated Prod and Demo workspaces. Demo uses deterministic simulated
+media. Prod can ingest configured RSS feeds without credentials; add `NEWSAPI_API_KEY`
+to `.env` only when enabling the suggested UAE NewsAPI source.
+
 ## Start locally
 
 ```bash

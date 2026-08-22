@@ -33,7 +33,7 @@ class MediaIngestionService:
     def ingest(self, *, workspace_id: str) -> IngestionResult:
         return self._repository.ingest(
             workspace_id=workspace_id,
-            items=tuple(self._normalize(item) for item in self._provider.fetch_items()),
+            items=tuple(self.normalize(item) for item in self._provider.fetch_items()),
         )
 
     def list(self, *, workspace_id: str, limit: int = 100) -> list[MediaItem]:
@@ -55,7 +55,7 @@ class MediaIngestionService:
         return hashlib.sha256(identity.encode()).hexdigest()
 
     @staticmethod
-    def _normalize(item: IncomingMediaItem) -> IncomingMediaItem:
+    def normalize(item: IncomingMediaItem) -> IncomingMediaItem:
         source = item.source.strip()
         headline = item.headline.strip()
         body = item.body.strip()

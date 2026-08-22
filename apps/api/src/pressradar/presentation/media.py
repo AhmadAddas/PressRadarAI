@@ -9,6 +9,10 @@ from pressradar.application.media import InvalidMediaItemError, MediaIngestionSe
 from pressradar.application.opportunities import OpportunityService
 from pressradar.domain.auth import Identity, WorkspaceKind
 from pressradar.domain.media import IngestionResult, MediaItem, MediaSourceType
+from pressradar.infrastructure.configured_media import (
+    ConfiguredMediaIngestionService,
+    MediaSourceConfigurationError,
+)
 
 
 class MediaItemResponse(BaseModel):
@@ -36,6 +40,7 @@ class IngestionResponse(BaseModel):
 
 def create_media_router(
     media_service: MediaIngestionService,
+    configured_media_service: ConfiguredMediaIngestionService,
     opportunity_service: OpportunityService,
     current_identity: Callable[..., Identity],
 ) -> APIRouter:
@@ -45,15 +50,16 @@ def create_media_router(
     def ingest_media(
         identity: Annotated[Identity, Depends(current_identity)],
     ) -> IngestionResult:
-        if identity.workspace_kind is not WorkspaceKind.DEMO:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Simulated ingestion is only available in the Demo workspace",
-            )
         try:
-            result = media_service.ingest(workspace_id=identity.workspace_id)
+            result = (
+                media_service.ingest(workspace_id=identity.workspace_id)
+                if identity.workspace_kind is WorkspaceKind.DEMO
+                else configured_media_service.ingest(workspace_id=identity.workspace_id)
+            )
             opportunity_service.detect(workspace_id=identity.workspace_id)
             return result
+        except MediaSourceConfigurationError as error:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
         except InvalidMediaItemError as error:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,

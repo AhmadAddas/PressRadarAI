@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     twilio_from_number: str | None = None
     twilio_to_number: str | None = None
     hubspot_access_token: SecretStr | None = None
+    newsapi_api_key: SecretStr | None = None
     external_provider_timeout_seconds: float = Field(default=10, gt=0, le=60)
     ollama_base_url: AnyHttpUrl = AnyHttpUrl("http://localhost:11434")
     ollama_model: Annotated[

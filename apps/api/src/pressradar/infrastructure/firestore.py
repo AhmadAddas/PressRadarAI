@@ -9,11 +9,13 @@ from google.cloud import firestore
 
 from pressradar.application.auth import DuplicateEmailError
 from pressradar.application.media import MediaIngestionService
+from pressradar.application.media_sources import DuplicateMediaSourceError, MediaSourceRepository
 from pressradar.domain.audit import AuditAction, AuditEvent
 from pressradar.domain.auth import Identity, WorkspaceKind
 from pressradar.domain.clients import Client, ClientDetails
 from pressradar.domain.delivery import Delivery, DeliveryReceipt
 from pressradar.domain.media import IncomingMediaItem, IngestionResult, MediaItem, MediaSourceType
+from pressradar.domain.media_sources import MediaSource, MediaSourceDetails, MediaSourceKind
 from pressradar.domain.opportunities import Opportunity, OpportunityMatch, OpportunityStatus
 from pressradar.domain.pitches import GeneratedPitch, Pitch
 from pressradar.domain.relevance import RelevanceAnalysis
@@ -125,6 +127,32 @@ class FirestoreRepository:
             return None
         reference.update(_client_details(details))
         return _client(client_id, {"workspace_id": workspace_id, **_client_details(details)})
+
+    def create_media_source(self, *, workspace_id: str, details: MediaSourceDetails) -> MediaSource:
+        source_id = _key(f"{workspace_id}:{details.name.casefold()}")
+        data = {"workspace_id": workspace_id, **vars(details), "kind": details.kind.value}
+        try:
+            self._db.collection("media_sources").document(source_id).create(data)
+        except AlreadyExists as error:
+            raise DuplicateMediaSourceError from error
+        return _media_source(source_id, data)
+
+    def list_media_sources(
+        self, *, workspace_id: str, kind: MediaSourceKind | None
+    ) -> list[MediaSource]:
+        query = self._db.collection("media_sources").where("workspace_id", "==", workspace_id)
+        if kind is not None:
+            query = query.where("kind", "==", kind.value)
+        sources = [_media_source(item.id, _data(item)) for item in query.stream()]
+        return sorted(sources, key=lambda item: (item.name.casefold(), item.id))
+
+    def delete_media_source(self, *, workspace_id: str, source_id: str) -> bool:
+        reference = self._db.collection("media_sources").document(source_id)
+        document = reference.get()
+        if not document.exists or document.get("workspace_id") != workspace_id:
+            return False
+        reference.delete()
+        return True
 
     def ingest(self, *, workspace_id: str, items: tuple[IncomingMediaItem, ...]) -> IngestionResult:
         created = 0
@@ -527,6 +555,20 @@ class FirestoreMediaRepository:
         return self._repository.get_media(workspace_id=workspace_id, media_item_id=media_item_id)
 
 
+class FirestoreMediaSourceRepository(MediaSourceRepository):
+    def __init__(self, repository: FirestoreRepository) -> None:
+        self._repository = repository
+
+    def create(self, *, workspace_id: str, details: MediaSourceDetails) -> MediaSource:
+        return self._repository.create_media_source(workspace_id=workspace_id, details=details)
+
+    def list(self, *, workspace_id: str, kind: MediaSourceKind | None) -> list[MediaSource]:
+        return self._repository.list_media_sources(workspace_id=workspace_id, kind=kind)
+
+    def delete(self, *, workspace_id: str, source_id: str) -> bool:
+        return self._repository.delete_media_source(workspace_id=workspace_id, source_id=source_id)
+
+
 class FirestoreOpportunityRepository:
     def __init__(self, repository: FirestoreRepository) -> None:
         self._repository = repository
@@ -571,6 +613,17 @@ def _client_details(details: ClientDetails) -> dict[str, Any]:
         field: list(value) if isinstance(value, tuple) else value
         for field, value in vars(details).items()
     }
+
+
+def _media_source(source_id: str, data: dict[str, Any]) -> MediaSource:
+    return MediaSource(
+        id=source_id,
+        workspace_id=str(data["workspace_id"]),
+        name=str(data["name"]),
+        kind=MediaSourceKind(str(data["kind"])),
+        url=None if data.get("url") is None else str(data["url"]),
+        provider=None if data.get("provider") is None else str(data["provider"]),
+    )
 
 
 def _client(client_id: str, data: dict[str, Any]) -> Client:

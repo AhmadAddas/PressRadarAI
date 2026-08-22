@@ -10,11 +10,13 @@ from pressradar.application.delivery import PitchSender
 from pressradar.application.demo import DemoSetupService
 from pressradar.application.integrations import CRMIntegration, NotificationSender
 from pressradar.application.media import MediaIngestionService, MediaRepository
+from pressradar.application.media_sources import MediaSourceRepository, MediaSourceService
 from pressradar.application.opportunities import OpportunityRepository, OpportunityService
 from pressradar.application.pitches import PitchGenerator
 from pressradar.application.relevance import RelevanceAnalyzer
 from pressradar.config import Settings, get_settings
 from pressradar.infrastructure.bigquery_analytics import BigQueryAnalyticsStore
+from pressradar.infrastructure.configured_media import ConfiguredMediaIngestionService
 from pressradar.infrastructure.fake_integrations import (
     FakeCRMIntegration,
     FakeNotificationSender,
@@ -24,6 +26,7 @@ from pressradar.infrastructure.fake_relevance import FakeRelevanceAnalyzer
 from pressradar.infrastructure.firestore import (
     FirestoreClientRepository,
     FirestoreMediaRepository,
+    FirestoreMediaSourceRepository,
     FirestoreOpportunityRepository,
     FirestoreRepository,
 )
@@ -38,6 +41,7 @@ from pressradar.infrastructure.sqlite_analytics import SQLiteAnalyticsStore
 from pressradar.infrastructure.sqlite_auth import SQLiteAuthRepository
 from pressradar.infrastructure.sqlite_clients import SQLiteClientRepository
 from pressradar.infrastructure.sqlite_media import SQLiteMediaRepository
+from pressradar.infrastructure.sqlite_media_sources import SQLiteMediaSourceRepository
 from pressradar.infrastructure.sqlite_opportunities import SQLiteOpportunityRepository
 from pressradar.infrastructure.twilio_notifications import TwilioNotificationSender
 from pressradar.presentation.analytics import create_analytics_router
@@ -45,6 +49,7 @@ from pressradar.presentation.auth import create_auth_router, require_identity
 from pressradar.presentation.clients import create_clients_router
 from pressradar.presentation.demo import create_demo_router
 from pressradar.presentation.media import create_media_router
+from pressradar.presentation.media_sources import create_media_sources_router
 from pressradar.presentation.opportunities import create_opportunities_router
 
 
@@ -61,6 +66,7 @@ def create_app(
     auth_repository: AuthRepository
     client_repository: ClientRepository
     media_repository: MediaRepository
+    media_source_repository: MediaSourceRepository
     opportunity_repository: OpportunityRepository
     if settings.operational_provider == "firestore":
         firestore_repository = FirestoreRepository(
@@ -69,6 +75,7 @@ def create_app(
         auth_repository = firestore_repository
         client_repository = FirestoreClientRepository(firestore_repository)
         media_repository = FirestoreMediaRepository(firestore_repository)
+        media_source_repository = FirestoreMediaSourceRepository(firestore_repository)
         opportunity_repository = FirestoreOpportunityRepository(firestore_repository)
     else:
         sqlite_auth = SQLiteAuthRepository(settings.database_path)
@@ -80,6 +87,9 @@ def create_app(
         sqlite_media = SQLiteMediaRepository(settings.database_path)
         sqlite_media.initialize()
         media_repository = sqlite_media
+        sqlite_media_sources = SQLiteMediaSourceRepository(settings.database_path)
+        sqlite_media_sources.initialize()
+        media_source_repository = sqlite_media_sources
         sqlite_opportunities = SQLiteOpportunityRepository(settings.database_path)
         sqlite_opportunities.initialize()
         opportunity_repository = sqlite_opportunities
@@ -190,7 +200,7 @@ def create_app(
         CORSMiddleware,
         allow_origins=[settings.web_origin],
         allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "PATCH"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["Content-Type"],
     )
     application.include_router(
@@ -205,7 +215,26 @@ def create_app(
     )
     identity_dependency = require_identity(auth_service)
     application.include_router(
-        create_media_router(media_service, opportunity_service, identity_dependency)
+        create_media_router(
+            media_service,
+            ConfiguredMediaIngestionService(
+                media_source_repository,
+                media_repository,
+                newsapi_api_key=(
+                    ""
+                    if settings.newsapi_api_key is None
+                    else settings.newsapi_api_key.get_secret_value()
+                ),
+                timeout_seconds=settings.external_provider_timeout_seconds,
+            ),
+            opportunity_service,
+            identity_dependency,
+        )
+    )
+    application.include_router(
+        create_media_sources_router(
+            MediaSourceService(media_source_repository), identity_dependency
+        )
     )
     application.include_router(
         create_opportunities_router(opportunity_service, identity_dependency)
