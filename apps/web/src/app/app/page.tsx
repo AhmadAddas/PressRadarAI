@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { SignOutButton } from "@/components/signout-button";
+import { AccountMenu } from "@/components/account-menu";
 import { DismissOpportunityButton } from "@/components/dismiss-opportunity-button";
 import { AuditTrail } from "@/components/audit-trail";
 import { DemoSetupButton } from "@/components/demo-setup-button";
@@ -62,7 +62,7 @@ export default async function ApplicationPage() {
             <Link className="button" href="/app/clients/new">
               Add client
             </Link>
-            <SignOutButton />
+            <AccountMenu name={identity.name} email={identity.email} />
           </div>
         </header>
         <section aria-labelledby="opportunities-heading">
@@ -139,17 +139,19 @@ export default async function ApplicationPage() {
                           <span key={topic}>{topic}</span>
                         ))}
                       </div>
-                      {opportunity.status === "new" ||
-                      opportunity.status === "ready" ? (
-                        <DismissOpportunityButton
+                      <div className="opportunity-controls">
+                        {opportunity.status === "new" ||
+                        opportunity.status === "ready" ? (
+                          <DismissOpportunityButton
+                            opportunityId={opportunity.id}
+                          />
+                        ) : null}
+                        <OpportunityWorkflowActions
                           opportunityId={opportunity.id}
+                          status={opportunity.status}
+                          hasPitch={opportunity.pitch !== null}
                         />
-                      ) : null}
-                      <OpportunityWorkflowActions
-                        opportunityId={opportunity.id}
-                        status={opportunity.status}
-                        hasPitch={opportunity.pitch !== null}
-                      />
+                      </div>
                     </div>
                     <AuditTrail opportunityId={opportunity.id} />
                   </li>
