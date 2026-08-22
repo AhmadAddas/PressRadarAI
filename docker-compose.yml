@@ -1,0 +1,28 @@
+services:
+  api:
+    build:
+      context: ./apps/api
+      target: development
+    environment:
+      APP_MODE: ${APP_MODE:-local}
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/api/src:/app/src
+      - ./apps/api/tests:/app/tests
+
+  web:
+    build:
+      context: ./apps/web
+      target: development
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/web/src:/app/src
+    depends_on:
+      api:
+        condition: service_started
