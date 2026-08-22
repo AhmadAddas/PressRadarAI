@@ -203,6 +203,26 @@ nav {
   margin-bottom: 0;
 }
 
+.pitch-editor {
+  display: grid;
+  gap: 0.65rem;
+  margin: 1rem 0;
+}
+
+.pitch-editor textarea {
+  width: 100%;
+}
+
+.pitch-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.pitch-actions p {
+  margin: 0;
+}
+
 .opportunity-action {
   text-align: right;
 }

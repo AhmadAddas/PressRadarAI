@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { SignOutButton } from "@/components/signout-button";
 import { DismissOpportunityButton } from "@/components/dismiss-opportunity-button";
+import { PitchEditor } from "@/components/pitch-editor";
 import { internalApiUrl } from "@/lib/api";
 import type { Client } from "@/lib/client-types";
 import type { Opportunity } from "@/lib/opportunity-types";
@@ -91,13 +92,21 @@ export default async function ApplicationPage() {
                   {opportunity.analysis_error ? (
                     <p role="alert">{opportunity.analysis_error}</p>
                   ) : null}
+                  {opportunity.status === "ready" ? (
+                    <PitchEditor
+                      opportunityId={opportunity.id}
+                      initialContent={opportunity.pitch?.content ?? ""}
+                      generationError={opportunity.pitch_error}
+                    />
+                  ) : null}
                   <div className="opportunity-footer">
                     <div className="topics">
                       {opportunity.matched_topics.map((topic) => (
                         <span key={topic}>{topic}</span>
                       ))}
                     </div>
-                    {opportunity.status === "new" ? (
+                    {opportunity.status === "new" ||
+                    opportunity.status === "ready" ? (
                       <DismissOpportunityButton
                         opportunityId={opportunity.id}
                       />

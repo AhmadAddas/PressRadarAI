@@ -22,6 +22,14 @@ export type Opportunity = {
   relevance_score: number | null;
   relevance_reason: string | null;
   analysis_error: string | null;
+  pitch: {
+    id: string;
+    opportunity_id: string;
+    content: string;
+    generated_at: string;
+    updated_at: string;
+  } | null;
+  pitch_error: string | null;
   status: OpportunityStatus;
   detected_at: string;
 };
