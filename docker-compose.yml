@@ -42,17 +42,22 @@ services:
   web:
     build:
       context: ./apps/web
-      target: development
+      target: production
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
       API_INTERNAL_URL: ${API_INTERNAL_URL:-http://api:8000}
     ports:
       - "3000:3000"
-    volumes:
-      - ./apps/web/src:/app/src
     depends_on:
       api:
         condition: service_started
+
+  web-tools:
+    profiles: ["tools"]
+    build:
+      context: ./apps/web
+      target: development
 
 volumes:
   api-data:
