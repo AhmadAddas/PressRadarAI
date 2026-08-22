@@ -7,11 +7,15 @@ services:
       APP_MODE: ${APP_MODE:-local}
       API_HOST: 0.0.0.0
       API_PORT: 8000
+      DATABASE_PATH: /data/pressradar.db
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-168}
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
     ports:
       - "8000:8000"
     volumes:
       - ./apps/api/src:/app/src
       - ./apps/api/tests:/app/tests
+      - api-data:/data
 
   web:
     build:
@@ -19,6 +23,7 @@ services:
       target: development
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      API_INTERNAL_URL: ${API_INTERNAL_URL:-http://api:8000}
     ports:
       - "3000:3000"
     volumes:
@@ -26,3 +31,6 @@ services:
     depends_on:
       api:
         condition: service_started
+
+volumes:
+  api-data:

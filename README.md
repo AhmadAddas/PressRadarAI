@@ -20,6 +20,9 @@ Open the web application at <http://localhost:3000>. The API health endpoint is 
 
 Stop the services with `docker compose down`.
 
+Local accounts, workspaces, and sessions are stored in the `api-data` Docker volume. Use
+`docker compose down --volumes` only when you intentionally want to remove local application data.
+
 ## Validate
 
 Run the full foundation validation suite:
