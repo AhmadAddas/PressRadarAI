@@ -1,7 +1,9 @@
 import builtins
 import re
+from datetime import UTC, datetime
 from typing import Protocol
 
+from pressradar.application.analytics import AnalyticsService
 from pressradar.application.clients import ClientRepository
 from pressradar.application.delivery import PitchSender, PitchSendError
 from pressradar.application.integrations import (
@@ -19,6 +21,7 @@ from pressradar.application.pitches import (
     validate_generated_pitch,
 )
 from pressradar.application.relevance import RelevanceAnalysisError, RelevanceAnalyzer
+from pressradar.domain.analytics import ProductEvent, ProductEventName
 from pressradar.domain.audit import AuditEvent
 from pressradar.domain.clients import Client
 from pressradar.domain.delivery import DeliveryReceipt, DeliveryRequest
@@ -134,6 +137,7 @@ class OpportunityService:
         pitch_sender: PitchSender,
         notification_sender: NotificationSender,
         crm_integration: CRMIntegration,
+        analytics: AnalyticsService,
     ) -> None:
         self._clients = clients
         self._media = media
@@ -143,6 +147,7 @@ class OpportunityService:
         self._pitch_sender = pitch_sender
         self._notification_sender = notification_sender
         self._crm_integration = crm_integration
+        self._analytics = analytics
 
     def detect(self, *, workspace_id: str) -> int:
         matches = tuple(
@@ -152,6 +157,12 @@ class OpportunityService:
             if (match := _match(client, item)) is not None
         )
         created = self._opportunities.create_matches(matches)
+        for opportunity in self._opportunities.list(workspace_id=workspace_id):
+            self._track(
+                ProductEventName.OPPORTUNITY_DETECTED,
+                opportunity,
+                occurred_at=opportunity.detected_at,
+            )
         self.analyze_pending(workspace_id=workspace_id)
         return created
 
@@ -195,6 +206,7 @@ class OpportunityService:
                 analysis=analysis,
             )
             if ready is not None:
+                self._track(ProductEventName.ANALYSIS_COMPLETED, ready)
                 self._notify_if_urgent(ready)
                 self._generate_pitch(client=client, media_item=media_item, opportunity=ready)
 
@@ -217,6 +229,7 @@ class OpportunityService:
         )
         if updated is None:
             raise PitchNotEditableError
+        self._track(ProductEventName.PITCH_REVIEWED, updated)
         return updated
 
     def approve(self, *, workspace_id: str, opportunity_id: str) -> Opportunity:
@@ -230,6 +243,7 @@ class OpportunityService:
         )
         if approved is None:
             raise PitchApprovalError
+        self._track(ProductEventName.PITCH_APPROVED, approved)
         return approved
 
     def send(self, *, workspace_id: str, opportunity_id: str) -> Opportunity:
@@ -261,6 +275,7 @@ class OpportunityService:
         )
         if sent is None:
             raise PitchDeliveryError
+        self._track(ProductEventName.PITCH_SENT, sent)
         self._sync_sent_opportunity(sent)
         return sent
 
@@ -334,6 +349,28 @@ class OpportunityService:
                 detail="CRM synchronization failed",
             )
 
+    def _track(
+        self,
+        name: ProductEventName,
+        opportunity: Opportunity,
+        *,
+        occurred_at: datetime | None = None,
+    ) -> None:
+        self._analytics.track(
+            ProductEvent(
+                id=f"{opportunity.id}:{name.value}",
+                workspace_id=opportunity.workspace_id,
+                name=name,
+                occurred_at=occurred_at or datetime.now(UTC),
+                opportunity_id=opportunity.id,
+                client_id=opportunity.client_id,
+                client_name=opportunity.client_name,
+                source=opportunity.source,
+                relevance_score=opportunity.relevance_score,
+                detected_at=opportunity.detected_at,
+            )
+        )
+
     def transition(
         self,
         *,
@@ -359,6 +396,7 @@ class OpportunityService:
         )
         if updated is None:
             raise InvalidOpportunityTransitionError
+        self._track(ProductEventName.OPPORTUNITY_DISMISSED, updated)
         return updated
 
     def _get(self, *, workspace_id: str, opportunity_id: str) -> Opportunity:

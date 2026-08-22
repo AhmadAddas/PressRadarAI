@@ -3,6 +3,7 @@ from datetime import timedelta
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from pressradar.application.analytics import AnalyticsError, AnalyticsService, AnalyticsStore
 from pressradar.application.auth import AuthService
 from pressradar.application.clients import ClientService
 from pressradar.application.delivery import PitchSender
@@ -20,16 +21,19 @@ from pressradar.infrastructure.fake_integrations import (
 from pressradar.infrastructure.fake_pitch import FakePitchGenerator
 from pressradar.infrastructure.fake_relevance import FakeRelevanceAnalyzer
 from pressradar.infrastructure.hubspot_crm import HubSpotCRMIntegration
+from pressradar.infrastructure.noop_analytics import NoOpAnalyticsStore
 from pressradar.infrastructure.ollama_pitch import OllamaPitchGenerator
 from pressradar.infrastructure.ollama_relevance import OllamaRelevanceAnalyzer
 from pressradar.infrastructure.security import PasswordHasher, SessionTokens
 from pressradar.infrastructure.simulated_media import SimulatedMediaProvider
 from pressradar.infrastructure.simulated_sender import SimulatedPitchSender
+from pressradar.infrastructure.sqlite_analytics import SQLiteAnalyticsStore
 from pressradar.infrastructure.sqlite_auth import SQLiteAuthRepository
 from pressradar.infrastructure.sqlite_clients import SQLiteClientRepository
 from pressradar.infrastructure.sqlite_media import SQLiteMediaRepository
 from pressradar.infrastructure.sqlite_opportunities import SQLiteOpportunityRepository
 from pressradar.infrastructure.twilio_notifications import TwilioNotificationSender
+from pressradar.presentation.analytics import create_analytics_router
 from pressradar.presentation.auth import create_auth_router, require_identity
 from pressradar.presentation.clients import create_clients_router
 from pressradar.presentation.demo import create_demo_router
@@ -44,6 +48,7 @@ def create_app(
     pitch_sender: PitchSender | None = None,
     notification_sender: NotificationSender | None = None,
     crm_integration: CRMIntegration | None = None,
+    analytics_store: AnalyticsStore | None = None,
 ) -> FastAPI:
     settings = settings or get_settings()
     auth_repository = SQLiteAuthRepository(settings.database_path)
@@ -65,6 +70,17 @@ def create_app(
     )
     opportunity_repository = SQLiteOpportunityRepository(settings.database_path)
     opportunity_repository.initialize()
+    if analytics_store is None:
+        if settings.analytics_provider == "sqlite":
+            sqlite_analytics = SQLiteAnalyticsStore(settings.analytics_database_path)
+            try:
+                sqlite_analytics.initialize()
+            except AnalyticsError:
+                pass
+            analytics_store = sqlite_analytics
+        else:
+            analytics_store = NoOpAnalyticsStore()
+    analytics_service = AnalyticsService(analytics_store)
     if relevance_analyzer is None:
         relevance_analyzer = (
             FakeRelevanceAnalyzer()
@@ -126,6 +142,7 @@ def create_app(
         pitch_sender,
         notification_sender,
         crm_integration,
+        analytics_service,
     )
     demo_opportunity_service = OpportunityService(
         client_repository,
@@ -136,6 +153,7 @@ def create_app(
         SimulatedPitchSender(),
         FakeNotificationSender(),
         FakeCRMIntegration(),
+        analytics_service,
     )
     application = FastAPI(title="PressRadar API", version="0.1.0")
     application.add_middleware(
@@ -162,6 +180,7 @@ def create_app(
     application.include_router(
         create_opportunities_router(opportunity_service, identity_dependency)
     )
+    application.include_router(create_analytics_router(analytics_service, identity_dependency))
     application.include_router(
         create_demo_router(
             DemoSetupService(client_service, media_service, demo_opportunity_service),
