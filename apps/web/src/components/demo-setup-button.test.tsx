@@ -46,13 +46,11 @@ describe("DemoSetupButton", () => {
   });
 
   it("switches from Demo back to Prod without reseeding", async () => {
-    const fetchMock = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValue(
-        new Response(JSON.stringify({ workspace_kind: "prod" }), {
-          status: 200,
-        }),
-      );
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ workspace_kind: "prod" }), {
+        status: 200,
+      }),
+    );
     render(<DemoSetupButton workspaceKind="demo" />);
 
     const toggle = screen.getByRole("button", {

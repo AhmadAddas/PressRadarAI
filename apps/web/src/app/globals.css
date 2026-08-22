@@ -522,9 +522,14 @@ nav {
 }
 
 .media-header-actions > * {
-  width: 14rem;
   min-height: 2.75rem;
   text-align: center;
+}
+
+.media-header-actions > a,
+.media-header-actions .ingest-action,
+.source-toolbar > button {
+  width: 14rem;
 }
 
 .media-header-actions {
@@ -534,6 +539,89 @@ nav {
 .media-header-actions .ingest-action button {
   width: 100%;
   min-height: 2.75rem;
+}
+
+.source-manager {
+  position: relative;
+  text-align: right;
+}
+
+.source-toolbar {
+  display: flex;
+  gap: 1rem;
+}
+
+.source-manager > p {
+  margin: 0.4rem 0 0;
+  font-size: 0.8rem;
+}
+
+.source-options {
+  position: absolute;
+  z-index: 9;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  display: grid;
+  width: min(38rem, calc(100vw - 2rem));
+  gap: 1.25rem;
+  padding: 1.25rem;
+  border: 1px solid #dce1e7;
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: 0 1rem 2rem rgb(23 32 42 / 14%);
+  text-align: left;
+}
+
+.source-options label,
+.source-form {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.source-options select {
+  min-height: 2.75rem;
+  padding: 0.5rem;
+  border: 1px solid #aab4c0;
+  border-radius: 0.4rem;
+  background: #fff;
+  font: inherit;
+}
+
+.source-list h2,
+.source-form h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.source-list ul {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.source-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem;
+  border: 1px solid #e5e9ee;
+  border-radius: 0.5rem;
+}
+
+.source-list span {
+  display: grid;
+  min-width: 0;
+}
+
+.source-list small {
+  color: #53606d;
+}
+
+.button-danger {
+  background: #a12222;
 }
 
 .demo-action {
@@ -736,6 +824,23 @@ nav {
 
   .page-header .actions > .account-menu {
     width: 100%;
+  }
+
+  .source-manager,
+  .source-toolbar,
+  .source-toolbar > button {
+    width: 100%;
+  }
+
+  .source-toolbar {
+    flex-direction: column;
+  }
+
+  .source-options {
+    position: static;
+    width: 100%;
+    margin-top: 0.5rem;
+    box-shadow: none;
   }
 
   .account-popover {
