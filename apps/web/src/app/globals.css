@@ -202,14 +202,9 @@ nav {
   display: flex;
   min-height: 2.75rem;
   align-items: center;
-  gap: 0.65rem;
-  padding: 0.35rem 0.65rem 0.35rem 0.35rem;
-  border: 1px solid #ccd4df;
-  border-radius: 999px;
-  background: #fff;
+  gap: 0.5rem;
   color: #17202a;
   cursor: pointer;
-  font-weight: 700;
   list-style: none;
 }
 
@@ -217,13 +212,26 @@ nav {
   display: none;
 }
 
-.account-menu summary::after {
-  color: #53606d;
-  content: "▾";
-  font-size: 0.75rem;
+.account-trigger {
+  display: flex;
+  min-width: 0;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid #ccd4df;
+  border-radius: 999px;
+  background: #fff;
+  font-weight: 700;
 }
 
-.account-menu[open] summary::after {
+.account-chevron {
+  color: #53606d;
+  font-size: 0.75rem;
+  transition: transform 0.15s ease;
+}
+
+.account-menu[open] .account-chevron {
   transform: rotate(180deg);
 }
 
@@ -512,7 +520,12 @@ nav {
 }
 
 .ingest-action {
+  width: 15rem;
   text-align: right;
+}
+
+.ingest-action button {
+  width: 100%;
 }
 
 .demo-action {
@@ -523,6 +536,12 @@ nav {
   background: #6b4eff;
 }
 
+.demo-toggle[aria-pressed="true"] {
+  background: #276749;
+  cursor: default;
+  opacity: 1;
+}
+
 .demo-action p {
   max-width: 14rem;
   margin: 0.4rem 0 0;
@@ -530,6 +549,7 @@ nav {
 }
 
 .ingest-action p {
+  min-height: 1rem;
   margin: 0.4rem 0 0;
   font-size: 0.8rem;
 }
@@ -650,6 +670,17 @@ nav {
   .account-menu,
   .account-menu summary {
     width: 100%;
+  }
+
+  .account-trigger {
+    flex: 1;
+    justify-content: space-between;
+  }
+
+  .account-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .account-popover {

@@ -7,32 +7,26 @@ import { publicApiUrl } from "@/lib/api";
 
 export function DemoSetupButton() {
   const router = useRouter();
-  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [ready, setReady] = useState(false);
   const [working, setWorking] = useState(false);
 
   async function setup() {
     setWorking(true);
-    setMessage("");
+    setError("");
     try {
       const response = await fetch(`${publicApiUrl}/demo/setup`, {
         method: "POST",
         credentials: "include",
       });
       if (!response.ok) {
-        setMessage("Unable to prepare the demo workspace.");
+        setError("Unable to prepare the demo workspace.");
         return;
       }
-      const result = (await response.json()) as {
-        opportunities_created: number;
-      };
-      setMessage(
-        result.opportunities_created
-          ? `Demo ready with ${result.opportunities_created} opportunities.`
-          : "Demo workspace is already ready.",
-      );
+      setReady(true);
       router.refresh();
     } catch {
-      setMessage("PressRadar is temporarily unavailable.");
+      setError("PressRadar is temporarily unavailable.");
     } finally {
       setWorking(false);
     }
@@ -40,10 +34,20 @@ export function DemoSetupButton() {
 
   return (
     <div className="demo-action">
-      <button type="button" onClick={setup} disabled={working}>
-        {working ? "Preparing demo…" : "Load demo workspace"}
+      <button
+        type="button"
+        className="demo-toggle"
+        onClick={setup}
+        disabled={working || ready}
+        aria-pressed={ready}
+      >
+        {working
+          ? "Preparing demo…"
+          : ready
+            ? "Demo workspace loaded"
+            : "Load demo workspace"}
       </button>
-      {message ? <p role="status">{message}</p> : null}
+      {error ? <p role="alert">{error}</p> : null}
     </div>
   );
 }

@@ -128,7 +128,9 @@ export function ClientForm({ client }: Readonly<{ client?: Client }>) {
         <button type="submit" disabled={submitting}>
           {submitting ? "Saving…" : client ? "Save changes" : "Create client"}
         </button>
-        <Link href="/app">Cancel</Link>
+        <Link className="button button-secondary" href="/app">
+          Cancel
+        </Link>
       </div>
     </form>
   );

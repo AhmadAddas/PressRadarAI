@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { IngestMediaButton } from "./ingest-media-button";
@@ -24,6 +24,8 @@ describe("IngestMediaButton", () => {
     );
     render(<IngestMediaButton />);
 
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+
     fireEvent.click(
       screen.getByRole("button", { name: "Ingest simulated media" }),
     );
@@ -32,5 +34,24 @@ describe("IngestMediaButton", () => {
       "Added 3 media items.",
     );
     expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it("reports duplicate media without shifting the action area", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ created: 0, duplicates: 3 }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    render(<IngestMediaButton />);
+
+    const status = screen.getByRole("status");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Ingest simulated media" }),
+    );
+
+    await waitFor(() =>
+      expect(status).toHaveTextContent("3 media items were already ingested."),
+    );
   });
 });

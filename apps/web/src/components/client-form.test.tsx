@@ -57,4 +57,13 @@ describe("ClientForm", () => {
       }),
     );
   });
+
+  it("presents cancel as a secondary action", () => {
+    render(<ClientForm />);
+
+    expect(screen.getByRole("link", { name: "Cancel" })).toHaveAttribute(
+      "class",
+      expect.stringContaining("button-secondary"),
+    );
+  });
 });

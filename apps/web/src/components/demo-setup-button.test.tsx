@@ -21,13 +21,20 @@ describe("DemoSetupButton", () => {
     );
     render(<DemoSetupButton />);
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Load demo workspace" }),
-    );
+    const toggle = screen.getByRole("button", {
+      name: "Load demo workspace",
+    });
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(toggle);
 
+    const loadedToggle = await screen.findByRole("button", {
+      name: "Demo workspace loaded",
+    });
+    expect(loadedToggle).toHaveAttribute("aria-pressed", "true");
+    expect(loadedToggle).toBeDisabled();
     expect(
-      await screen.findByText("Demo ready with 3 opportunities."),
-    ).toBeInTheDocument();
+      screen.queryByText(/Demo workspace is already ready/i),
+    ).not.toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining("/demo/setup"),
       expect.objectContaining({ method: "POST", credentials: "include" }),

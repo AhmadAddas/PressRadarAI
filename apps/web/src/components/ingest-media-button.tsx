@@ -44,7 +44,9 @@ export function IngestMediaButton() {
       <button type="button" onClick={ingest} disabled={disabled}>
         {disabled ? "Ingesting…" : "Ingest simulated media"}
       </button>
-      {status ? <p role="status">{status}</p> : null}
+      <p role="status" aria-live="polite">
+        {status}
+      </p>
     </div>
   );
 }
