@@ -36,6 +36,7 @@ export default async function ApplicationPage() {
             <h1>Clients</h1>
           </div>
           <div className="actions">
+            <Link href="/app/media">Media feed</Link>
             <Link className="button" href="/app/clients/new">
               Add client
             </Link>

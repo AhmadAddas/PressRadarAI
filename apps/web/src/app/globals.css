@@ -142,6 +142,55 @@ nav {
   list-style: none;
 }
 
+.media-list {
+  display: grid;
+  gap: 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.media-list li {
+  padding: 1.25rem;
+  border: 1px solid #dce1e7;
+  border-radius: 0.75rem;
+}
+
+.media-list h2 {
+  margin-bottom: 0.5rem;
+  font-size: 1.15rem;
+}
+
+.media-meta,
+.topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  color: #53606d;
+  font-size: 0.8rem;
+  text-transform: capitalize;
+}
+
+.media-meta strong {
+  color: #a12222;
+}
+
+.topics span {
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  background: #eef3ff;
+  color: #244ca7;
+  text-transform: none;
+}
+
+.ingest-action {
+  text-align: right;
+}
+
+.ingest-action p {
+  margin: 0.4rem 0 0;
+  font-size: 0.8rem;
+}
+
 .client-list a {
   display: grid;
   grid-template-columns: 2fr 2fr 1fr;
