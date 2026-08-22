@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = Field(default=8000, ge=1, le=65535)
     database_path: str = "data/pressradar.db"
+    analytics_database_path: str = "data/analytics.db"
     session_ttl_hours: int = Field(default=168, ge=1, le=720)
     web_origin: str = "http://localhost:3000"
     media_provider: Literal["simulated"] = "simulated"
@@ -21,6 +22,7 @@ class Settings(BaseSettings):
     pitch_sender: Literal["simulated"] = "simulated"
     notification_provider: Literal["fake", "twilio"] = "fake"
     crm_provider: Literal["fake", "hubspot"] = "fake"
+    analytics_provider: Literal["none", "sqlite"] = "sqlite"
     twilio_account_sid: str | None = None
     twilio_auth_token: SecretStr | None = None
     twilio_from_number: str | None = None
@@ -45,6 +47,11 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_optional_providers(self) -> "Settings":
+        if (
+            self.analytics_provider == "sqlite"
+            and self.analytics_database_path == self.database_path
+        ):
+            raise ValueError("Analytics and operational databases must be separate")
         twilio_values = (
             self.twilio_account_sid or "",
             "" if self.twilio_auth_token is None else self.twilio_auth_token.get_secret_value(),
