@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pressradar.application.auth import AuthService
 from pressradar.application.clients import ClientService
 from pressradar.application.delivery import PitchSender
+from pressradar.application.demo import DemoSetupService
 from pressradar.application.media import MediaIngestionService
 from pressradar.application.opportunities import OpportunityService
 from pressradar.application.pitches import PitchGenerator
@@ -24,6 +25,7 @@ from pressradar.infrastructure.sqlite_media import SQLiteMediaRepository
 from pressradar.infrastructure.sqlite_opportunities import SQLiteOpportunityRepository
 from pressradar.presentation.auth import create_auth_router, require_identity
 from pressradar.presentation.clients import create_clients_router
+from pressradar.presentation.demo import create_demo_router
 from pressradar.presentation.media import create_media_router
 from pressradar.presentation.opportunities import create_opportunities_router
 
@@ -85,6 +87,14 @@ def create_app(
         pitch_generator,
         pitch_sender,
     )
+    demo_opportunity_service = OpportunityService(
+        client_repository,
+        media_repository,
+        opportunity_repository,
+        FakeRelevanceAnalyzer(),
+        FakePitchGenerator(),
+        SimulatedPitchSender(),
+    )
     application = FastAPI(title="PressRadar API", version="0.1.0")
     application.add_middleware(
         CORSMiddleware,
@@ -109,6 +119,12 @@ def create_app(
     )
     application.include_router(
         create_opportunities_router(opportunity_service, identity_dependency)
+    )
+    application.include_router(
+        create_demo_router(
+            DemoSetupService(client_service, media_service, demo_opportunity_service),
+            identity_dependency,
+        )
     )
 
     @application.get("/health", tags=["system"])
