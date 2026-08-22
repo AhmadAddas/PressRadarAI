@@ -5,11 +5,17 @@ import { redirect } from "next/navigation";
 import { SignOutButton } from "@/components/signout-button";
 import { DismissOpportunityButton } from "@/components/dismiss-opportunity-button";
 import { AuditTrail } from "@/components/audit-trail";
+import { DemoSetupButton } from "@/components/demo-setup-button";
 import { OpportunityWorkflowActions } from "@/components/opportunity-workflow-actions";
 import { PitchEditor } from "@/components/pitch-editor";
 import { internalApiUrl } from "@/lib/api";
 import type { Client } from "@/lib/client-types";
 import type { Opportunity } from "@/lib/opportunity-types";
+import {
+  statusLabels,
+  urgencyLabels,
+  urgencyLevel,
+} from "@/lib/opportunity-presentation";
 
 type Identity = { name: string; email: string; workspace_id: string };
 
@@ -49,6 +55,7 @@ export default async function ApplicationPage() {
             <h1>Opportunity dashboard</h1>
           </div>
           <div className="actions">
+            <DemoSetupButton />
             <Link href="/app/media">Media feed</Link>
             <Link className="button" href="/app/clients/new">
               Add client
@@ -60,88 +67,100 @@ export default async function ApplicationPage() {
           <h2 id="opportunities-heading">Opportunities</h2>
           {opportunities.length ? (
             <ul className="opportunity-list">
-              {opportunities.map((opportunity) => (
-                <li
-                  key={opportunity.id}
-                  className={opportunity.deadline ? "urgent" : undefined}
-                >
-                  <div className="opportunity-heading">
-                    <div>
-                      <p className="eyebrow">
-                        {opportunity.client_name} · {opportunity.client_company}
-                      </p>
-                      <h3>{opportunity.headline}</h3>
+              {opportunities.map((opportunity) => {
+                const urgency = urgencyLevel(opportunity.deadline);
+                return (
+                  <li key={opportunity.id} className={`urgency-${urgency}`}>
+                    <div className="opportunity-heading">
+                      <div>
+                        <p className="eyebrow">
+                          {opportunity.client_name} ·{" "}
+                          {opportunity.client_company}
+                        </p>
+                        <h3>{opportunity.headline}</h3>
+                      </div>
+                      <span className={`status status-${opportunity.status}`}>
+                        {statusLabels[opportunity.status]}
+                      </span>
                     </div>
-                    <span className="status">{opportunity.status}</span>
-                  </div>
-                  <p>
-                    {opportunity.source}
-                    {opportunity.journalist
-                      ? ` · ${opportunity.journalist}`
-                      : ""}
-                  </p>
-                  {opportunity.deadline ? (
-                    <strong className="deadline">
-                      Deadline {formatTime(opportunity.deadline)}
-                    </strong>
-                  ) : null}
-                  {opportunity.relevance_score !== null ? (
-                    <div className="relevance">
-                      <strong>{opportunity.relevance_score}% relevant</strong>
-                      <p>{opportunity.relevance_reason}</p>
-                    </div>
-                  ) : null}
-                  {opportunity.analysis_error ? (
-                    <p role="alert">{opportunity.analysis_error}</p>
-                  ) : null}
-                  {opportunity.status === "ready" ? (
-                    <PitchEditor
-                      opportunityId={opportunity.id}
-                      initialContent={opportunity.pitch?.content ?? ""}
-                      generationError={opportunity.pitch_error}
-                    />
-                  ) : null}
-                  {opportunity.status !== "ready" && opportunity.pitch ? (
-                    <div className="pitch-readonly">
-                      <strong>Pitch</strong>
-                      <p>{opportunity.pitch.content}</p>
-                    </div>
-                  ) : null}
-                  {opportunity.send_error ? (
-                    <p role="alert">{opportunity.send_error}</p>
-                  ) : null}
-                  {opportunity.delivery ? (
-                    <p className="delivery-status">
-                      Sent via {opportunity.delivery.provider} on{" "}
-                      {formatTime(opportunity.delivery.sent_at)}
+                    <p>
+                      {opportunity.source}
+                      {opportunity.journalist
+                        ? ` · ${opportunity.journalist}`
+                        : ""}
                     </p>
-                  ) : null}
-                  <div className="opportunity-footer">
-                    <div className="topics">
-                      {opportunity.matched_topics.map((topic) => (
-                        <span key={topic}>{topic}</span>
-                      ))}
-                    </div>
-                    {opportunity.status === "new" ||
-                    opportunity.status === "ready" ? (
-                      <DismissOpportunityButton
+                    <p className="detected-time">
+                      Detected {formatTime(opportunity.detected_at)}
+                    </p>
+                    {opportunity.deadline ? (
+                      <div className="deadline">
+                        {urgency !== "none" ? (
+                          <strong>{urgencyLabels[urgency]}</strong>
+                        ) : null}
+                        <span>Deadline {formatTime(opportunity.deadline)}</span>
+                      </div>
+                    ) : null}
+                    {opportunity.relevance_score !== null ? (
+                      <div className="relevance">
+                        <strong>{opportunity.relevance_score}% relevant</strong>
+                        <p>{opportunity.relevance_reason}</p>
+                      </div>
+                    ) : null}
+                    {opportunity.analysis_error ? (
+                      <p role="alert">{opportunity.analysis_error}</p>
+                    ) : null}
+                    {opportunity.status === "ready" ? (
+                      <PitchEditor
                         opportunityId={opportunity.id}
+                        initialContent={opportunity.pitch?.content ?? ""}
+                        generationError={opportunity.pitch_error}
                       />
                     ) : null}
-                    <OpportunityWorkflowActions
-                      opportunityId={opportunity.id}
-                      status={opportunity.status}
-                      hasPitch={opportunity.pitch !== null}
-                    />
-                  </div>
-                  <AuditTrail opportunityId={opportunity.id} />
-                </li>
-              ))}
+                    {opportunity.status !== "ready" && opportunity.pitch ? (
+                      <div className="pitch-readonly">
+                        <strong>Pitch</strong>
+                        <p>{opportunity.pitch.content}</p>
+                      </div>
+                    ) : null}
+                    {opportunity.send_error ? (
+                      <p role="alert">{opportunity.send_error}</p>
+                    ) : null}
+                    {opportunity.delivery ? (
+                      <p className="delivery-status">
+                        Sent via {opportunity.delivery.provider} on{" "}
+                        {formatTime(opportunity.delivery.sent_at)}
+                      </p>
+                    ) : null}
+                    <div className="opportunity-footer">
+                      <div className="topics">
+                        {opportunity.matched_topics.map((topic) => (
+                          <span key={topic}>{topic}</span>
+                        ))}
+                      </div>
+                      {opportunity.status === "new" ||
+                      opportunity.status === "ready" ? (
+                        <DismissOpportunityButton
+                          opportunityId={opportunity.id}
+                        />
+                      ) : null}
+                      <OpportunityWorkflowActions
+                        opportunityId={opportunity.id}
+                        status={opportunity.status}
+                        hasPitch={opportunity.pitch !== null}
+                      />
+                    </div>
+                    <AuditTrail opportunityId={opportunity.id} />
+                  </li>
+                );
+              })}
             </ul>
           ) : (
             <div className="empty-state">
               <h3>No opportunities yet</h3>
-              <p>Add a client, then ingest media to detect relevant matches.</p>
+              <p>
+                Load the demo workspace, or add a client and ingest media to
+                detect relevant matches.
+              </p>
             </div>
           )}
         </section>
