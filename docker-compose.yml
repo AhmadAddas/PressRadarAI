@@ -11,6 +11,7 @@ services:
       SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-168}
       WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
       AI_PROVIDER: ${AI_PROVIDER:-ollama}
+      PITCH_SENDER: ${PITCH_SENDER:-simulated}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2:3b}
       OLLAMA_TIMEOUT_SECONDS: ${OLLAMA_TIMEOUT_SECONDS:-30}

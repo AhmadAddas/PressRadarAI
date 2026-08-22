@@ -11,6 +11,7 @@ def test_settings_use_safe_local_defaults() -> None:
     assert settings.api_port == 8000
     assert settings.media_provider == "simulated"
     assert settings.ai_provider == "ollama"
+    assert settings.pitch_sender == "simulated"
 
 
 def test_settings_reject_unknown_runtime_mode() -> None:

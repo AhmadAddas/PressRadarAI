@@ -181,8 +181,16 @@ def test_existing_opportunity_table_receives_additive_relevance_columns(tmp_path
         pitch_table = connection.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'pitches'"
         ).fetchone()
+        delivery_table = connection.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'pitch_deliveries'"
+        ).fetchone()
+        audit_table = connection.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'audit_events'"
+        ).fetchone()
     assert {"relevance_score", "relevance_reason", "analysis_error", "pitch_error"} <= columns
     assert pitch_table == ("pitches",)
+    assert delivery_table == ("pitch_deliveries",)
+    assert audit_table == ("audit_events",)
 
 
 def _client() -> Client:

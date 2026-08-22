@@ -1,7 +1,9 @@
+import builtins
 import re
 from typing import Protocol
 
 from pressradar.application.clients import ClientRepository
+from pressradar.application.delivery import PitchSender, PitchSendError
 from pressradar.application.media import MediaRepository
 from pressradar.application.pitches import (
     PitchGenerationError,
@@ -9,7 +11,9 @@ from pressradar.application.pitches import (
     validate_generated_pitch,
 )
 from pressradar.application.relevance import RelevanceAnalysisError, RelevanceAnalyzer
+from pressradar.domain.audit import AuditEvent
 from pressradar.domain.clients import Client
+from pressradar.domain.delivery import DeliveryReceipt, DeliveryRequest
 from pressradar.domain.media import MediaItem
 from pressradar.domain.opportunities import (
     ALLOWED_TRANSITIONS,
@@ -31,6 +35,14 @@ class InvalidOpportunityTransitionError(Exception):
 
 class PitchNotEditableError(Exception):
     """Raised when an opportunity cannot accept pitch edits in its current state."""
+
+
+class PitchApprovalError(Exception):
+    """Raised when an opportunity does not contain an approvable pitch."""
+
+
+class PitchDeliveryError(Exception):
+    """Raised when an approved pitch could not be delivered."""
 
 
 class OpportunityRepository(Protocol):
@@ -77,6 +89,24 @@ class OpportunityRepository(Protocol):
         content: str,
     ) -> Opportunity | None: ...
 
+    def approve(self, *, workspace_id: str, opportunity_id: str) -> Opportunity | None: ...
+
+    def claim_send(self, *, workspace_id: str, opportunity_id: str) -> Opportunity | None: ...
+
+    def complete_send(
+        self,
+        *,
+        workspace_id: str,
+        opportunity_id: str,
+        receipt: DeliveryReceipt,
+    ) -> Opportunity | None: ...
+
+    def fail_send(self, *, workspace_id: str, opportunity_id: str) -> None: ...
+
+    def list_audit(
+        self, *, workspace_id: str, opportunity_id: str
+    ) -> builtins.list[AuditEvent]: ...
+
 
 class OpportunityService:
     def __init__(
@@ -86,12 +116,14 @@ class OpportunityService:
         opportunities: OpportunityRepository,
         relevance_analyzer: RelevanceAnalyzer,
         pitch_generator: PitchGenerator,
+        pitch_sender: PitchSender,
     ) -> None:
         self._clients = clients
         self._media = media
         self._opportunities = opportunities
         self._relevance_analyzer = relevance_analyzer
         self._pitch_generator = pitch_generator
+        self._pitch_sender = pitch_sender
 
     def detect(self, *, workspace_id: str) -> int:
         matches = tuple(
@@ -167,6 +199,56 @@ class OpportunityService:
             raise PitchNotEditableError
         return updated
 
+    def approve(self, *, workspace_id: str, opportunity_id: str) -> Opportunity:
+        opportunity = self._get(workspace_id=workspace_id, opportunity_id=opportunity_id)
+        if opportunity.status is OpportunityStatus.APPROVED:
+            return opportunity
+        if opportunity.status is not OpportunityStatus.READY or opportunity.pitch is None:
+            raise PitchApprovalError
+        approved = self._opportunities.approve(
+            workspace_id=workspace_id, opportunity_id=opportunity_id
+        )
+        if approved is None:
+            raise PitchApprovalError
+        return approved
+
+    def send(self, *, workspace_id: str, opportunity_id: str) -> Opportunity:
+        opportunity = self._get(workspace_id=workspace_id, opportunity_id=opportunity_id)
+        if opportunity.status is OpportunityStatus.SENT:
+            return opportunity
+        if opportunity.status is not OpportunityStatus.APPROVED or opportunity.pitch is None:
+            raise PitchApprovalError
+        claimed = self._opportunities.claim_send(
+            workspace_id=workspace_id, opportunity_id=opportunity_id
+        )
+        if claimed is None:
+            raise PitchApprovalError
+        try:
+            receipt = self._pitch_sender.send(
+                DeliveryRequest(
+                    opportunity_id=opportunity.id,
+                    recipient=opportunity.journalist or opportunity.source,
+                    content=opportunity.pitch.content,
+                )
+            )
+        except PitchSendError as error:
+            self._opportunities.fail_send(workspace_id=workspace_id, opportunity_id=opportunity_id)
+            raise PitchDeliveryError from error
+        sent = self._opportunities.complete_send(
+            workspace_id=workspace_id,
+            opportunity_id=opportunity_id,
+            receipt=receipt,
+        )
+        if sent is None:
+            raise PitchDeliveryError
+        return sent
+
+    def list_audit(self, *, workspace_id: str, opportunity_id: str) -> builtins.list[AuditEvent]:
+        self._get(workspace_id=workspace_id, opportunity_id=opportunity_id)
+        return self._opportunities.list_audit(
+            workspace_id=workspace_id, opportunity_id=opportunity_id
+        )
+
     def _generate_pitch(
         self, *, client: Client, media_item: MediaItem, opportunity: Opportunity
     ) -> None:
@@ -200,7 +282,10 @@ class OpportunityService:
         )
         if opportunity is None:
             raise OpportunityNotFoundError
-        if new_status not in ALLOWED_TRANSITIONS[opportunity.status]:
+        if (
+            new_status is not OpportunityStatus.DISMISSED
+            or new_status not in ALLOWED_TRANSITIONS[opportunity.status]
+        ):
             raise InvalidOpportunityTransitionError
         updated = self._opportunities.update_status(
             workspace_id=workspace_id,
@@ -211,6 +296,14 @@ class OpportunityService:
         if updated is None:
             raise InvalidOpportunityTransitionError
         return updated
+
+    def _get(self, *, workspace_id: str, opportunity_id: str) -> Opportunity:
+        opportunity = self._opportunities.get(
+            workspace_id=workspace_id, opportunity_id=opportunity_id
+        )
+        if opportunity is None:
+            raise OpportunityNotFoundError
+        return opportunity
 
 
 def _match(client: Client, item: MediaItem) -> OpportunityMatch | None:

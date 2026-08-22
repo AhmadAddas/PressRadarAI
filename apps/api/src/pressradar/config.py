@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     web_origin: str = "http://localhost:3000"
     media_provider: Literal["simulated"] = "simulated"
     ai_provider: Literal["fake", "ollama"] = "ollama"
+    pitch_sender: Literal["simulated"] = "simulated"
     ollama_base_url: AnyHttpUrl = AnyHttpUrl("http://localhost:11434")
     ollama_model: Annotated[
         str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)
