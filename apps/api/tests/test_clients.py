@@ -100,3 +100,17 @@ async def test_client_input_rejects_invalid_urls_and_blank_rules(tmp_path: Path)
         response = await client.post("/clients", json=payload)
 
     assert response.status_code == 422
+
+
+async def test_client_updates_are_allowed_from_the_configured_web_origin(tmp_path: Path) -> None:
+    async with create_test_client(tmp_path / "clients.db") as client:
+        response = await client.options(
+            "/clients/client-id",
+            headers={
+                "Origin": "http://localhost:3000",
+                "Access-Control-Request-Method": "PUT",
+            },
+        )
+
+    assert response.status_code == 200
+    assert "PUT" in response.headers["access-control-allow-methods"]
