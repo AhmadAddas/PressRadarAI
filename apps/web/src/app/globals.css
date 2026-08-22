@@ -11,19 +11,22 @@
 
 body {
   margin: 0;
+  min-width: 20rem;
+  overflow-x: hidden;
+  line-height: 1.5;
 }
 
-main {
+.centered-shell {
   display: grid;
   min-height: 100vh;
   place-content: center;
-  padding: 2rem;
+  padding: clamp(1rem, 4vw, 3rem);
   text-align: center;
 }
 
 .card {
-  width: min(100%, 32rem);
-  padding: 2.5rem;
+  width: min(100%, 38rem);
+  padding: clamp(1.5rem, 5vw, 3rem);
   border: 1px solid #dce1e7;
   border-radius: 1rem;
   background: #fff;
@@ -39,7 +42,16 @@ main {
 }
 
 h1 {
-  margin-bottom: 0.5rem;
+  margin: 0 0 0.5rem;
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+h2,
+h3 {
+  line-height: 1.2;
+  text-wrap: balance;
 }
 
 p {
@@ -61,6 +73,7 @@ label {
 
 input {
   width: 100%;
+  min-width: 0;
   padding: 0.75rem;
   border: 1px solid #aab4c0;
   border-radius: 0.5rem;
@@ -68,6 +81,8 @@ input {
 }
 
 textarea {
+  width: 100%;
+  min-width: 0;
   min-height: 6rem;
   padding: 0.75rem;
   border: 1px solid #aab4c0;
@@ -90,6 +105,15 @@ button,
   text-decoration: none;
 }
 
+button:focus-visible,
+.button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 0.2rem solid #88aaff;
+  outline-offset: 0.15rem;
+}
+
 button:disabled {
   cursor: wait;
   opacity: 0.65;
@@ -101,6 +125,7 @@ nav {
   justify-content: center;
   gap: 1rem;
   margin-top: 2rem;
+  flex-wrap: wrap;
 }
 
 [role="alert"] {
@@ -114,13 +139,18 @@ nav {
 
 .page-shell {
   display: block;
-  padding: 4rem max(1.5rem, calc((100vw - 70rem) / 2));
+  width: 100%;
+  max-width: 76rem;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: clamp(1rem, 4vw, 3rem);
   text-align: left;
 }
 
 .wide-card {
   width: 100%;
-  padding: 2.5rem;
+  min-width: 0;
+  padding: clamp(1rem, 4vw, 2.5rem);
   border: 1px solid #dce1e7;
   border-radius: 1rem;
   background: #fff;
@@ -133,6 +163,17 @@ nav {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.page-header > *,
+.opportunity-heading > *,
+.opportunity-footer > * {
+  min-width: 0;
+}
+
+.actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .client-list {
@@ -157,6 +198,7 @@ nav {
 }
 
 .opportunity-list li {
+  min-width: 0;
   padding: 1.25rem;
   border: 1px solid #dce1e7;
   border-radius: 0.75rem;
@@ -182,9 +224,11 @@ nav {
 
 .opportunity-heading h3 {
   margin-top: 0;
+  overflow-wrap: anywhere;
 }
 
 .status {
+  flex: 0 0 auto;
   padding: 0.3rem 0.55rem;
   border-radius: 999px;
   background: #eef3ff;
@@ -231,6 +275,7 @@ nav {
 
 .relevance p {
   margin-bottom: 0;
+  overflow-wrap: anywhere;
 }
 
 .pitch-editor {
@@ -276,14 +321,19 @@ nav {
 
 .audit-trail ol {
   display: grid;
-  gap: 0.4rem;
-  padding-left: 1.5rem;
+  gap: 0.5rem;
+  margin-bottom: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .audit-trail li {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #dce1e7;
+  border-radius: 0.65rem;
   text-transform: capitalize;
 }
 
@@ -305,6 +355,7 @@ nav {
 }
 
 .media-list li {
+  min-width: 0;
   padding: 1.25rem;
   border: 1px solid #dce1e7;
   border-radius: 0.75rem;
@@ -313,6 +364,7 @@ nav {
 .media-list h2 {
   margin-bottom: 0.5rem;
   font-size: 1.15rem;
+  overflow-wrap: anywhere;
 }
 
 .media-meta,
@@ -388,6 +440,17 @@ nav {
   text-align: center;
 }
 
+@media (max-width: 64rem) {
+  .page-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .page-header .actions {
+    justify-content: flex-start;
+  }
+}
+
 @media (max-width: 48rem) {
   .page-header,
   .actions,
@@ -401,6 +464,48 @@ nav {
   .ingest-action,
   .opportunity-action {
     text-align: left;
+  }
+
+  .page-shell {
+    padding: 0.75rem;
+  }
+
+  .wide-card {
+    padding: 1rem;
+    border-radius: 0.75rem;
+  }
+
+  .page-header .actions,
+  .page-header .actions > *,
+  .demo-action button,
+  .ingest-action button,
+  .opportunity-action button,
+  .workflow-action button,
+  .pitch-actions button {
+    width: 100%;
+  }
+
+  .page-header .actions > a:not(.button) {
+    min-height: 2.75rem;
+    padding: 0.65rem 0;
+  }
+
+  .opportunity-list li,
+  .media-list li {
+    padding: 1rem;
+  }
+
+  .status {
+    align-self: flex-start;
+  }
+
+  .pitch-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .audit-trail button {
+    width: 100%;
   }
 }
 
@@ -423,5 +528,53 @@ nav {
   .page-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+}
+
+@media (max-width: 30rem) {
+  .centered-shell {
+    align-content: start;
+    padding: 0.75rem;
+  }
+
+  .landing-shell,
+  .auth-shell {
+    padding-top: 1.5rem;
+  }
+
+  .card {
+    padding: 1.25rem;
+    border-radius: 0.75rem;
+  }
+
+  h1 {
+    font-size: clamp(1.8rem, 10vw, 2.35rem);
+  }
+
+  nav,
+  nav > *,
+  form > button,
+  .client-form .actions,
+  .client-form .actions > * {
+    width: 100%;
+  }
+
+  nav {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .media-meta {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .audit-trail li {
+    grid-template-columns: 1fr;
+  }
+
+  .audit-trail time,
+  .audit-trail small {
+    grid-column: 1;
   }
 }

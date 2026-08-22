@@ -47,7 +47,7 @@ export function AuthForm({ mode }: Readonly<{ mode: AuthMode }>) {
   }
 
   return (
-    <main>
+    <main className="centered-shell auth-shell">
       <section className="card" aria-labelledby="auth-title">
         <p className="eyebrow">PressRadar</p>
         <h1 id="auth-title">

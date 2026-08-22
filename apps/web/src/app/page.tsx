@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <main>
+    <main className="centered-shell landing-shell">
       <section className="card">
         <p className="eyebrow">PressRadar</p>
         <h1>Turn media opportunities into timely pitches.</h1>
