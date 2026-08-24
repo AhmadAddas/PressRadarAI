@@ -30,6 +30,7 @@ class LocalAIResponse(BaseModel):
     enabled: bool
     reachable: bool
     model_available: bool
+    installed_models: list[str]
     model: str
     license: LicenseResponse
     recommended_model: str
@@ -42,6 +43,7 @@ class ModelRequest(BaseModel):
 
 class PullModelRequest(ModelRequest):
     accepted_license: str
+    activate: bool = True
 
 
 def create_local_ai_router(
@@ -71,7 +73,11 @@ def create_local_ai_router(
         _identity: Annotated[Identity, Depends(current_identity)],
     ) -> LocalAIStatus:
         try:
-            return runtime.pull_and_activate(request.model, request.accepted_license)
+            return runtime.pull_model(
+                request.model,
+                request.accepted_license,
+                activate=request.activate,
+            )
         except LocalAIError as error:
             raise HTTPException(status_code=502, detail=str(error)) from error
 

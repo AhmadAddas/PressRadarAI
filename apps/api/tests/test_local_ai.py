@@ -87,6 +87,25 @@ async def test_local_ai_license_is_reviewed_before_model_pull(tmp_path: Path) ->
     assert any(request.url.path == "/api/pull" for request in requests)
 
 
+async def test_local_ai_model_can_be_pulled_without_activation(tmp_path: Path) -> None:
+    runtime, requests = runtime_with_mock_provider()
+    async with authenticated_client(tmp_path / "clone-only.db", runtime) as client:
+        await client.delete("/local-ai/active")
+        pulled = await client.post(
+            "/local-ai/models",
+            json={
+                "model": "qwen2.5:0.5b-instruct",
+                "accepted_license": "apache-2.0",
+                "activate": False,
+            },
+        )
+
+    assert pulled.status_code == 200
+    assert pulled.json()["enabled"] is False
+    assert pulled.json()["model"] == "llama3.2:3b"
+    assert any(request.url.path == "/api/pull" for request in requests)
+
+
 async def test_local_ai_can_be_deactivated_and_reactivated(tmp_path: Path) -> None:
     runtime, _ = runtime_with_mock_provider()
     async with authenticated_client(tmp_path / "toggle-ai.db", runtime) as client:
@@ -96,6 +115,7 @@ async def test_local_ai_can_be_deactivated_and_reactivated(tmp_path: Path) -> No
     assert deactivated.json()["enabled"] is False
     assert activated.json()["enabled"] is True
     assert activated.json()["model_available"] is False
+    assert activated.json()["installed_models"] == []
 
 
 async def test_local_ai_rejects_unknown_or_changed_license_confirmation(

@@ -39,6 +39,7 @@ class LocalAIStatus:
     enabled: bool
     reachable: bool
     model_available: bool
+    installed_models: tuple[str, ...]
     model: str
     license: LicenseDetails
     recommended_model: str = RECOMMENDED_MODEL
@@ -96,11 +97,12 @@ class OllamaRuntime:
         with self._lock:
             enabled = self._enabled
             model = self._model
-        reachable, model_available = self._ollama_status(model)
+        reachable, installed_models = self._ollama_status()
         return LocalAIStatus(
             enabled=enabled,
             reachable=reachable,
-            model_available=model_available,
+            model_available=model in installed_models,
+            installed_models=installed_models,
             model=model,
             license=self.inspect_license(model),
         )
@@ -130,7 +132,7 @@ class OllamaRuntime:
             return license_details(ollama_license, None)
         return license_details("Unknown", None)
 
-    def pull_and_activate(self, model: str, accepted_license: str) -> LocalAIStatus:
+    def pull_model(self, model: str, accepted_license: str, *, activate: bool) -> LocalAIStatus:
         model = validate_model_name(model)
         license_info = self.inspect_license(model)
         if accepted_license != license_info.name:
@@ -145,8 +147,9 @@ class OllamaRuntime:
         except httpx.HTTPError as error:
             raise LocalAIError("Ollama could not download this model") from error
         with self._lock:
-            self._model = model
-            self._enabled = True
+            if activate:
+                self._model = model
+                self._enabled = True
         return self.status()
 
     def activate(self) -> LocalAIStatus:
@@ -159,18 +162,21 @@ class OllamaRuntime:
             self._enabled = False
         return self.status()
 
-    def _ollama_status(self, model: str) -> tuple[bool, bool]:
+    def _ollama_status(self) -> tuple[bool, tuple[str, ...]]:
         try:
             response = self._client.get(f"{self._base_url}/api/tags", timeout=self._timeout_seconds)
             response.raise_for_status()
             models = response.json().get("models", [])
-            available = any(
-                isinstance(item, dict) and (item.get("name") == model or item.get("model") == model)
+            installed = tuple(
+                name
                 for item in models
+                if isinstance(item, dict)
+                for name in (item.get("name") or item.get("model"),)
+                if isinstance(name, str)
             )
-            return True, available
+            return True, installed
         except (httpx.HTTPError, TypeError, ValueError):
-            return False, False
+            return False, ()
 
     def _ollama_license(self, model: str) -> str | None:
         try:
