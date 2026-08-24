@@ -137,6 +137,18 @@ export default async function ApplicationPage() {
                           opportunityId={opportunity.id}
                           initialContent={opportunity.pitch?.content ?? ""}
                           generationError={opportunity.pitch_error}
+                          actions={
+                            <>
+                              <DismissOpportunityButton
+                                opportunityId={opportunity.id}
+                              />
+                              <OpportunityWorkflowActions
+                                opportunityId={opportunity.id}
+                                status={opportunity.status}
+                                hasPitch={opportunity.pitch !== null}
+                              />
+                            </>
+                          }
                         />
                       ) : null}
                       {opportunity.status !== "ready" && opportunity.pitch ? (
@@ -161,17 +173,18 @@ export default async function ApplicationPage() {
                           ))}
                         </div>
                         <div className="opportunity-controls">
-                          {opportunity.status === "new" ||
-                          opportunity.status === "ready" ? (
+                          {opportunity.status === "new" ? (
                             <DismissOpportunityButton
                               opportunityId={opportunity.id}
                             />
                           ) : null}
-                          <OpportunityWorkflowActions
-                            opportunityId={opportunity.id}
-                            status={opportunity.status}
-                            hasPitch={opportunity.pitch !== null}
-                          />
+                          {opportunity.status !== "ready" ? (
+                            <OpportunityWorkflowActions
+                              opportunityId={opportunity.id}
+                              status={opportunity.status}
+                              hasPitch={opportunity.pitch !== null}
+                            />
+                          ) : null}
                         </div>
                       </div>
                       <AuditTrail opportunityId={opportunity.id} />

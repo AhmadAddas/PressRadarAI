@@ -7,6 +7,7 @@ import { MediaSourceManager } from "@/components/media-source-manager";
 import { PaginatedSelectableList } from "@/components/paginated-selectable-list";
 import { internalApiUrl } from "@/lib/api";
 import type { MediaItem } from "@/lib/media-types";
+import { formatSourceType } from "@/lib/media-presentation";
 import type {
   MediaSource,
   MediaSourceSuggestion,
@@ -83,7 +84,7 @@ export default async function MediaPage() {
               content: (
                 <article>
                   <div className="media-meta">
-                    <span>{item.source_type.replace("_", " ")}</span>
+                    <span>{formatSourceType(item.source_type)}</span>
                     <span>{item.source}</span>
                     {item.deadline ? (
                       <strong>Deadline {formatTime(item.deadline)}</strong>

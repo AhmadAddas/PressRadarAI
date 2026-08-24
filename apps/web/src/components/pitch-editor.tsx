@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { startTransition, useState } from "react";
+import type { ReactNode } from "react";
 import { toast } from "sonner";
 
 import { publicApiUrl } from "@/lib/api";
@@ -10,12 +11,14 @@ type PitchEditorProps = {
   opportunityId: string;
   initialContent: string;
   generationError: string | null;
+  actions?: ReactNode;
 };
 
 export function PitchEditor({
   opportunityId,
   initialContent,
   generationError,
+  actions,
 }: PitchEditorProps) {
   const router = useRouter();
   const [content, setContent] = useState(initialContent);
@@ -66,6 +69,7 @@ export function PitchEditor({
         >
           Save draft
         </button>
+        {actions}
       </div>
     </div>
   );

@@ -41,6 +41,26 @@ describe("PaginatedSelectableList", () => {
     expect(screen.queryByText("Content 1")).not.toBeInTheDocument();
   });
 
+  it.each([
+    ["client", "clients", "client-list"],
+    ["opportunity", "opportunities", "opportunity-list"],
+  ])("paginates %s records", (noun, endpoint, className) => {
+    render(
+      <PaginatedSelectableList
+        items={items}
+        noun={noun}
+        endpoint={endpoint}
+        className={className}
+      />,
+    );
+
+    expect(
+      screen.getByRole("navigation", { name: `${noun} pagination` }),
+    ).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByText("Content 6")).toBeVisible();
+  });
+
   it("deduplicates selection and requires the timed delete confirmation", async () => {
     vi.useFakeTimers();
     const request = vi

@@ -408,9 +408,19 @@ nav {
   min-height: 2rem;
   padding: 0.2rem;
   background: transparent;
-  color: #a12222;
-  font-size: 1.15rem;
+  color: #8f1d1d;
   line-height: 1;
+}
+
+.item-delete:hover {
+  background: #fce8e8;
+  color: #721c1c;
+}
+
+.trash-icon {
+  display: block;
+  width: 1.35rem;
+  height: 1.35rem;
 }
 
 .client-list .item-checkbox,
@@ -418,8 +428,7 @@ nav {
   margin-top: 1rem;
 }
 
-.opportunity-list .item-checkbox,
-.opportunity-list .item-delete {
+.opportunity-list .item-checkbox {
   margin-top: 1.45rem;
 }
 
@@ -560,10 +569,23 @@ nav {
   width: 100%;
 }
 
+.pitch-editor textarea:focus-visible {
+  border-color: #3264d6;
+  outline: none;
+}
+
 .pitch-actions {
   display: flex;
   align-items: center;
   gap: 1rem;
+}
+
+.workflow-action-approve button {
+  background: #247044;
+}
+
+.workflow-action-approve button:hover {
+  background: #1d5a37;
 }
 
 .pitch-actions p {
@@ -695,6 +717,9 @@ nav {
   gap: 0.5rem;
   color: #53606d;
   font-size: 0.8rem;
+}
+
+.topics {
   text-transform: capitalize;
 }
 

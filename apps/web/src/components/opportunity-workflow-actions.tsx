@@ -57,7 +57,7 @@ export function OpportunityWorkflowActions({
   if (!action && status !== "sending") return null;
 
   return (
-    <div className="workflow-action">
+    <div className={`workflow-action workflow-action-${action ?? "pending"}`}>
       <button
         type="button"
         onClick={runAction}

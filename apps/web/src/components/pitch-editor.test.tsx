@@ -28,6 +28,7 @@ describe("PitchEditor", () => {
         opportunityId="opportunity-1"
         initialContent="Generated draft"
         generationError={null}
+        actions={<button type="button">Approve pitch</button>}
       />,
     );
 
@@ -47,5 +48,6 @@ describe("PitchEditor", () => {
       }),
     );
     expect(refresh).toHaveBeenCalledOnce();
+    expect(screen.getByRole("button", { name: "Approve pitch" })).toBeVisible();
   });
 });
