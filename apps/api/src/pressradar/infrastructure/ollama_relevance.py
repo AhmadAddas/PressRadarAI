@@ -14,7 +14,6 @@ class _OllamaResult(BaseModel):
 
     score: int = Field(ge=0, le=100)
     reason: str = Field(min_length=1, max_length=2_000)
-    matched_topics: list[str] = Field(min_length=1, max_length=50)
 
 
 def _ollama_format_schema() -> dict[str, object]:
@@ -59,11 +58,10 @@ class OllamaRelevanceAnalyzer:
             response.raise_for_status()
             envelope = response.json()
             result = _OllamaResult.model_validate_json(envelope["response"])
-            topics = tuple(dict.fromkeys(topic.strip() for topic in result.matched_topics))
             return RelevanceAnalysis(
                 score=result.score,
                 reason=result.reason.strip(),
-                matched_topics=topics,
+                matched_topics=matched_topics,
             )
         except (httpx.HTTPError, KeyError, TypeError, ValueError, ValidationError) as error:
             raise RelevanceAnalysisError("Ollama relevance analysis failed") from error
@@ -99,5 +97,5 @@ def _prompt(client: Client, media_item: MediaItem, matched_topics: tuple[str, ..
         "Use only the known client facts. Never invent credentials, customers, funding, "
         "experience, statistics, or quotes.\n\n"
         "OUTPUT REQUIREMENTS\nReturn only JSON matching the provided schema with a 0-100 "
-        "score, a concise factual reason, and matched_topics grounded in the supplied data."
+        "score and a concise factual reason. PressRadar retains the supplied candidate topics."
     )

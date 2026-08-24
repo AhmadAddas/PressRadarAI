@@ -114,7 +114,7 @@ def test_ollama_analyzer_validates_structured_response(
             json={
                 "response": (
                     '{"score":94,"reason":"The request matches the known Dubai AI '
-                    'governance expertise.","matched_topics":["AI governance","Dubai"]}'
+                    'governance expertise."}'
                 )
             },
         )
@@ -133,11 +133,11 @@ def test_ollama_analyzer_validates_structured_response(
     assert payload["model"] == "test-model"
     response_schema = payload["format"]
     assert isinstance(response_schema, dict)
-    assert response_schema["required"] == ["score", "reason", "matched_topics"]
+    assert response_schema["required"] == ["score", "reason"]
     properties = response_schema["properties"]
     assert isinstance(properties, dict)
     assert "maxLength" not in properties["reason"]
-    assert "maxItems" not in properties["matched_topics"]
+    assert "matched_topics" not in properties
     assert "KNOWN CLIENT FACTS" in str(payload["prompt"])
     assert "MEDIA OPPORTUNITY" in str(payload["prompt"])
 
@@ -149,7 +149,7 @@ def test_ollama_analyzer_rejects_invalid_provider_output(
         return httpx.Response(
             200,
             request=httpx.Request("POST", url),
-            json={"response": '{"score":101,"reason":"Invalid","matched_topics":[]}'},
+            json={"response": '{"score":101,"reason":"Invalid"}'},
         )
 
     monkeypatch.setattr(httpx, "post", post)
