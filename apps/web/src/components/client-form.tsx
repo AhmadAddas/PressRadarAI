@@ -105,6 +105,8 @@ export function ClientForm({ client }: Readonly<{ client?: Client }>) {
           type="url"
           value={client?.website}
           autoUrl
+          pattern="https?://([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}(:[0-9]{1,5})?([/?#].*)?"
+          placeholder="https://example.com"
         />
         <TextField
           label="Email"

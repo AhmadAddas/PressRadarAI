@@ -1,3 +1,4 @@
+import re
 from collections.abc import Callable
 from typing import Annotated
 
@@ -55,6 +56,19 @@ class ClientRequest(BaseModel):
             return None
         normalized = value.strip()
         return normalized or None
+
+    @field_validator("website")
+    @classmethod
+    def validate_website_domain(cls, value: AnyHttpUrl | None) -> AnyHttpUrl | None:
+        if value is None:
+            return None
+        host = value.host or ""
+        if not re.fullmatch(
+            r"(?=.{1,253}\Z)(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}",
+            host,
+        ):
+            raise ValueError("Website must use a valid domain name")
+        return value
 
     def details(self) -> ClientDetails:
         return ClientDetails(

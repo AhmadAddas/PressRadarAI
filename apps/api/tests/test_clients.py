@@ -117,6 +117,15 @@ async def test_client_input_rejects_invalid_urls_and_blank_rules(tmp_path: Path)
     assert response.status_code == 422
 
 
+async def test_client_input_rejects_url_without_valid_domain(tmp_path: Path) -> None:
+    payload = client_payload() | {"website": "https://localhost"}
+    async with create_test_client(tmp_path / "invalid-domain.db") as client:
+        await sign_up(client, "owner@example.com")
+        response = await client.post("/clients", json=payload)
+
+    assert response.status_code == 422
+
+
 async def test_client_input_rejects_invalid_contact_details(tmp_path: Path) -> None:
     payload = client_payload() | {"email": "not-email", "phone": "050 123 4567"}
     async with create_test_client(tmp_path / "invalid-contact.db") as client:

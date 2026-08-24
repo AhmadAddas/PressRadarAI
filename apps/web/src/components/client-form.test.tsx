@@ -172,4 +172,13 @@ describe("ClientForm", () => {
       expect.stringContaining("button-secondary"),
     );
   });
+
+  it("requires a website with a valid domain name", () => {
+    render(<ClientForm />);
+    const website = screen.getByLabelText("Website");
+
+    fireEvent.change(website, { target: { value: "https://localhost" } });
+
+    expect(website).toBeInvalid();
+  });
 });
