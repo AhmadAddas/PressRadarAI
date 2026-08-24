@@ -78,8 +78,8 @@ describe("LocalAIMenu", () => {
       screen.getByText(/No Ollama models are installed yet/),
     ).toBeVisible();
     expect(
-      screen.getByRole("button", { name: "Activate Local AI" }),
-    ).toBeDisabled();
+      screen.queryByRole("button", { name: "Deactivate Local AI" }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText("Active model license")).not.toBeInTheDocument();
     expect(
       screen.queryByText("Community license summary."),
@@ -109,6 +109,15 @@ describe("LocalAIMenu", () => {
       )
       .mockResolvedValueOnce(
         new Response(
+          '{"completed":50,"total":100}\n{"status":"success","completed":100,"total":100}\n{"done":true}\n',
+          {
+            status: 200,
+            headers: { "Content-Type": "application/x-ndjson" },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
           JSON.stringify({ ...status, model: "qwen2.5:0.5b-instruct" }),
           { status: 200, headers: { "Content-Type": "application/json" } },
         ),
@@ -117,9 +126,9 @@ describe("LocalAIMenu", () => {
     fireEvent.click(screen.getByRole("button", { name: "Local AI" }));
     await act(async () => Promise.resolve());
     expect(screen.getByText("Active local AI")).toBeVisible();
-    fireEvent.change(screen.getByRole("combobox", { name: "Ollama model" }), {
-      target: { value: "custom" },
-    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Clone another model" }),
+    );
     fireEvent.submit(
       screen
         .getByRole("button", {
@@ -138,13 +147,13 @@ describe("LocalAIMenu", () => {
     fireEvent.click(screen.getByRole("button", { name: "Clone and activate" }));
     await act(async () => Promise.resolve());
 
-    expect(request).toHaveBeenLastCalledWith(
-      expect.stringContaining("/local-ai/models"),
+    expect(request.mock.calls).toContainEqual([
+      expect.stringContaining("/local-ai/models/stream"),
       expect.objectContaining({
         method: "POST",
         body: expect.stringContaining('"activate":true'),
       }),
-    );
+    ]);
     expect(toast.success).toHaveBeenCalledWith(
       "qwen2.5:0.5b-instruct is active.",
     );
@@ -152,9 +161,11 @@ describe("LocalAIMenu", () => {
 
   it("can clone the selected model without activating it", async () => {
     vi.useFakeTimers();
-    let resolvePull!: (response: Response) => void;
-    const pendingPull = new Promise<Response>((resolve) => {
-      resolvePull = resolve;
+    let streamController!: ReadableStreamDefaultController<Uint8Array>;
+    const pullStream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        streamController = controller;
+      },
     });
     const request = vi
       .spyOn(globalThis, "fetch")
@@ -175,20 +186,24 @@ describe("LocalAIMenu", () => {
           { status: 200, headers: { "Content-Type": "application/json" } },
         ),
       )
-      .mockReturnValueOnce(pendingPull);
-    const completedPull = new Response(
-      JSON.stringify({ ...status, enabled: false }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      },
-    );
+      .mockResolvedValueOnce(
+        new Response(pullStream, {
+          status: 200,
+          headers: { "Content-Type": "application/x-ndjson" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ ...status, enabled: false }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
     render(<LocalAIMenu />);
     fireEvent.click(screen.getByRole("button", { name: "Local AI" }));
     await act(async () => Promise.resolve());
-    fireEvent.change(screen.getByRole("combobox", { name: "Ollama model" }), {
-      target: { value: "custom" },
-    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Clone another model" }),
+    );
     fireEvent.submit(
       screen
         .getByRole("button", {
@@ -207,18 +222,69 @@ describe("LocalAIMenu", () => {
         name: "Downloading qwen2.5:0.5b-instruct",
       }),
     ).toBeVisible();
-    await act(async () => resolvePull(completedPull));
+    await act(async () => {
+      streamController.enqueue(
+        new TextEncoder().encode('{"completed":50,"total":100}\n'),
+      );
+    });
+    expect(screen.getByRole("progressbar")).toHaveValue(50);
+    await act(async () => {
+      streamController.enqueue(
+        new TextEncoder().encode(
+          '{"status":"success","completed":100,"total":100}\n{"done":true}\n',
+        ),
+      );
+      streamController.close();
+    });
 
-    expect(request).toHaveBeenLastCalledWith(
-      expect.stringContaining("/local-ai/models"),
+    expect(request.mock.calls).toContainEqual([
+      expect.stringContaining("/local-ai/models/stream"),
       expect.objectContaining({
         method: "POST",
         body: expect.stringContaining('"activate":false'),
       }),
-    );
+    ]);
     expect(toast.success).toHaveBeenCalledWith(
       "qwen2.5:0.5b-instruct was cloned and remains inactive.",
     );
+  });
+
+  it("confirms before deleting an installed model", async () => {
+    const request = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(status), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            ...status,
+            enabled: false,
+            model_available: false,
+            installed_models: [],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      );
+    render(<LocalAIMenu />);
+    fireEvent.click(screen.getByRole("button", { name: "Local AI" }));
+    await screen.findByText("Active local AI");
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete selected" }));
+    expect(screen.getByRole("alertdialog")).toHaveTextContent(
+      "Delete llama3.2:3b?",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Delete model" }));
+
+    await act(async () => Promise.resolve());
+    expect(request).toHaveBeenLastCalledWith(
+      expect.stringContaining("/local-ai/models?model=llama3.2%3A3b"),
+      expect.objectContaining({ method: "DELETE" }),
+    );
+    expect(toast.success).toHaveBeenCalledWith("llama3.2:3b was deleted.");
   });
 
   it("offers an internet-search recommendation for an unknown license", async () => {

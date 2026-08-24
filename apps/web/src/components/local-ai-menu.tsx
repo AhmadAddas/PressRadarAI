@@ -15,6 +15,8 @@ export function LocalAIMenu() {
   const [countdown, setCountdown] = useState(0);
   const [working, setWorking] = useState(false);
   const [pulling, setPulling] = useState(false);
+  const [pullProgress, setPullProgress] = useState(0);
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const modelActive = Boolean(
     status?.enabled && status.reachable && status.model_available,
@@ -112,8 +114,9 @@ export function LocalAIMenu() {
     if (!license || countdown > 0) return;
     setWorking(true);
     setPulling(true);
+    setPullProgress(0);
     try {
-      const response = await fetch(`${publicApiUrl}/local-ai/models`, {
+      const response = await fetch(`${publicApiUrl}/local-ai/models/stream`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -129,7 +132,32 @@ export function LocalAIMenu() {
         );
         return;
       }
-      setStatus((await response.json()) as LocalAIStatus);
+      const streamError = await readPullProgress(
+        response,
+        (completed, total) => {
+          if (total > 0) {
+            const percentage = Math.min(
+              100,
+              Math.round((completed / total) * 100),
+            );
+            setPullProgress((current) => Math.max(current, percentage));
+          }
+        },
+      );
+      if (streamError) {
+        toast.error(streamError);
+        return;
+      }
+      const statusResponse = await fetch(`${publicApiUrl}/local-ai`, {
+        credentials: "include",
+      });
+      if (!statusResponse.ok) {
+        toast.error(
+          "The model was cloned, but its updated status is unavailable.",
+        );
+        return;
+      }
+      setStatus((await statusResponse.json()) as LocalAIStatus);
       setLicense(null);
       toast.success(
         activate
@@ -140,6 +168,57 @@ export function LocalAIMenu() {
       toast.error("PressRadar cannot reach the local AI service.");
     } finally {
       setPulling(false);
+      setWorking(false);
+    }
+  }
+
+  async function activateSelected() {
+    if (!status || modelChoice === "custom") return;
+    setWorking(true);
+    try {
+      const response = await fetch(`${publicApiUrl}/local-ai/models/active`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: modelChoice }),
+      });
+      if (!response.ok) {
+        toast.error(
+          await errorMessage(response, "Unable to activate this model."),
+        );
+        return;
+      }
+      setStatus((await response.json()) as LocalAIStatus);
+      toast.success(`${modelChoice} is active.`);
+    } catch {
+      toast.error("PressRadar cannot reach the local AI service.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function deleteSelected() {
+    if (!pendingDelete) return;
+    setWorking(true);
+    try {
+      const response = await fetch(
+        `${publicApiUrl}/local-ai/models?model=${encodeURIComponent(pendingDelete)}`,
+        { method: "DELETE", credentials: "include" },
+      );
+      if (!response.ok) {
+        toast.error(
+          await errorMessage(response, "Unable to delete this model."),
+        );
+        return;
+      }
+      const result = (await response.json()) as LocalAIStatus;
+      setStatus(result);
+      setModelChoice(result.installed_models[0] ?? "custom");
+      setPendingDelete(null);
+      toast.success(`${pendingDelete} was deleted.`);
+    } catch {
+      toast.error("PressRadar cannot reach the local AI service.");
+    } finally {
       setWorking(false);
     }
   }
@@ -236,7 +315,6 @@ export function LocalAIMenu() {
                       {installedModel}
                     </option>
                   ))}
-                  <option value="custom">Clone another Ollama model…</option>
                 </select>
               </label>
             ) : status ? (
@@ -245,20 +323,70 @@ export function LocalAIMenu() {
                 check its license and clone it.
               </p>
             ) : null}
+            {status?.installed_models.length ? (
+              <div className="local-ai-model-actions">
+                <button
+                  className="button-secondary"
+                  type="button"
+                  onClick={activateSelected}
+                  disabled={
+                    working || (modelActive && status.model === modelChoice)
+                  }
+                >
+                  {modelActive && status.model === modelChoice
+                    ? "Active model"
+                    : "Activate selected"}
+                </button>
+                <button
+                  className="button-danger"
+                  type="button"
+                  onClick={() => setPendingDelete(modelChoice)}
+                  disabled={working}
+                >
+                  Delete selected
+                </button>
+              </div>
+            ) : null}
+            {modelChoice !== "custom" ? (
+              <button
+                className="button-secondary"
+                type="button"
+                onClick={() => {
+                  setModelChoice("custom");
+                  setLicense(null);
+                }}
+              >
+                Clone another model
+              </button>
+            ) : null}
             {modelChoice === "custom" ? (
-              <label>
-                Custom Ollama model name
-                <input
-                  value={customModel}
-                  onChange={(event) => {
-                    setCustomModel(event.target.value);
-                    setLicense(null);
-                  }}
-                  placeholder="model:tag"
-                  required
-                  maxLength={200}
-                />
-              </label>
+              <>
+                <label>
+                  Custom Ollama model name
+                  <input
+                    value={customModel}
+                    onChange={(event) => {
+                      setCustomModel(event.target.value);
+                      setLicense(null);
+                    }}
+                    placeholder="model:tag"
+                    required
+                    maxLength={200}
+                  />
+                </label>
+                {status?.installed_models.length ? (
+                  <button
+                    className="button-secondary"
+                    type="button"
+                    onClick={() => {
+                      setModelChoice(status.installed_models[0]);
+                      setLicense(null);
+                    }}
+                  >
+                    Use installed model
+                  </button>
+                ) : null}
+              </>
             ) : null}
             <button
               className="button-secondary"
@@ -299,21 +427,57 @@ export function LocalAIMenu() {
               </div>
               {pulling ? (
                 <div className="local-ai-pull-progress" role="status">
-                  <progress aria-label={`Downloading ${model}`} />
-                  <small>Downloading {model}. Keep this page open.</small>
+                  <progress
+                    aria-label={`Downloading ${model}`}
+                    max="100"
+                    value={pullProgress}
+                  />
+                  <small>
+                    Downloading {model}: {pullProgress}%. Keep this page open.
+                  </small>
                 </div>
               ) : null}
             </div>
           ) : null}
-          {status ? (
+          {status && modelActive ? (
             <button
-              className={`${status.enabled ? "button-danger" : "button-secondary"} ${!status.enabled && !status.model_available ? "is-blocked" : ""}`}
+              className="button-danger"
               type="button"
-              onClick={() => setActive(!status.enabled)}
-              disabled={working || (!status.enabled && !status.model_available)}
+              onClick={() => setActive(false)}
+              disabled={working}
             >
-              {status.enabled ? "Deactivate Local AI" : "Activate Local AI"}
+              Deactivate Local AI
             </button>
+          ) : null}
+          {pendingDelete ? (
+            <div
+              className="confirmation-modal"
+              role="alertdialog"
+              aria-modal="true"
+            >
+              <p>
+                Delete {pendingDelete}? Ollama will remove its downloaded files
+                and you will need to clone it again to use it.
+              </p>
+              <div className="actions">
+                <button
+                  className="button-secondary"
+                  type="button"
+                  onClick={() => setPendingDelete(null)}
+                  disabled={working}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="button-danger"
+                  type="button"
+                  onClick={deleteSelected}
+                  disabled={working}
+                >
+                  Delete model
+                </button>
+              </div>
+            </div>
           ) : null}
         </section>
       ) : null}
@@ -363,5 +527,34 @@ async function errorMessage(
     return payload.detail || fallback;
   } catch {
     return fallback;
+  }
+}
+
+async function readPullProgress(
+  response: Response,
+  onProgress: (completed: number, total: number) => void,
+): Promise<string | null> {
+  if (!response.body) return "Ollama did not provide download progress.";
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    buffer += decoder.decode(value, { stream: !done });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      if (!line) continue;
+      const event = JSON.parse(line) as {
+        completed?: number;
+        total?: number;
+        error?: string;
+      };
+      if (event.error) return event.error;
+      if (event.completed !== undefined && event.total !== undefined) {
+        onProgress(event.completed, event.total);
+      }
+    }
+    if (done) return null;
   }
 }

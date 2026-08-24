@@ -462,6 +462,12 @@ nav {
   gap: 0.75rem;
 }
 
+.local-ai-model-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
 .local-ai-pull-progress {
   display: grid;
   gap: 0.35rem;
