@@ -35,7 +35,7 @@ describe("ClientForm", () => {
     render(<ClientForm />);
 
     fireEvent.change(screen.getByLabelText("Client name"), {
-      target: { value: "Dr. Amina Noor" },
+      target: { value: "dr. Amina Noor" },
     });
     fireEvent.change(screen.getByLabelText("Company"), {
       target: { value: "Nexa AI" },
@@ -65,6 +65,7 @@ describe("ClientForm", () => {
     );
     expect(JSON.parse(String(options?.body))).toEqual(
       expect.objectContaining({
+        name: "Dr. Amina Noor",
         keywords: ["Nexa AI", "AI regulation"],
         website: "https://nexa.example.com",
         monitoring_rules: ["Dubai AI startup", "UAE AI regulation"],
@@ -88,7 +89,7 @@ describe("ClientForm", () => {
 
     expect(request).not.toHaveBeenCalled();
     expect(screen.getByRole("alertdialog")).toHaveTextContent(
-      "company, website, expertise and monitoring rules will be empty",
+      "Company, Website, Expertise and Monitoring rules will be empty",
     );
     expect(
       screen.getByRole("button", { name: "Confirm in 5s" }),

@@ -29,7 +29,7 @@ export function ClientForm({ client }: Readonly<{ client?: Client }>) {
     setError("");
     const form = new FormData(event.currentTarget);
     const body: ClientPayload = {
-      name: String(form.get("name") ?? "").trim(),
+      name: capitalizeFirst(String(form.get("name") ?? "").trim()),
       company: optional(form.get("company")),
       website: website(form.get("website")),
       industry: optional(form.get("industry")),
@@ -262,10 +262,10 @@ function website(value: FormDataEntryValue | string | null): string | null {
 
 function importantMissingFields(body: ClientPayload): string[] {
   return [
-    ["company", body.company],
-    ["website", body.website],
-    ["expertise", body.expertise.length],
-    ["monitoring rules", body.monitoring_rules.length],
+    ["Company", body.company],
+    ["Website", body.website],
+    ["Expertise", body.expertise.length],
+    ["Monitoring rules", body.monitoring_rules.length],
   ]
     .filter(([, value]) => !value)
     .map(([label]) => String(label));
@@ -291,6 +291,10 @@ function TextArea({ label, name, value }: FieldProps) {
 function optional(value: FormDataEntryValue | null): string | null {
   const text = typeof value === "string" ? value.trim() : "";
   return text || null;
+}
+
+function capitalizeFirst(value: string): string {
+  return value ? `${value.charAt(0).toUpperCase()}${value.slice(1)}` : value;
 }
 
 function commaList(value: FormDataEntryValue | null): string[] {
