@@ -22,10 +22,14 @@ docker compose up --build
 
 Open the web application at <http://localhost:3000>. The API health endpoint is available at <http://localhost:8000/health> and interactive API documentation at <http://localhost:8000/docs>.
 
+Docker Compose runs Ollama internally and stores downloaded models in the
+`ollama-data` volume. The first model download can take several minutes.
+
 Stop the services with `docker compose down`.
 
-Local accounts, workspaces, and sessions are stored in the `api-data` Docker volume. Use
-`docker compose down --volumes` only when you intentionally want to remove local application data.
+Local accounts, workspaces, and sessions are stored in the `api-data` Docker volume. Downloaded
+models are stored in `ollama-data`. Use `docker compose down --volumes` only when you intentionally
+want to remove both local application data and downloaded models.
 
 ## Validate
 

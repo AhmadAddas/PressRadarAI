@@ -28,17 +28,28 @@ services:
       HUBSPOT_ACCESS_TOKEN: ${HUBSPOT_ACCESS_TOKEN:-}
       NEWSAPI_API_KEY: ${NEWSAPI_API_KEY:-}
       EXTERNAL_PROVIDER_TIMEOUT_SECONDS: ${EXTERNAL_PROVIDER_TIMEOUT_SECONDS:-10}
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2:3b}
       OLLAMA_TIMEOUT_SECONDS: ${OLLAMA_TIMEOUT_SECONDS:-30}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    depends_on:
+      ollama:
+        condition: service_healthy
     ports:
       - "8000:8000"
     volumes:
       - ./apps/api/src:/app/src
       - ./apps/api/tests:/app/tests
       - api-data:/data
+
+  ollama:
+    image: ollama/ollama:0.32.15
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
 
   web:
     build:
@@ -64,3 +75,4 @@ services:
 
 volumes:
   api-data:
+  ollama-data:
