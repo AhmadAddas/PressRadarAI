@@ -52,6 +52,17 @@ async def test_create_list_and_view_client_with_monitoring_rules(tmp_path: Path)
     assert viewed.json() == created.json()
 
 
+async def test_client_can_be_created_with_only_a_name(tmp_path: Path) -> None:
+    async with create_test_client(tmp_path / "minimal-client.db") as client:
+        await sign_up(client, "minimal@example.com")
+        created = await client.post("/clients", json={"name": "Amina Noor"})
+
+    assert created.status_code == 201
+    assert created.json()["company"] == ""
+    assert created.json()["website"] is None
+    assert created.json()["monitoring_rules"] == []
+
+
 async def test_update_client_replaces_profile_and_monitoring_rules(tmp_path: Path) -> None:
     async with create_test_client(tmp_path / "clients.db") as client:
         await sign_up(client, "owner@example.com")

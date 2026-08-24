@@ -16,7 +16,7 @@ ListItem = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1,
 
 class ClientRequest(BaseModel):
     name: RequiredText
-    company: RequiredText
+    company: str | None = Field(default=None, max_length=200)
     website: AnyHttpUrl | None = None
     industry: str | None = Field(default=None, max_length=100)
     description: str | None = Field(default=None, max_length=2000)
@@ -32,6 +32,7 @@ class ClientRequest(BaseModel):
 
     @field_validator(
         "industry",
+        "company",
         "description",
         "location",
         "spokesperson_name",
@@ -48,7 +49,7 @@ class ClientRequest(BaseModel):
     def details(self) -> ClientDetails:
         return ClientDetails(
             name=self.name,
-            company=self.company,
+            company=self.company or "",
             website=None if self.website is None else str(self.website),
             industry=self.industry,
             description=self.description,
