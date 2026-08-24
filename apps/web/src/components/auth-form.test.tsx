@@ -65,4 +65,25 @@ describe("AuthForm", () => {
       "Invalid email or password",
     );
   });
+
+  it("rejects a first name longer than 25 characters before submission", () => {
+    const request = vi.spyOn(globalThis, "fetch");
+    render(<AuthForm mode="signup" />);
+
+    fireEvent.change(screen.getByLabelText("Name"), {
+      target: { value: `${"A".repeat(26)} Noor` },
+    });
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "amina@example.com" },
+    });
+    fireEvent.change(screen.getByLabelText("Password"), {
+      target: { value: "secure-passphrase" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "First name must be 25 characters or fewer.",
+    );
+    expect(request).not.toHaveBeenCalled();
+  });
 });

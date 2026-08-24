@@ -21,6 +21,16 @@ export function AuthForm({ mode }: Readonly<{ mode: AuthMode }>) {
     const body = Object.fromEntries(
       new FormData(event.currentTarget).entries(),
     );
+    if (
+      isSignup &&
+      String(body.name ?? "")
+        .trim()
+        .split(/\s+/, 1)[0].length > 25
+    ) {
+      setError("First name must be 25 characters or fewer.");
+      setSubmitting(false);
+      return;
+    }
     try {
       const response = await fetch(`${publicApiUrl}/auth/${mode}`, {
         method: "POST",

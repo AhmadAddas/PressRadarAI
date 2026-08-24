@@ -116,3 +116,29 @@ async def test_signup_validates_email_name_and_password(tmp_path: Path) -> None:
         )
 
     assert response.status_code == 422
+
+
+async def test_signup_limits_only_the_first_name_to_25_characters(tmp_path: Path) -> None:
+    async with create_test_client(tmp_path / "auth.db") as client:
+        accepted = await client.post(
+            "/auth/signup",
+            json={
+                "email": "long-full-name@example.com",
+                "name": "Amina " + "Al Noor " * 8,
+                "password": "secure-passphrase",
+            },
+        )
+        rejected = await client.post(
+            "/auth/signup",
+            json={
+                "email": "long-first-name@example.com",
+                "name": "A" * 26 + " Noor",
+                "password": "secure-passphrase",
+            },
+        )
+
+    assert accepted.status_code == 201
+    assert rejected.status_code == 422
+    assert rejected.json()["detail"][0]["msg"] == (
+        "Value error, First name must be 25 characters or fewer"
+    )

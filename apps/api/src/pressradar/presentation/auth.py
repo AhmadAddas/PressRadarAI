@@ -2,7 +2,7 @@ from collections.abc import Callable
 from typing import Annotated
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
-from pydantic import BaseModel, EmailStr, Field, StringConstraints
+from pydantic import BaseModel, EmailStr, Field, StringConstraints, field_validator
 
 from pressradar.application.auth import (
     AuthService,
@@ -20,6 +20,13 @@ class SignUpRequest(BaseModel):
     email: EmailStr
     name: DisplayName
     password: str = Field(min_length=12, max_length=128)
+
+    @field_validator("name")
+    @classmethod
+    def validate_first_name(cls, value: str) -> str:
+        if len(value.split(maxsplit=1)[0]) > 25:
+            raise ValueError("First name must be 25 characters or fewer")
+        return value
 
 
 class SignInRequest(BaseModel):

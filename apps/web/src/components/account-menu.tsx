@@ -47,7 +47,7 @@ export function AccountMenu({ name, email }: Readonly<AccountMenuProps>) {
         <span className="avatar" aria-hidden="true">
           {initials(name)}
         </span>
-        <span className="account-name">{name}</span>
+        <span className="account-name">{firstName(name)}</span>
       </summary>
       <div className="account-popover">
         <div className="account-identity">
@@ -70,4 +70,8 @@ function initials(name: string): string {
     .slice(0, 2)
     .map((part) => part.charAt(0).toUpperCase())
     .join("");
+}
+
+function firstName(name: string): string {
+  return name.trim().split(/\s+/, 1)[0] ?? name;
 }
