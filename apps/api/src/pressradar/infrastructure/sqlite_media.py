@@ -85,9 +85,36 @@ class SQLiteMediaRepository:
 
     def ingest(self, *, workspace_id: str, items: tuple[IncomingMediaItem, ...]) -> IngestionResult:
         created = 0
+        restored = 0
         ingested_at = datetime.now(UTC).isoformat()
         with self._connect() as connection:
             for item in items:
+                dedupe_key = MediaIngestionService.dedupe_key(item)
+                restore = connection.execute(
+                    """UPDATE media_items SET deleted_at = NULL, source = ?, source_type = ?,
+                        author = ?, journalist = ?, headline = ?, body = ?, url = ?,
+                        published_at = ?, deadline = ?, topics = ?, external_id = ?, ingested_at = ?
+                    WHERE workspace_id = ? AND dedupe_key = ? AND deleted_at IS NOT NULL""",
+                    (
+                        item.source,
+                        item.source_type.value,
+                        item.author,
+                        item.journalist,
+                        item.headline,
+                        item.body,
+                        item.url,
+                        item.published_at.isoformat(),
+                        None if item.deadline is None else item.deadline.isoformat(),
+                        json.dumps(item.topics),
+                        item.external_id,
+                        ingested_at,
+                        workspace_id,
+                        dedupe_key,
+                    ),
+                )
+                if restore.rowcount:
+                    restored += 1
+                    continue
                 cursor = connection.execute(
                     """INSERT OR IGNORE INTO media_items (
                         id, workspace_id, source, source_type, author, journalist,
@@ -108,12 +135,16 @@ class SQLiteMediaRepository:
                         None if item.deadline is None else item.deadline.isoformat(),
                         json.dumps(item.topics),
                         item.external_id,
-                        MediaIngestionService.dedupe_key(item),
+                        dedupe_key,
                         ingested_at,
                     ),
                 )
                 created += cursor.rowcount
-        return IngestionResult(created=created, duplicates=len(items) - created)
+        return IngestionResult(
+            created=created,
+            restored=restored,
+            duplicates=len(items) - created - restored,
+        )
 
     def list(self, *, workspace_id: str, limit: int) -> list[MediaItem]:
         with self._connect() as connection:

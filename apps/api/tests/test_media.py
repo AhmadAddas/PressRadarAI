@@ -38,12 +38,27 @@ async def test_simulated_ingestion_is_deterministic_and_deduplicated(tmp_path: P
         second = await client.post("/media/ingest")
         media = await client.get("/media")
 
-    assert first.json() == {"created": 3, "duplicates": 0}
-    assert second.json() == {"created": 0, "duplicates": 3}
+    assert first.json() == {"created": 3, "restored": 0, "duplicates": 0}
+    assert second.json() == {"created": 0, "restored": 0, "duplicates": 3}
     assert len(media.json()) == 3
     urgent = next(item for item in media.json() if item["source_type"] == "journalist_request")
     assert urgent["deadline"] is not None
     assert "AI governance" in urgent["topics"]
+
+
+async def test_deleted_media_is_restored_by_the_next_ingestion(tmp_path: Path) -> None:
+    async with create_test_client(tmp_path / "restore-media.db") as client:
+        await sign_up(client)
+        await client.post("/media/ingest")
+        original = (await client.get("/media")).json()
+        deleted_id = original[0]["id"]
+        assert (await client.delete(f"/media/{deleted_id}")).status_code == 204
+
+        result = await client.post("/media/ingest")
+        restored = (await client.get("/media")).json()
+
+    assert result.json() == {"created": 0, "restored": 1, "duplicates": 2}
+    assert {item["id"] for item in restored} == {item["id"] for item in original}
 
 
 async def test_media_routes_require_authentication(tmp_path: Path) -> None:

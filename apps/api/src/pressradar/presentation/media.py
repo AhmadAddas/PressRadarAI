@@ -39,6 +39,7 @@ class MediaItemResponse(BaseModel):
 
 class IngestionResponse(BaseModel):
     created: int
+    restored: int
     duplicates: int
 
 

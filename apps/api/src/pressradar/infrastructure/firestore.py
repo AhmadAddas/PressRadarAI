@@ -178,6 +178,7 @@ class FirestoreRepository:
 
     def ingest(self, *, workspace_id: str, items: tuple[IncomingMediaItem, ...]) -> IngestionResult:
         created = 0
+        restored = 0
         for item in items:
             dedupe_key = MediaIngestionService.dedupe_key(item)
             reference = self._db.collection("media_items").document(
@@ -203,8 +204,31 @@ class FirestoreRepository:
                 )
                 created += 1
             except AlreadyExists:
-                pass
-        return IngestionResult(created=created, duplicates=len(items) - created)
+                document = reference.get()
+                if document.get("deleted_at") is not None:
+                    reference.update(
+                        {
+                            "source": item.source,
+                            "source_type": item.source_type.value,
+                            "author": item.author,
+                            "journalist": item.journalist,
+                            "headline": item.headline,
+                            "body": item.body,
+                            "url": item.url,
+                            "published_at": item.published_at,
+                            "deadline": item.deadline,
+                            "topics": list(item.topics),
+                            "external_id": item.external_id,
+                            "ingested_at": datetime.now(UTC),
+                            "deleted_at": None,
+                        }
+                    )
+                    restored += 1
+        return IngestionResult(
+            created=created,
+            restored=restored,
+            duplicates=len(items) - created - restored,
+        )
 
     def list_media(self, *, workspace_id: str, limit: int) -> list[MediaItem]:
         items = [

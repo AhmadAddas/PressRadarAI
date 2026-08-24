@@ -114,7 +114,7 @@ async def test_prod_ingestion_uses_configured_sources_and_requires_provider_key(
         )
         missing_key = await client.post("/media/ingest")
 
-    assert empty.json() == {"created": 0, "duplicates": 0}
+    assert empty.json() == {"created": 0, "restored": 0, "duplicates": 0}
     assert missing_key.status_code == 409
     assert missing_key.json() == {"detail": "NEWSAPI_API_KEY is required for NewsAPI"}
 
@@ -162,18 +162,18 @@ async def test_newsapi_adapter_ingests_uae_articles(
         ingestion = await client.post("/media/ingest")
         media = await client.get("/media")
 
-    assert ingestion.json() == {"created": 1, "duplicates": 0}
+    assert ingestion.json() == {"created": 1, "restored": 0, "duplicates": 0}
     assert media.json()[0]["headline"] == "UAE technology companies expand"
     assert [request[0] for request in requests] == [
         "https://newsapi.org/v2/top-headlines",
         "https://newsapi.org/v2/everything",
     ]
-    assert requests[0][1]["params"] == {"country": "ae", "pageSize": 100}
+    assert requests[0][1]["params"] == {"country": "ae", "pageSize": 25}
     assert requests[1][1]["params"] == {
         "q": '"United Arab Emirates" OR UAE OR Dubai OR "Abu Dhabi"',
         "language": "en",
         "sortBy": "publishedAt",
-        "pageSize": 100,
+        "pageSize": 25,
     }
     assert requests[1][1]["headers"] == {"X-Api-Key": "test-key"}
 
@@ -211,5 +211,50 @@ async def test_rss_adapter_ingests_public_feed(
         ingestion = await client.post("/media/ingest")
         media = await client.get("/media")
 
-    assert ingestion.json() == {"created": 1, "duplicates": 0}
+    assert ingestion.json() == {"created": 1, "restored": 0, "duplicates": 0}
     assert media.json()[0]["body"] == "A UAE startup raised new funding."
+
+
+async def test_production_ingestion_caps_each_source_and_the_total_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        socket,
+        "getaddrinfo",
+        lambda *args: [(2, 1, 6, "", ("93.184.216.34", 443))],
+    )
+    requests: list[str] = []
+
+    def rss_response(url: str, **kwargs: object) -> httpx.Response:
+        requests.append(url)
+        items = "".join(
+            f"""<item><title>Story {index}</title><description>UAE story {index}</description>
+            <guid>{url}-{index}</guid><pubDate>Sat, 22 Aug 2026 10:00:00 GMT</pubDate></item>"""
+            for index in range(30)
+        )
+        return httpx.Response(
+            200,
+            request=httpx.Request("GET", url),
+            content=f"<rss><channel>{items}</channel></rss>".encode(),
+        )
+
+    monkeypatch.setattr(httpx, "get", rss_response)
+    async with create_test_client(tmp_path / "bounded-ingestion.db") as client:
+        await sign_up(client)
+        for index in range(5):
+            created = await client.post(
+                "/media/sources",
+                json={
+                    "name": f"Feed {index}",
+                    "kind": "rss",
+                    "url": f"https://example.com/feed-{index}.xml",
+                },
+            )
+            assert created.status_code == 201
+
+        ingestion = await client.post("/media/ingest")
+        media = await client.get("/media", params={"limit": 100})
+
+    assert ingestion.json() == {"created": 100, "restored": 0, "duplicates": 0}
+    assert len(media.json()) == 100
+    assert len(requests) == 4

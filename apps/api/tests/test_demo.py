@@ -58,7 +58,7 @@ async def test_demo_setup_builds_ranked_workspace_and_is_idempotent(tmp_path: Pa
     assert len(clients.json()) == 3
     assert empty_media.json() == []
     assert empty_opportunities.json() == []
-    assert ingestion.json() == {"created": 3, "duplicates": 0}
+    assert ingestion.json() == {"created": 3, "restored": 0, "duplicates": 0}
     assert [item["client_name"] for item in opportunities.json()] == [
         "Nadia Rahman",
         "Samir Qureshi",

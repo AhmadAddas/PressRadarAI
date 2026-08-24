@@ -24,6 +24,10 @@ class MediaSourceConfigurationError(Exception):
     """Raised when a configured production source cannot be used safely."""
 
 
+MAX_ITEMS_PER_SOURCE = 25
+MAX_ITEMS_PER_INGESTION = 100
+
+
 class ConfiguredMediaIngestionService:
     def __init__(
         self,
@@ -41,14 +45,18 @@ class ConfiguredMediaIngestionService:
     def ingest(self, *, workspace_id: str) -> IngestionResult:
         items: list[IncomingMediaItem] = []
         for source in self._sources.list(workspace_id=workspace_id, kind=None):
+            remaining = MAX_ITEMS_PER_INGESTION - len(items)
+            if remaining <= 0:
+                break
+            source_limit = min(MAX_ITEMS_PER_SOURCE, remaining)
             if source.kind is MediaSourceKind.RSS:
-                items.extend(self._fetch_rss(source))
+                items.extend(self._fetch_rss(source, limit=source_limit))
             elif source.provider == "newsapi":
-                items.extend(self._fetch_newsapi(source))
+                items.extend(self._fetch_newsapi(source, limit=source_limit))
         normalized = tuple(MediaIngestionService.normalize(item) for item in items)
         return self._media.ingest(workspace_id=workspace_id, items=normalized)
 
-    def _fetch_rss(self, source: MediaSource) -> tuple[IncomingMediaItem, ...]:
+    def _fetch_rss(self, source: MediaSource, *, limit: int) -> tuple[IncomingMediaItem, ...]:
         if source.url is None:
             raise MediaSourceConfigurationError(f"{source.name} has no RSS URL")
         _require_public_https(source.url)
@@ -58,14 +66,14 @@ class ConfiguredMediaIngestionService:
             root = ElementTree.fromstring(response.content)
         except (httpx.HTTPError, ElementTree.ParseError) as error:
             raise MediaSourceConfigurationError(f"Unable to fetch {source.name}") from error
-        return tuple(_rss_item(source.name, item) for item in root.findall(".//item")[:100])
+        return tuple(_rss_item(source.name, item) for item in root.findall(".//item")[:limit])
 
-    def _fetch_newsapi(self, source: MediaSource) -> tuple[IncomingMediaItem, ...]:
+    def _fetch_newsapi(self, source: MediaSource, *, limit: int) -> tuple[IncomingMediaItem, ...]:
         if not self._newsapi_api_key:
             raise MediaSourceConfigurationError("NEWSAPI_API_KEY is required for NewsAPI")
         articles = self._request_newsapi(
             "https://newsapi.org/v2/top-headlines",
-            {"country": "ae", "pageSize": 100},
+            {"country": "ae", "pageSize": limit},
         )
         if not articles:
             articles = self._request_newsapi(
@@ -74,10 +82,10 @@ class ConfiguredMediaIngestionService:
                     "q": '"United Arab Emirates" OR UAE OR Dubai OR "Abu Dhabi"',
                     "language": "en",
                     "sortBy": "publishedAt",
-                    "pageSize": 100,
+                    "pageSize": limit,
                 },
             )
-        return tuple(_newsapi_item(source.name, article) for article in articles[:100])
+        return tuple(_newsapi_item(source.name, article) for article in articles[:limit])
 
     def _request_newsapi(self, url: str, params: dict[str, str | int]) -> list[object]:
         try:

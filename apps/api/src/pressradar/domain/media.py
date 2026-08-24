@@ -45,4 +45,5 @@ class MediaItem:
 @dataclass(frozen=True)
 class IngestionResult:
     created: int
+    restored: int
     duplicates: int
