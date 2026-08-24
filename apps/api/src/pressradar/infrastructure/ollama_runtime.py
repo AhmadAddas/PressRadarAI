@@ -58,6 +58,8 @@ class LocalAIStatus:
 class OllamaRuntime:
     """Switchable Ollama adapter for AI execution and model management."""
 
+    _TRANSLATION_BATCH_SIZE = 8
+
     def __init__(
         self,
         *,
@@ -113,6 +115,26 @@ class OllamaRuntime:
             if not self._enabled:
                 raise LocalAIError("Activate Local AI before translating")
             model = self._model
+        translations: list[str] = []
+        for offset in range(0, len(texts), self._TRANSLATION_BATCH_SIZE):
+            translations.extend(
+                self._translate_batch(
+                    texts=texts[offset : offset + self._TRANSLATION_BATCH_SIZE],
+                    language_code=language_code,
+                    language_name=language_name,
+                    model=model,
+                )
+            )
+        return tuple(translations)
+
+    def _translate_batch(
+        self,
+        *,
+        texts: tuple[str, ...],
+        language_code: str,
+        language_name: str,
+        model: str,
+    ) -> tuple[str, ...]:
         try:
             response = self._client.post(
                 f"{self._base_url}/api/generate",
@@ -120,6 +142,7 @@ class OllamaRuntime:
                     "model": model,
                     "stream": False,
                     "format": _TranslationResult.model_json_schema(),
+                    "options": {"temperature": 0},
                     "prompt": (
                         f"Translate each JSON string into {language_name} "
                         f"(locale {language_code}). Write every translation using the normal "
