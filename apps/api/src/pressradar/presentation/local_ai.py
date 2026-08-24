@@ -51,11 +51,21 @@ class PullModelRequest(ModelRequest):
 LanguageCode = Annotated[
     str, StringConstraints(pattern=r"^[a-z]{2,3}(?:-[A-Z]{2})?$", max_length=6)
 ]
+LanguageName = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        pattern=r"^[A-Za-z][A-Za-z ()-]*$",
+        min_length=2,
+        max_length=50,
+    ),
+]
 TranslationText = Annotated[str, StringConstraints(min_length=1, max_length=1_000)]
 
 
 class TranslationRequest(BaseModel):
     language_code: LanguageCode
+    language_name: LanguageName
     texts: list[TranslationText] = Field(min_length=1, max_length=100)
 
 
@@ -155,7 +165,9 @@ def create_local_ai_router(
     ) -> TranslationResponse:
         try:
             translations = runtime.translate(
-                texts=tuple(request.texts), language_code=request.language_code
+                texts=tuple(request.texts),
+                language_code=request.language_code,
+                language_name=request.language_name,
             )
         except LocalAIError as error:
             raise HTTPException(status_code=503, detail=str(error)) from error

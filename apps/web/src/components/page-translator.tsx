@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 import { languageEvent, languageStorageKey } from "@/components/language-menu";
 import { publicApiUrl } from "@/lib/api";
-import { languageByCode } from "@/lib/languages";
+import { languageByCode, translationLanguageName } from "@/lib/languages";
 
 export function PageTranslator({
   children,
@@ -47,7 +47,11 @@ export function PageTranslator({
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ language_code: language.code, texts }),
+          body: JSON.stringify({
+            language_code: language.code,
+            language_name: translationLanguageName(language),
+            texts,
+          }),
         });
         if (!response.ok) throw new Error();
         const result = (await response.json()) as { translations: string[] };

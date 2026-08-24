@@ -102,7 +102,13 @@ class OllamaRuntime:
             timeout_seconds=self._timeout_seconds,
         ).generate(client=client, media_item=media_item)
 
-    def translate(self, *, texts: tuple[str, ...], language_code: str) -> tuple[str, ...]:
+    def translate(
+        self,
+        *,
+        texts: tuple[str, ...],
+        language_code: str,
+        language_name: str,
+    ) -> tuple[str, ...]:
         with self._lock:
             if not self._enabled:
                 raise LocalAIError("Activate Local AI before translating")
@@ -115,8 +121,11 @@ class OllamaRuntime:
                     "stream": False,
                     "format": _TranslationResult.model_json_schema(),
                     "prompt": (
-                        f"Translate each JSON string into language code {language_code}. "
-                        "Preserve names, numbers, placeholders, punctuation, and item order. "
+                        f"Translate each JSON string into {language_name} "
+                        f"(locale {language_code}). Write every translation using the normal "
+                        f"writing system for {language_name}. Do not repeat English except "
+                        "names and brands that should remain unchanged. Preserve numbers, "
+                        "placeholders, punctuation, and item order. "
                         "Return only JSON matching the schema with exactly one translation per "
                         f"input. INPUT: {json.dumps(texts)}"
                     ),

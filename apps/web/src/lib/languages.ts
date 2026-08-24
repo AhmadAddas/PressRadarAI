@@ -3,6 +3,7 @@ export type Language = {
   name: string;
   flag: string;
   rtl?: boolean;
+  translationName?: string;
 };
 
 export const languages: Language[] = [
@@ -34,7 +35,12 @@ export const languages: Language[] = [
   { code: "hi", name: "हिन्दी · Hindi", flag: "🇮🇳" },
   { code: "hu", name: "Magyar · Hungarian", flag: "🇭🇺" },
   { code: "is", name: "Íslenska · Icelandic", flag: "🇮🇸" },
-  { code: "id", name: "Bahasa Indonesia", flag: "🇮🇩" },
+  {
+    code: "id",
+    name: "Bahasa Indonesia",
+    flag: "🇮🇩",
+    translationName: "Indonesian",
+  },
   { code: "ga", name: "Gaeilge · Irish", flag: "🇮🇪" },
   { code: "it", name: "Italiano · Italian", flag: "🇮🇹" },
   { code: "ja", name: "日本語 · Japanese", flag: "🇯🇵" },
@@ -45,7 +51,12 @@ export const languages: Language[] = [
   { code: "lo", name: "ລາວ · Lao", flag: "🇱🇦" },
   { code: "lv", name: "Latviešu · Latvian", flag: "🇱🇻" },
   { code: "lt", name: "Lietuvių · Lithuanian", flag: "🇱🇹" },
-  { code: "ms", name: "Bahasa Melayu", flag: "🇲🇾" },
+  {
+    code: "ms",
+    name: "Bahasa Melayu",
+    flag: "🇲🇾",
+    translationName: "Malay",
+  },
   { code: "ml", name: "മലയാളം · Malayalam", flag: "🇮🇳" },
   { code: "mr", name: "मराठी · Marathi", flag: "🇮🇳" },
   { code: "mn", name: "Монгол · Mongolian", flag: "🇲🇳" },
@@ -81,4 +92,8 @@ export function languageByCode(code: string): Language {
   return (
     languages.find((language) => language.code === code) ?? defaultLanguage
   );
+}
+
+export function translationLanguageName(language: Language): string {
+  return language.translationName ?? language.name.split(" · ").at(-1)!;
 }

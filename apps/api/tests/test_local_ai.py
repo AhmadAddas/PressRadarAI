@@ -47,7 +47,7 @@ def runtime_with_mock_provider() -> tuple[OllamaRuntime, list[httpx.Request]]:
         if request.url.path == "/api/generate":
             payload = json.loads(request.content)
             prompt = str(payload["prompt"])
-            assert "language code ar" in prompt
+            assert "into Arabic (locale ar)" in prompt
             return httpx.Response(
                 200,
                 json={"response": '{"translations":["لوحة الفرص","إضافة عميل"]}'},
@@ -225,6 +225,7 @@ async def test_local_ai_translates_an_ordered_text_batch(tmp_path: Path) -> None
             "/local-ai/translate",
             json={
                 "language_code": "ar",
+                "language_name": "Arabic",
                 "texts": ["Opportunity dashboard", "Add client"],
             },
         )

@@ -34,6 +34,11 @@ describe("PageTranslator", () => {
     await waitFor(() => expect(screen.getByText("لوحة الفرص")).toBeVisible());
     expect(document.documentElement).toHaveAttribute("dir", "rtl");
     expect(request).toHaveBeenCalledOnce();
+    expect(JSON.parse(String(request.mock.calls[0]?.[1]?.body))).toEqual({
+      language_code: "ar",
+      language_name: "Arabic",
+      texts: ["Opportunity dashboard"],
+    });
 
     act(() => {
       window.dispatchEvent(new CustomEvent(languageEvent, { detail: "en" }));
