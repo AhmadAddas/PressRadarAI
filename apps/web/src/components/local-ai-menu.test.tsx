@@ -11,6 +11,7 @@ vi.mock("sonner", () => ({
 const status = {
   enabled: true,
   reachable: true,
+  model_available: true,
   model: "llama3.2:3b",
   license: {
     name: "llama3.2",
@@ -44,10 +45,13 @@ describe("LocalAIMenu", () => {
 
   it("hides the active model license when Local AI is inactive", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ ...status, enabled: false }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+      new Response(
+        JSON.stringify({ ...status, enabled: false, model_available: false }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
     );
     render(<LocalAIMenu />);
 
@@ -58,6 +62,9 @@ describe("LocalAIMenu", () => {
       screen.getByText("Clone an Ollama model to activate Local AI."),
     ).toBeVisible();
     expect(screen.queryByText("llama3.2:3b")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Activate Local AI" }),
+    ).toBeDisabled();
     expect(screen.queryByText("Active model license")).not.toBeInTheDocument();
     expect(
       screen.queryByText("Community license summary."),

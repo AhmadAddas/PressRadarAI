@@ -14,6 +14,9 @@ export function LocalAIMenu() {
   const [countdown, setCountdown] = useState(0);
   const [working, setWorking] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const modelActive = Boolean(
+    status?.enabled && status.reachable && status.model_available,
+  );
 
   useEffect(() => {
     if (!open || status) return;
@@ -159,21 +162,21 @@ export function LocalAIMenu() {
         <section className="local-ai-menu" id="local-ai-menu">
           <div className="local-ai-status">
             <span
-              className={`status-dot ${status?.enabled && status.reachable ? "is-active" : ""}`}
+              className={`status-dot ${modelActive ? "is-active" : ""}`}
               aria-hidden="true"
             />
             <div>
               <strong>
-                {status?.enabled && status.reachable
+                {modelActive
                   ? "Active local AI"
-                  : status?.enabled
+                  : status?.enabled && !status.reachable
                     ? "Local AI unavailable"
                     : "Local AI inactive"}
               </strong>
               <span>
-                {status?.enabled && status.reachable
-                  ? status.model
-                  : status?.enabled
+                {modelActive
+                  ? status?.model
+                  : status?.enabled && !status.reachable
                     ? "Connect Ollama to use Local AI."
                     : status
                       ? "Clone an Ollama model to activate Local AI."
@@ -181,7 +184,7 @@ export function LocalAIMenu() {
               </span>
             </div>
           </div>
-          {status?.enabled && status.reachable ? (
+          {modelActive && status ? (
             <LicenseSummary
               license={status.license}
               title="Active model license"
@@ -241,10 +244,10 @@ export function LocalAIMenu() {
           ) : null}
           {status ? (
             <button
-              className={status.enabled ? "button-danger" : "button-secondary"}
+              className={`${status.enabled ? "button-danger" : "button-secondary"} ${!status.enabled && !status.model_available ? "is-blocked" : ""}`}
               type="button"
               onClick={() => setActive(!status.enabled)}
-              disabled={working}
+              disabled={working || (!status.enabled && !status.model_available)}
             >
               {status.enabled ? "Deactivate Local AI" : "Activate Local AI"}
             </button>

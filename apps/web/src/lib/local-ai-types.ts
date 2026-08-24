@@ -8,6 +8,7 @@ export type LicenseDetails = {
 export type LocalAIStatus = {
   enabled: boolean;
   reachable: boolean;
+  model_available: boolean;
   model: string;
   license: LicenseDetails;
   recommended_model: string;
