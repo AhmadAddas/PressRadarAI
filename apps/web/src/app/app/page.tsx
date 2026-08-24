@@ -183,7 +183,8 @@ export default async function ApplicationPage() {
                           ))}
                         </div>
                         <div className="opportunity-controls">
-                          {opportunity.status === "new" ? (
+                          {opportunity.status === "new" ||
+                          opportunity.status === "approved" ? (
                             <DismissOpportunityButton
                               opportunityId={opportunity.id}
                             />

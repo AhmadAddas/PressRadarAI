@@ -21,7 +21,7 @@ ALLOWED_TRANSITIONS: dict[OpportunityStatus, frozenset[OpportunityStatus]] = {
     OpportunityStatus.NEW: frozenset({OpportunityStatus.ANALYZING, OpportunityStatus.DISMISSED}),
     OpportunityStatus.ANALYZING: frozenset({OpportunityStatus.READY, OpportunityStatus.FAILED}),
     OpportunityStatus.READY: frozenset({OpportunityStatus.APPROVED, OpportunityStatus.DISMISSED}),
-    OpportunityStatus.APPROVED: frozenset({OpportunityStatus.SENDING}),
+    OpportunityStatus.APPROVED: frozenset({OpportunityStatus.SENDING, OpportunityStatus.DISMISSED}),
     OpportunityStatus.SENDING: frozenset({OpportunityStatus.APPROVED, OpportunityStatus.SENT}),
     OpportunityStatus.SENT: frozenset(),
     OpportunityStatus.DISMISSED: frozenset(),

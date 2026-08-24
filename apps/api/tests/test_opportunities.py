@@ -88,6 +88,22 @@ async def test_opportunity_state_transitions_are_guarded(tmp_path: Path) -> None
     assert invalid.status_code == 409
 
 
+async def test_approved_opportunity_can_still_be_dismissed(tmp_path: Path) -> None:
+    async with create_test_client(tmp_path / "approved-dismissal.db") as client:
+        await sign_up(client)
+        await create_nadia(client)
+        await client.post("/media/ingest")
+        opportunity_id = (await client.get("/opportunities")).json()[0]["id"]
+        approved = await client.post(f"/opportunities/{opportunity_id}/approve")
+        dismissed = await client.patch(
+            f"/opportunities/{opportunity_id}/status", json={"status": "dismissed"}
+        )
+
+    assert approved.status_code == 200
+    assert dismissed.status_code == 200
+    assert dismissed.json()["status"] == "dismissed"
+
+
 async def test_opportunities_are_workspace_isolated(tmp_path: Path) -> None:
     database = tmp_path / "isolated.db"
     async with create_test_client(database) as first:

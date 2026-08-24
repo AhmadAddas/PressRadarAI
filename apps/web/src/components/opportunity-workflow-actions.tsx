@@ -78,7 +78,7 @@ export function OpportunityWorkflowActions({
           onClick={() => setSendOpen((current) => !current)}
           aria-expanded={sendOpen}
         >
-          Send pitch
+          Send Pitch
         </button>
         {sendOpen ? (
           <div className="send-pitch-menu">
@@ -88,18 +88,23 @@ export function OpportunityWorkflowActions({
               onClick={runAction}
               disabled={working || !clientEmail}
             >
-              Email (simulated)
+              Email
             </button>
-            <small>{clientEmail ?? "Add a client email to send."}</small>
+            <small>
+              {clientEmail
+                ? `Simulated delivery to ${clientEmail}.`
+                : "Add a client email to send."}
+            </small>
             <button
               className="button-secondary is-blocked"
               type="button"
               disabled
             >
-              SMS locked
+              SMS
             </button>
             <small>
-              Add Twilio API keys and phone configuration to enable SMS.
+              Unavailable: configure Twilio API keys and phone numbers to enable
+              SMS.
             </small>
           </div>
         ) : null}
@@ -115,7 +120,7 @@ export function OpportunityWorkflowActions({
         disabled={working || status === "sending"}
         aria-busy={working || status === "sending"}
       >
-        {action === "approve" ? "Approve pitch" : "Send pitch"}
+        {action === "approve" ? "Approve pitch" : "Send Pitch"}
       </button>
     </div>
   );

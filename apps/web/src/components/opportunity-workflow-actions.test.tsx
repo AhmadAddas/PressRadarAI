@@ -50,10 +50,12 @@ describe("OpportunityWorkflowActions", () => {
         clientEmail="press@example.com"
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Send pitch" }));
+    fireEvent.click(screen.getByRole("button", { name: "Send Pitch" }));
+    expect(screen.getByRole("button", { name: "Email" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "SMS" })).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: "Email (simulated)" }),
-    ).toBeEnabled();
-    expect(screen.getByRole("button", { name: "SMS locked" })).toBeDisabled();
+      screen.getByText(/Simulated delivery to press@example.com/),
+    ).toBeVisible();
+    expect(screen.getByText(/configure Twilio API keys/)).toBeVisible();
   });
 });
