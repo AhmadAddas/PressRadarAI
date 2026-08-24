@@ -1,4 +1,5 @@
 import json
+import re
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -47,7 +48,7 @@ class OllamaPitchGenerator:
             response.raise_for_status()
             envelope = response.json()
             result = _OllamaPitchResult.model_validate_json(envelope["response"])
-            return GeneratedPitch(content=result.content.strip())
+            return GeneratedPitch(content=_normalize_content(result.content, client.name))
         except (httpx.HTTPError, KeyError, TypeError, ValueError, ValidationError) as error:
             raise PitchGenerationError("Ollama pitch generation failed") from error
 
@@ -83,7 +84,17 @@ def _prompt(client: Client, media_item: MediaItem) -> str:
         "only the known client facts. Never invent revenue, funding, customers, partnerships, "
         "credentials, experience, titles, locations, statistics, quotes, or approvals. If the "
         "facts are limited, remain conservative.\n\n"
-        "OUTPUT REQUIREMENTS\nReturn only JSON matching the schema. The content should be "
-        "approximately three strong, concise, useful, human-sounding sentences without generic "
+        "OUTPUT REQUIREMENTS\nReturn only JSON matching the schema. Write exactly three "
+        f"sentences and explicitly mention the client name {json.dumps(client.name)}. The content "
+        "must be concise, useful, and human-sounding without generic "
         "promotional language. Do not imply that it has been approved or sent."
     )
+
+
+def _normalize_content(content: str, client_name: str) -> str:
+    normalized = content.strip()
+    sentences = re.findall(r".*?[.!?](?=\s|$)|.+$", normalized, flags=re.DOTALL)
+    concise = " ".join(sentence.strip() for sentence in sentences[:3])
+    if client_name.casefold() not in concise.casefold():
+        concise = f"{client_name}: {concise}"
+    return concise

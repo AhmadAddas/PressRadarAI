@@ -207,6 +207,33 @@ def test_ollama_pitch_generator_uses_separated_context(
     assert "Never invent" in str(payload["prompt"])
 
 
+def test_ollama_pitch_generator_normalizes_verbose_unattributed_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def post(url: str, **_kwargs: object) -> httpx.Response:
+        return httpx.Response(
+            200,
+            request=httpx.Request("POST", url),
+            json={
+                "response": (
+                    '{"content":"The request concerns aviation materials. '
+                    "It gives students practical industry experience. "
+                    "The initiative connects education and engineering. "
+                    'This fourth sentence must be removed."}'
+                )
+            },
+        )
+
+    monkeypatch.setattr(httpx, "post", post)
+    pitch = OllamaPitchGenerator(
+        base_url="http://ollama:11434", model="test-model", timeout_seconds=4
+    ).generate(client=_client(), media_item=_media_item())
+
+    assert pitch.content.startswith("Nadia Rahman:")
+    assert pitch.content.count(".") == 3
+    assert "fourth sentence" not in pitch.content
+
+
 def _client() -> Client:
     return Client(
         id="client-1",
