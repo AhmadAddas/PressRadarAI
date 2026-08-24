@@ -38,6 +38,7 @@ class LicenseDetails:
 class LocalAIStatus:
     enabled: bool
     reachable: bool
+    model_available: bool
     model: str
     license: LicenseDetails
     recommended_model: str = RECOMMENDED_MODEL
@@ -95,10 +96,11 @@ class OllamaRuntime:
         with self._lock:
             enabled = self._enabled
             model = self._model
-        reachable = self._ollama_reachable()
+        reachable, model_available = self._ollama_status(model)
         return LocalAIStatus(
             enabled=enabled,
             reachable=reachable,
+            model_available=model_available,
             model=model,
             license=self.inspect_license(model),
         )
@@ -157,13 +159,18 @@ class OllamaRuntime:
             self._enabled = False
         return self.status()
 
-    def _ollama_reachable(self) -> bool:
+    def _ollama_status(self, model: str) -> tuple[bool, bool]:
         try:
             response = self._client.get(f"{self._base_url}/api/tags", timeout=self._timeout_seconds)
             response.raise_for_status()
-            return True
-        except httpx.HTTPError:
-            return False
+            models = response.json().get("models", [])
+            available = any(
+                isinstance(item, dict) and (item.get("name") == model or item.get("model") == model)
+                for item in models
+            )
+            return True, available
+        except (httpx.HTTPError, TypeError, ValueError):
+            return False, False
 
     def _ollama_license(self, model: str) -> str | None:
         try:

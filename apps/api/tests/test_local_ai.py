@@ -95,6 +95,7 @@ async def test_local_ai_can_be_deactivated_and_reactivated(tmp_path: Path) -> No
 
     assert deactivated.json()["enabled"] is False
     assert activated.json()["enabled"] is True
+    assert activated.json()["model_available"] is False
 
 
 async def test_local_ai_rejects_unknown_or_changed_license_confirmation(

@@ -29,6 +29,7 @@ class LocalAIResponse(BaseModel):
 
     enabled: bool
     reachable: bool
+    model_available: bool
     model: str
     license: LicenseResponse
     recommended_model: str
