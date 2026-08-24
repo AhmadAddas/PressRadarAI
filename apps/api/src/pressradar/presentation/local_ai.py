@@ -1,7 +1,9 @@
+import json
 from collections.abc import Callable
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, StringConstraints
 
 from pressradar.domain.auth import Identity
@@ -81,11 +83,49 @@ def create_local_ai_router(
         except LocalAIError as error:
             raise HTTPException(status_code=502, detail=str(error)) from error
 
+    @router.post("/models/stream")
+    def pull_model_stream(
+        request: PullModelRequest,
+        _identity: Annotated[Identity, Depends(current_identity)],
+    ) -> StreamingResponse:
+        try:
+            model = runtime.validate_pull(request.model, request.accepted_license)
+        except LocalAIError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        events = (
+            json.dumps(event) + "\n"
+            for event in runtime.pull_model_events(model, activate=request.activate)
+        )
+        return StreamingResponse(events, media_type="application/x-ndjson")
+
+    @router.post("/models/active", response_model=LocalAIResponse)
+    def activate_model(
+        request: ModelRequest,
+        _identity: Annotated[Identity, Depends(current_identity)],
+    ) -> LocalAIStatus:
+        try:
+            return runtime.activate_model(request.model)
+        except LocalAIError as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
+
+    @router.delete("/models", response_model=LocalAIResponse)
+    def delete_model(
+        model: ModelName,
+        _identity: Annotated[Identity, Depends(current_identity)],
+    ) -> LocalAIStatus:
+        try:
+            return runtime.delete_model(model)
+        except LocalAIError as error:
+            raise HTTPException(status_code=502, detail=str(error)) from error
+
     @router.post("/active", response_model=LocalAIResponse)
     def activate(
         _identity: Annotated[Identity, Depends(current_identity)],
     ) -> LocalAIStatus:
-        return runtime.activate()
+        try:
+            return runtime.activate()
+        except LocalAIError as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
 
     @router.delete("/active", response_model=LocalAIResponse)
     def deactivate(

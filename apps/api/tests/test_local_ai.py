@@ -1,3 +1,4 @@
+import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -11,14 +12,37 @@ from pressradar.main import create_app
 
 def runtime_with_mock_provider() -> tuple[OllamaRuntime, list[httpx.Request]]:
     requests: list[httpx.Request] = []
+    installed_models: list[str] = []
 
     def respond(request: httpx.Request) -> httpx.Response:
         requests.append(request)
         if request.url.path == "/api/tags":
-            return httpx.Response(200, json={"models": []})
+            return httpx.Response(
+                200,
+                json={"models": [{"name": model} for model in installed_models]},
+            )
         if request.url.path == "/api/show":
             return httpx.Response(404)
         if request.url.path == "/api/pull":
+            payload = json.loads(request.content)
+            model = payload["model"]
+            if model == "broken:latest" and payload.get("stream"):
+                return httpx.Response(200, text='{"error":"model not found"}\n')
+            if model not in installed_models:
+                installed_models.append(model)
+            if payload.get("stream"):
+                return httpx.Response(
+                    200,
+                    text=(
+                        '{"status":"pulling manifest","completed":50,"total":100}\n'
+                        '{"status":"success","completed":100,"total":100}\n'
+                    ),
+                )
+            return httpx.Response(200, json={"status": "success"})
+        if request.url.path == "/api/delete":
+            model = json.loads(request.content)["model"]
+            if model in installed_models:
+                installed_models.remove(model)
             return httpx.Response(200, json={"status": "success"})
         if request.url.host == "huggingface.co":
             return httpx.Response(
@@ -113,9 +137,63 @@ async def test_local_ai_can_be_deactivated_and_reactivated(tmp_path: Path) -> No
         activated = await client.post("/local-ai/active")
 
     assert deactivated.json()["enabled"] is False
+    assert activated.status_code == 409
+    assert "before activating" in activated.json()["detail"]
+
+
+async def test_local_ai_streams_model_pull_progress(tmp_path: Path) -> None:
+    runtime, _ = runtime_with_mock_provider()
+    async with authenticated_client(tmp_path / "stream-pull.db", runtime) as client:
+        response = await client.post(
+            "/local-ai/models/stream",
+            json={
+                "model": "qwen2.5:0.5b-instruct",
+                "accepted_license": "apache-2.0",
+                "activate": False,
+            },
+        )
+
+    assert response.status_code == 200
+    events = [event for event in response.text.splitlines() if event]
+    assert any('"completed": 50' in event and '"total": 100' in event for event in events)
+    assert any('"status": "success"' in event for event in events)
+    assert '"done": true' in events[-1]
+
+
+def test_failed_model_pull_does_not_activate_local_ai() -> None:
+    runtime, _ = runtime_with_mock_provider()
+    runtime.deactivate()
+
+    events = list(runtime.pull_model_events("broken:latest", activate=True))
+
+    assert events == [{"error": "model not found"}]
+    assert runtime.status().enabled is False
+
+
+async def test_installed_model_can_be_activated_and_deleted(tmp_path: Path) -> None:
+    runtime, requests = runtime_with_mock_provider()
+    async with authenticated_client(tmp_path / "manage-model.db", runtime) as client:
+        await client.post(
+            "/local-ai/models",
+            json={
+                "model": "qwen2.5:0.5b-instruct",
+                "accepted_license": "apache-2.0",
+                "activate": False,
+            },
+        )
+        activated = await client.post(
+            "/local-ai/models/active",
+            json={"model": "qwen2.5:0.5b-instruct"},
+        )
+        deleted = await client.delete("/local-ai/models", params={"model": "qwen2.5:0.5b-instruct"})
+
+    assert activated.status_code == 200
     assert activated.json()["enabled"] is True
-    assert activated.json()["model_available"] is False
-    assert activated.json()["installed_models"] == []
+    assert activated.json()["model"] == "qwen2.5:0.5b-instruct"
+    assert deleted.status_code == 200
+    assert deleted.json()["enabled"] is False
+    assert deleted.json()["installed_models"] == []
+    assert any(request.url.path == "/api/delete" for request in requests)
 
 
 async def test_local_ai_rejects_unknown_or_changed_license_confirmation(

@@ -1,4 +1,6 @@
+import json
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass
 from threading import RLock
 from typing import Any
@@ -152,8 +154,70 @@ class OllamaRuntime:
                 self._enabled = True
         return self.status()
 
-    def activate(self) -> LocalAIStatus:
+    def validate_pull(self, model: str, accepted_license: str) -> str:
+        model = validate_model_name(model)
+        if accepted_license != self.inspect_license(model).name:
+            raise LocalAIError("The model license changed; review it again before downloading")
+        return model
+
+    def pull_model_events(self, model: str, *, activate: bool) -> Iterator[dict[str, Any]]:
+        try:
+            with self._client.stream(
+                "POST",
+                f"{self._base_url}/api/pull",
+                json={"model": model, "stream": True},
+                timeout=max(self._timeout_seconds, 900),
+            ) as response:
+                response.raise_for_status()
+                for line in response.iter_lines():
+                    if not line:
+                        continue
+                    event = json.loads(line)
+                    if isinstance(event, dict):
+                        yield event
+                        if event.get("error"):
+                            return
+        except (httpx.HTTPError, json.JSONDecodeError):
+            yield {"error": "Ollama could not download this model"}
+            return
         with self._lock:
+            if activate:
+                self._model = model
+                self._enabled = True
+        yield {"done": True}
+
+    def activate_model(self, model: str) -> LocalAIStatus:
+        model = validate_model_name(model)
+        reachable, installed = self._ollama_status()
+        if not reachable or model not in installed:
+            raise LocalAIError("Clone this Ollama model before activating it")
+        with self._lock:
+            self._model = model
+            self._enabled = True
+        return self.status()
+
+    def delete_model(self, model: str) -> LocalAIStatus:
+        model = validate_model_name(model)
+        try:
+            response = self._client.request(
+                "DELETE",
+                f"{self._base_url}/api/delete",
+                json={"model": model},
+                timeout=self._timeout_seconds,
+            )
+            response.raise_for_status()
+        except httpx.HTTPError as error:
+            raise LocalAIError("Ollama could not delete this model") from error
+        with self._lock:
+            if self._model == model:
+                self._enabled = False
+        return self.status()
+
+    def activate(self) -> LocalAIStatus:
+        reachable, installed = self._ollama_status()
+        with self._lock:
+            if not reachable or self._model not in installed:
+                raise LocalAIError("Clone the configured Ollama model before activating Local AI")
             self._enabled = True
         return self.status()
 
