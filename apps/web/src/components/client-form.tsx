@@ -107,12 +107,14 @@ export function ClientForm({ client }: Readonly<{ client?: Client }>) {
           autoUrl
           pattern="https?://([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}(:[0-9]{1,5})?([/?#].*)?"
           placeholder="https://example.com"
+          validationMessage="Enter a valid website domain, such as example.com."
         />
         <TextField
           label="Email"
           name="email"
           type="email"
           value={client?.email}
+          validationMessage="Enter a valid email address."
         />
         <TextField
           label="Phone number"
@@ -121,6 +123,7 @@ export function ClientForm({ client }: Readonly<{ client?: Client }>) {
           value={client?.phone}
           pattern="\+[1-9][0-9]{7,14}"
           placeholder="+971501234567"
+          validationMessage="Use international format, such as +971501234567."
         />
         <TextField label="Industry" name="industry" value={client?.industry} />
         <TextField label="Location" name="location" value={client?.location} />
@@ -226,6 +229,7 @@ type FieldProps = {
   autoUrl?: boolean;
   pattern?: string;
   placeholder?: string;
+  validationMessage?: string;
 };
 
 function TextField({
@@ -237,10 +241,24 @@ function TextField({
   autoUrl = false,
   pattern,
   placeholder,
+  validationMessage,
 }: FieldProps) {
+  const [invalid, setInvalid] = useState(false);
+
+  function updateValidity(input: HTMLInputElement) {
+    setInvalid(Boolean(input.value) && !input.validity.valid);
+  }
+
   return (
     <label>
-      {label}
+      <span className="field-label-row">
+        <span>{label}</span>
+        {invalid && validationMessage ? (
+          <span className="field-validation-error" role="alert">
+            {validationMessage}
+          </span>
+        ) : null}
+      </span>
       <input
         name={name}
         type={type}
@@ -248,13 +266,24 @@ function TextField({
         required={required}
         pattern={pattern}
         placeholder={placeholder}
+        aria-invalid={invalid || undefined}
+        onInvalid={(event) => {
+          event.preventDefault();
+          updateValidity(event.currentTarget);
+        }}
+        onInput={(event) => {
+          if (invalid) updateValidity(event.currentTarget);
+        }}
         onBlur={
           autoUrl
             ? (event) => {
                 event.currentTarget.value =
                   website(event.currentTarget.value) ?? "";
+                updateValidity(event.currentTarget);
               }
-            : undefined
+            : validationMessage
+              ? (event) => updateValidity(event.currentTarget)
+              : undefined
         }
       />
     </label>

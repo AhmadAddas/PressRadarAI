@@ -173,12 +173,26 @@ describe("ClientForm", () => {
     );
   });
 
-  it("requires a website with a valid domain name", () => {
+  it("shows field-level syntax errors for contact details", () => {
     render(<ClientForm />);
     const website = screen.getByLabelText("Website");
+    const email = screen.getByLabelText("Email");
+    const phone = screen.getByLabelText("Phone number");
 
     fireEvent.change(website, { target: { value: "https://localhost" } });
+    fireEvent.blur(website);
+    fireEvent.change(email, { target: { value: "wrong-email" } });
+    fireEvent.blur(email);
+    fireEvent.change(phone, { target: { value: "0501234567" } });
+    fireEvent.blur(phone);
 
     expect(website).toBeInvalid();
+    expect(
+      screen.getByText("Enter a valid website domain, such as example.com."),
+    ).toBeVisible();
+    expect(screen.getByText("Enter a valid email address.")).toBeVisible();
+    expect(
+      screen.getByText("Use international format, such as +971501234567."),
+    ).toBeVisible();
   });
 });
