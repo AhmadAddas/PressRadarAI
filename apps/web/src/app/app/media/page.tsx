@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 
 import { IngestMediaButton } from "@/components/ingest-media-button";
+import { ExpandableText } from "@/components/expandable-text";
 import { MediaSourceManager } from "@/components/media-source-manager";
 import { PaginatedSelectableList } from "@/components/paginated-selectable-list";
 import { internalApiUrl } from "@/lib/api";
@@ -72,6 +73,7 @@ export default async function MediaPage() {
         </header>
         {media.length ? (
           <PaginatedSelectableList
+            key={media.map((item) => item.id).join(":")}
             noun="media item"
             endpoint="media"
             className="media-list"
@@ -88,7 +90,7 @@ export default async function MediaPage() {
                     ) : null}
                   </div>
                   <h2>{item.headline}</h2>
-                  <p>{item.body}</p>
+                  <ExpandableText text={item.body} />
                   <div className="topics">
                     {item.topics.map((topic) => (
                       <span key={topic}>{topic}</span>

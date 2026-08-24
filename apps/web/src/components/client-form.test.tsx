@@ -1,5 +1,11 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ClientForm } from "./client-form";
 
@@ -17,6 +23,8 @@ describe("ClientForm", () => {
     refresh.mockReset();
   });
 
+  afterEach(() => vi.useRealTimers());
+
   it("creates a client with simple monitoring rules", async () => {
     const request = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ id: "client-1" }), {
@@ -31,6 +39,13 @@ describe("ClientForm", () => {
     });
     fireEvent.change(screen.getByLabelText("Company"), {
       target: { value: "Nexa AI" },
+    });
+    fireEvent.change(screen.getByLabelText("Website"), {
+      target: { value: "nexa.example.com" },
+    });
+    fireEvent.blur(screen.getByLabelText("Website"));
+    fireEvent.change(screen.getByLabelText("Expertise (comma separated)"), {
+      target: { value: "AI governance" },
     });
     fireEvent.change(screen.getByLabelText("Keywords (comma separated)"), {
       target: { value: "Nexa AI, AI regulation" },
@@ -53,9 +68,41 @@ describe("ClientForm", () => {
     expect(JSON.parse(String(options?.body))).toEqual(
       expect.objectContaining({
         keywords: ["Nexa AI", "AI regulation"],
+        website: "https://nexa.example.com",
         monitoring_rules: ["Dubai AI startup", "UAE AI regulation"],
       }),
     );
+  });
+
+  it("warns with a timeout before creating an incomplete client", async () => {
+    vi.useFakeTimers();
+    const request = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ id: "client-2" }), {
+        status: 201,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    render(<ClientForm />);
+    fireEvent.change(screen.getByLabelText("Client name"), {
+      target: { value: "Amina Noor" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create client" }));
+
+    expect(request).not.toHaveBeenCalled();
+    expect(screen.getByRole("alertdialog")).toHaveTextContent(
+      "company, website, expertise and monitoring rules will be empty",
+    );
+    expect(
+      screen.getByRole("button", { name: "Confirm in 5s" }),
+    ).toBeDisabled();
+
+    for (let second = 0; second < 5; second += 1) {
+      await act(async () => vi.advanceTimersByTime(1000));
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Create anyway" }));
+    await act(async () => Promise.resolve());
+
+    expect(request).toHaveBeenCalledOnce();
   });
 
   it("presents cancel as a secondary action", () => {

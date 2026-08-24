@@ -9,6 +9,7 @@ import { DemoSetupButton } from "@/components/demo-setup-button";
 import { OpportunityWorkflowActions } from "@/components/opportunity-workflow-actions";
 import { PitchEditor } from "@/components/pitch-editor";
 import { PaginatedSelectableList } from "@/components/paginated-selectable-list";
+import { ExpandableText } from "@/components/expandable-text";
 import { internalApiUrl } from "@/lib/api";
 import type { Client } from "@/lib/client-types";
 import type { Opportunity } from "@/lib/opportunity-types";
@@ -123,7 +124,9 @@ export default async function ApplicationPage() {
                           <strong>
                             {opportunity.relevance_score}% relevant
                           </strong>
-                          <p>{opportunity.relevance_reason}</p>
+                          <ExpandableText
+                            text={opportunity.relevance_reason ?? ""}
+                          />
                         </div>
                       ) : null}
                       {opportunity.analysis_error ? (
@@ -212,13 +215,20 @@ export default async function ApplicationPage() {
                 id: client.id,
                 label: client.name,
                 content: (
-                  <Link href={`/app/clients/${client.id}`}>
+                  <div className="client-card-content">
                     <strong>{client.name}</strong>
-                    <span>{client.company}</span>
+                    <span>{client.company || "No company added"}</span>
                     <small>
                       {client.monitoring_rules.length} monitoring rules
                     </small>
-                  </Link>
+                    <Link
+                      className="client-edit-link"
+                      href={`/app/clients/${client.id}`}
+                      aria-label={`Edit ${client.name}`}
+                    >
+                      <span aria-hidden="true">✎</span> Edit
+                    </Link>
+                  </div>
                 ),
               }))}
             />

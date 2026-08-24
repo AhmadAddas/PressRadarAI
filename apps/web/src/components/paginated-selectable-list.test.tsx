@@ -55,7 +55,7 @@ describe("PaginatedSelectableList", () => {
       />,
     );
 
-    fireEvent.click(screen.getByLabelText("Select all"));
+    fireEvent.click(screen.getByLabelText("Select all pages"));
     fireEvent.click(
       screen.getByRole("button", { name: "Delete selected (2)" }),
     );
@@ -74,5 +74,29 @@ describe("PaginatedSelectableList", () => {
 
     expect(request).toHaveBeenCalledTimes(2);
     expect(new Set(request.mock.calls.map(([url]) => url)).size).toBe(2);
+  });
+
+  it("selects cards and Shift-selects the records in between", () => {
+    render(
+      <PaginatedSelectableList
+        items={items}
+        noun="media item"
+        endpoint="media"
+        className="media-list"
+      />,
+    );
+
+    const first = screen.getByLabelText("Select Item 1");
+    fireEvent.click(first);
+    fireEvent.keyDown(first, { key: "Shift" });
+    fireEvent.click(screen.getByLabelText("Select Item 4"));
+    fireEvent.keyUp(first, { key: "Shift" });
+
+    expect(
+      screen.getByRole("button", { name: "Delete selected (4)" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Tip: Shift-select chooses a range."),
+    ).toBeVisible();
   });
 });
