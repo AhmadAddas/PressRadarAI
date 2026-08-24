@@ -197,6 +197,11 @@ def test_ollama_pitch_generator_uses_separated_context(
     payload = request["json"]
     assert isinstance(payload, dict)
     assert payload["model"] == "test-model"
+    response_schema = payload["format"]
+    assert isinstance(response_schema, dict)
+    properties = response_schema["properties"]
+    assert isinstance(properties, dict)
+    assert "maxLength" not in properties["content"]
     assert "KNOWN CLIENT FACTS" in str(payload["prompt"])
     assert "MEDIA OPPORTUNITY" in str(payload["prompt"])
     assert "Never invent" in str(payload["prompt"])

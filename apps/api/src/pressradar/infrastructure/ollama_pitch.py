@@ -15,6 +15,17 @@ class _OllamaPitchResult(BaseModel):
     content: str = Field(min_length=1, max_length=3_000)
 
 
+def _ollama_format_schema() -> dict[str, object]:
+    schema = _OllamaPitchResult.model_json_schema()
+    properties = schema.get("properties", {})
+    if isinstance(properties, dict):
+        content = properties.get("content")
+        if isinstance(content, dict):
+            content.pop("minLength", None)
+            content.pop("maxLength", None)
+    return schema
+
+
 class OllamaPitchGenerator:
     def __init__(self, *, base_url: str, model: str, timeout_seconds: float) -> None:
         self._url = f"{base_url.rstrip('/')}/api/generate"
@@ -28,7 +39,7 @@ class OllamaPitchGenerator:
                 json={
                     "model": self._model,
                     "stream": False,
-                    "format": _OllamaPitchResult.model_json_schema(),
+                    "format": _ollama_format_schema(),
                     "prompt": _prompt(client, media_item),
                 },
                 timeout=self._timeout,
