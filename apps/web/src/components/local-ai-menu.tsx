@@ -9,7 +9,8 @@ import type { LicenseDetails, LocalAIStatus } from "@/lib/local-ai-types";
 export function LocalAIMenu() {
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<LocalAIStatus | null>(null);
-  const [model, setModel] = useState("");
+  const [modelChoice, setModelChoice] = useState("");
+  const [customModel, setCustomModel] = useState("");
   const [license, setLicense] = useState<LicenseDetails | null>(null);
   const [countdown, setCountdown] = useState(0);
   const [working, setWorking] = useState(false);
@@ -17,6 +18,7 @@ export function LocalAIMenu() {
   const modelActive = Boolean(
     status?.enabled && status.reachable && status.model_available,
   );
+  const model = modelChoice === "custom" ? customModel : modelChoice;
 
   useEffect(() => {
     if (!open || status) return;
@@ -29,7 +31,14 @@ export function LocalAIMenu() {
         if (!response.ok) return;
         const result = (await response.json()) as LocalAIStatus;
         setStatus(result);
-        setModel((current) => current || result.recommended_model);
+        setModelChoice(
+          (current) =>
+            current ||
+            (result.installed_models.length > 0
+              ? result.installed_models[0]
+              : "custom"),
+        );
+        setCustomModel((current) => current || result.recommended_model);
       } catch {
         // The menu reports an unavailable runtime without interrupting the dashboard.
       }
@@ -98,7 +107,7 @@ export function LocalAIMenu() {
     }
   }
 
-  async function clone() {
+  async function clone(activate: boolean) {
     if (!license || countdown > 0) return;
     setWorking(true);
     try {
@@ -106,7 +115,11 @@ export function LocalAIMenu() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model, accepted_license: license.name }),
+        body: JSON.stringify({
+          model,
+          accepted_license: license.name,
+          activate,
+        }),
       });
       if (!response.ok) {
         toast.error(
@@ -116,7 +129,11 @@ export function LocalAIMenu() {
       }
       setStatus((await response.json()) as LocalAIStatus);
       setLicense(null);
-      toast.success(`${model} is active.`);
+      toast.success(
+        activate
+          ? `${model} is active.`
+          : `${model} was cloned and remains inactive.`,
+      );
     } catch {
       toast.error("PressRadar cannot reach the local AI service.");
     } finally {
@@ -200,25 +217,52 @@ export function LocalAIMenu() {
             </div>
           ) : null}
           <form className="local-ai-form" onSubmit={inspect}>
-            <label>
-              Ollama model name
-              <input
-                value={model}
-                onChange={(event) => {
-                  setModel(event.target.value);
-                  setLicense(null);
-                }}
-                placeholder="qwen2.5:0.5b-instruct"
-                required
-                maxLength={200}
-              />
-            </label>
+            {status && status.installed_models.length > 0 ? (
+              <label>
+                Ollama model
+                <select
+                  value={modelChoice}
+                  onChange={(event) => {
+                    setModelChoice(event.target.value);
+                    setLicense(null);
+                  }}
+                  required
+                >
+                  {status.installed_models.map((installedModel) => (
+                    <option key={installedModel} value={installedModel}>
+                      {installedModel}
+                    </option>
+                  ))}
+                  <option value="custom">Clone another Ollama model…</option>
+                </select>
+              </label>
+            ) : status ? (
+              <p className="local-ai-empty-models" role="note">
+                No Ollama models are installed yet. Enter a model name below to
+                check its license and clone it.
+              </p>
+            ) : null}
+            {modelChoice === "custom" ? (
+              <label>
+                Custom Ollama model name
+                <input
+                  value={customModel}
+                  onChange={(event) => {
+                    setCustomModel(event.target.value);
+                    setLicense(null);
+                  }}
+                  placeholder="model:tag"
+                  required
+                  maxLength={200}
+                />
+              </label>
+            ) : null}
             <button
               className="button-secondary"
               type="submit"
               disabled={working}
             >
-              Check license
+              Check license to be able to clone
             </button>
           </form>
           {license ? (
@@ -231,15 +275,25 @@ export function LocalAIMenu() {
                 Model downloads can consume significant disk, memory, CPU, and
                 time on a VPS.
               </small>
-              <button
-                type="button"
-                onClick={clone}
-                disabled={working || countdown > 0}
-              >
-                {countdown > 0
-                  ? `Clone in ${countdown}s`
-                  : "Clone and activate"}
-              </button>
+              <div className="local-ai-clone-actions">
+                <button
+                  className="button-secondary"
+                  type="button"
+                  onClick={() => clone(false)}
+                  disabled={working || countdown > 0}
+                >
+                  {countdown > 0 ? `Clone only in ${countdown}s` : "Clone only"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => clone(true)}
+                  disabled={working || countdown > 0}
+                >
+                  {countdown > 0
+                    ? `Clone and activate in ${countdown}s`
+                    : "Clone and activate"}
+                </button>
+              </div>
             </div>
           ) : null}
           {status ? (

@@ -12,6 +12,7 @@ const status = {
   enabled: true,
   reachable: true,
   model_available: true,
+  installed_models: ["llama3.2:3b"],
   model: "llama3.2:3b",
   license: {
     name: "llama3.2",
@@ -39,6 +40,9 @@ describe("LocalAIMenu", () => {
     fireEvent.click(screen.getByRole("button", { name: "Local AI" }));
     expect(await screen.findByText("Active local AI")).toBeVisible();
     expect(screen.getByText("llama3.2")).toBeVisible();
+    expect(screen.getByRole("combobox", { name: "Ollama model" })).toHaveValue(
+      "llama3.2:3b",
+    );
     fireEvent.pointerDown(document.body);
     expect(screen.queryByText("Active local AI")).not.toBeInTheDocument();
   });
@@ -46,7 +50,12 @@ describe("LocalAIMenu", () => {
   it("hides the active model license when Local AI is inactive", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
-        JSON.stringify({ ...status, enabled: false, model_available: false }),
+        JSON.stringify({
+          ...status,
+          enabled: false,
+          model_available: false,
+          installed_models: [],
+        }),
         {
           status: 200,
           headers: { "Content-Type": "application/json" },
@@ -62,6 +71,12 @@ describe("LocalAIMenu", () => {
       screen.getByText("Clone an Ollama model to activate Local AI."),
     ).toBeVisible();
     expect(screen.queryByText("llama3.2:3b")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("combobox", { name: "Ollama model" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/No Ollama models are installed yet/),
+    ).toBeVisible();
     expect(
       screen.getByRole("button", { name: "Activate Local AI" }),
     ).toBeDisabled();
@@ -102,12 +117,21 @@ describe("LocalAIMenu", () => {
     fireEvent.click(screen.getByRole("button", { name: "Local AI" }));
     await act(async () => Promise.resolve());
     expect(screen.getByText("Active local AI")).toBeVisible();
+    fireEvent.change(screen.getByRole("combobox", { name: "Ollama model" }), {
+      target: { value: "custom" },
+    });
     fireEvent.submit(
-      screen.getByRole("button", { name: "Check license" }).closest("form")!,
+      screen
+        .getByRole("button", {
+          name: "Check license to be able to clone",
+        })
+        .closest("form")!,
     );
     await act(async () => Promise.resolve());
 
-    expect(screen.getByRole("button", { name: "Clone in 5s" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Clone and activate in 5s" }),
+    ).toBeDisabled();
     for (let second = 0; second < 5; second += 1) {
       await act(async () => vi.advanceTimersByTime(1000));
     }
@@ -116,10 +140,73 @@ describe("LocalAIMenu", () => {
 
     expect(request).toHaveBeenLastCalledWith(
       expect.stringContaining("/local-ai/models"),
-      expect.objectContaining({ method: "POST" }),
+      expect.objectContaining({
+        method: "POST",
+        body: expect.stringContaining('"activate":true'),
+      }),
     );
     expect(toast.success).toHaveBeenCalledWith(
       "qwen2.5:0.5b-instruct is active.",
+    );
+  });
+
+  it("can clone the selected model without activating it", async () => {
+    vi.useFakeTimers();
+    const request = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(status), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            name: "apache-2.0",
+            summary: "Permits commercial use with notice obligations.",
+            source_url: "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct",
+            known: true,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ ...status, enabled: false }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    render(<LocalAIMenu />);
+    fireEvent.click(screen.getByRole("button", { name: "Local AI" }));
+    await act(async () => Promise.resolve());
+    fireEvent.change(screen.getByRole("combobox", { name: "Ollama model" }), {
+      target: { value: "custom" },
+    });
+    fireEvent.submit(
+      screen
+        .getByRole("button", {
+          name: "Check license to be able to clone",
+        })
+        .closest("form")!,
+    );
+    await act(async () => Promise.resolve());
+    for (let second = 0; second < 5; second += 1) {
+      await act(async () => vi.advanceTimersByTime(1000));
+    }
+
+    fireEvent.click(screen.getByRole("button", { name: "Clone only" }));
+    await act(async () => Promise.resolve());
+
+    expect(request).toHaveBeenLastCalledWith(
+      expect.stringContaining("/local-ai/models"),
+      expect.objectContaining({
+        method: "POST",
+        body: expect.stringContaining('"activate":false'),
+      }),
+    );
+    expect(toast.success).toHaveBeenCalledWith(
+      "qwen2.5:0.5b-instruct was cloned and remains inactive.",
     );
   });
 
@@ -146,7 +233,11 @@ describe("LocalAIMenu", () => {
     fireEvent.click(screen.getByRole("button", { name: "Local AI" }));
     await screen.findByText("Active local AI");
     fireEvent.submit(
-      screen.getByRole("button", { name: "Check license" }).closest("form")!,
+      screen
+        .getByRole("button", {
+          name: "Check license to be able to clone",
+        })
+        .closest("form")!,
     );
 
     expect(
