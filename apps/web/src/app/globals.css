@@ -356,7 +356,7 @@ nav {
 .local-ai {
   position: relative;
   width: fit-content;
-  margin: 0 1.5rem 0 0;
+  margin: 0;
 }
 
 .local-ai-trigger {
@@ -1257,10 +1257,6 @@ nav {
   .local-ai,
   .local-ai-trigger {
     width: 100%;
-  }
-
-  .local-ai {
-    margin-right: 0;
   }
 
   .local-ai-menu {
