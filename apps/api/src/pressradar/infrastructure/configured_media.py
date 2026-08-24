@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from html.parser import HTMLParser
 from io import StringIO
+from typing import cast
 from urllib.parse import urlparse
 from xml.etree import ElementTree
 
@@ -62,18 +63,41 @@ class ConfiguredMediaIngestionService:
     def _fetch_newsapi(self, source: MediaSource) -> tuple[IncomingMediaItem, ...]:
         if not self._newsapi_api_key:
             raise MediaSourceConfigurationError("NEWSAPI_API_KEY is required for NewsAPI")
+        articles = self._request_newsapi(
+            "https://newsapi.org/v2/top-headlines",
+            {"country": "ae", "pageSize": 100},
+        )
+        if not articles:
+            articles = self._request_newsapi(
+                "https://newsapi.org/v2/everything",
+                {
+                    "q": '"United Arab Emirates" OR UAE OR Dubai OR "Abu Dhabi"',
+                    "language": "en",
+                    "sortBy": "publishedAt",
+                    "pageSize": 100,
+                },
+            )
+        return tuple(_newsapi_item(source.name, article) for article in articles[:100])
+
+    def _request_newsapi(self, url: str, params: dict[str, str | int]) -> list[object]:
         try:
             response = httpx.get(
-                "https://newsapi.org/v2/top-headlines",
-                params={"country": "ae", "pageSize": 100},
+                url,
+                params=params,
                 headers={"X-Api-Key": self._newsapi_api_key},
                 timeout=self._timeout_seconds,
             )
             response.raise_for_status()
-            articles = response.json().get("articles", [])
-        except (httpx.HTTPError, ValueError, AttributeError) as error:
+            payload = response.json()
+            if (
+                not isinstance(payload, dict)
+                or payload.get("status") != "ok"
+                or not isinstance(payload.get("articles"), list)
+            ):
+                raise ValueError("NewsAPI returned an invalid response")
+        except (httpx.HTTPError, ValueError) as error:
             raise MediaSourceConfigurationError("Unable to fetch NewsAPI") from error
-        return tuple(_newsapi_item(source.name, article) for article in articles[:100])
+        return cast(list[object], payload["articles"])
 
 
 def _rss_item(source: str, item: ElementTree.Element) -> IncomingMediaItem:

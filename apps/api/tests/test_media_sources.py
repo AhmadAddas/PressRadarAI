@@ -122,22 +122,26 @@ async def test_prod_ingestion_uses_configured_sources_and_requires_provider_key(
 async def test_newsapi_adapter_ingests_uae_articles(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def newsapi_response(*args: object, **kwargs: object) -> httpx.Response:
+    requests: list[tuple[str, dict[str, object]]] = []
+
+    def newsapi_response(url: str, **kwargs: object) -> httpx.Response:
+        requests.append((url, kwargs))
+        articles = []
+        if url.endswith("/everything"):
+            articles = [
+                {
+                    "source": {"name": "UAE Business"},
+                    "author": "Reporter",
+                    "title": "UAE technology companies expand",
+                    "description": "Companies announced new regional investments.",
+                    "url": "https://example.com/uae-tech",
+                    "publishedAt": "2026-08-22T10:00:00Z",
+                }
+            ]
         return httpx.Response(
             200,
-            request=httpx.Request("GET", "https://newsapi.org/v2/top-headlines"),
-            json={
-                "articles": [
-                    {
-                        "source": {"name": "UAE Business"},
-                        "author": "Reporter",
-                        "title": "UAE technology companies expand",
-                        "description": "Companies announced new regional investments.",
-                        "url": "https://example.com/uae-tech",
-                        "publishedAt": "2026-08-22T10:00:00Z",
-                    }
-                ]
-            },
+            request=httpx.Request("GET", url),
+            json={"status": "ok", "totalResults": len(articles), "articles": articles},
         )
 
     monkeypatch.setattr(httpx, "get", newsapi_response)
@@ -160,6 +164,18 @@ async def test_newsapi_adapter_ingests_uae_articles(
 
     assert ingestion.json() == {"created": 1, "duplicates": 0}
     assert media.json()[0]["headline"] == "UAE technology companies expand"
+    assert [request[0] for request in requests] == [
+        "https://newsapi.org/v2/top-headlines",
+        "https://newsapi.org/v2/everything",
+    ]
+    assert requests[0][1]["params"] == {"country": "ae", "pageSize": 100}
+    assert requests[1][1]["params"] == {
+        "q": '"United Arab Emirates" OR UAE OR Dubai OR "Abu Dhabi"',
+        "language": "en",
+        "sortBy": "publishedAt",
+        "pageSize": 100,
+    }
+    assert requests[1][1]["headers"] == {"X-Api-Key": "test-key"}
 
 
 async def test_rss_adapter_ingests_public_feed(
