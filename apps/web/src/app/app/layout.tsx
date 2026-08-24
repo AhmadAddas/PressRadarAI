@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { PageTranslator } from "@/components/page-translator";
 import { internalApiUrl } from "@/lib/api";
 
 export default async function ProtectedLayout({
@@ -14,5 +15,5 @@ export default async function ProtectedLayout({
   if (!response?.ok) {
     redirect("/signin");
   }
-  return children;
+  return <PageTranslator>{children}</PageTranslator>;
 }

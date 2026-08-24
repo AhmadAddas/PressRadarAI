@@ -11,6 +11,7 @@ import { PitchEditor } from "@/components/pitch-editor";
 import { PaginatedSelectableList } from "@/components/paginated-selectable-list";
 import { ExpandableText } from "@/components/expandable-text";
 import { LocalAIMenu } from "@/components/local-ai-menu";
+import { LanguageMenu } from "@/components/language-menu";
 import { internalApiUrl } from "@/lib/api";
 import type { Client } from "@/lib/client-types";
 import type { Opportunity } from "@/lib/opportunity-types";
@@ -67,6 +68,7 @@ export default async function ApplicationPage() {
           </div>
           <div className="actions dashboard-actions">
             <LocalAIMenu />
+            <LanguageMenu />
             <div className="dashboard-primary-actions">
               <DemoSetupButton workspaceKind={identity.workspace_kind} />
               <Link className="button button-secondary" href="/app/media">
