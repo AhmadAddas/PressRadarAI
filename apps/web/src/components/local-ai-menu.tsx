@@ -173,14 +173,14 @@ export function LocalAIMenu() {
               <span>{status?.model ?? "Ollama unavailable"}</span>
             </div>
           </div>
-          {status ? (
+          {status?.enabled && status.reachable ? (
             <LicenseSummary
               license={status.license}
               title="Active model license"
             />
-          ) : (
+          ) : !status ? (
             <p role="status">Checking the Ollama service…</p>
-          )}
+          ) : null}
           {status ? (
             <div className="recommendation">
               <strong>Low-power VPS suggestion</strong>

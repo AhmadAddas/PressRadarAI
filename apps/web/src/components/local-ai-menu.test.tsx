@@ -42,6 +42,24 @@ describe("LocalAIMenu", () => {
     expect(screen.queryByText("Active local AI")).not.toBeInTheDocument();
   });
 
+  it("hides the active model license when Local AI is inactive", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ ...status, enabled: false }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    render(<LocalAIMenu />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Local AI" }));
+
+    expect(await screen.findByText("Local AI inactive")).toBeVisible();
+    expect(screen.queryByText("Active model license")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Community license summary."),
+    ).not.toBeInTheDocument();
+  });
+
   it("requires license review and a timeout before cloning", async () => {
     vi.useFakeTimers();
     const request = vi
