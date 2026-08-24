@@ -47,6 +47,16 @@ describe("MediaSourceManager", () => {
     expect(screen.queryByText("UAE NewsAPI")).not.toBeInTheDocument();
   });
 
+  it("closes media options when the user presses outside", () => {
+    render(<MediaSourceManager sources={sources} suggestions={[]} />);
+    const toggle = screen.getByRole("button", { name: "Media options" });
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.pointerDown(document.body);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+  });
+
   it("ingests Prod media and deletes configured sources", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")

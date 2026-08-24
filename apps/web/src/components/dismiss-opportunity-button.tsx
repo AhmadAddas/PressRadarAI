@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { startTransition, useState } from "react";
 import { toast } from "sonner";
 
 import { publicApiUrl } from "@/lib/api";
@@ -30,7 +30,7 @@ export function DismissOpportunityButton({
         toast.error("Unable to dismiss opportunity.");
         return;
       }
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch {
       toast.error("PressRadar is temporarily unavailable.");
     } finally {

@@ -55,23 +55,21 @@ export default async function ApplicationPage() {
     <main className="page-shell">
       <section className="wide-card">
         <header className="dashboard-header">
-          <div className="account-row">
-            <AccountMenu name={identity.name} email={identity.email} />
-          </div>
-          <div className="page-header">
+          <div className="dashboard-top-row">
             <div>
               <p className="eyebrow">{identity.name}&apos;s workspace</p>
               <h1>Opportunity dashboard</h1>
             </div>
-            <div className="actions">
-              <DemoSetupButton workspaceKind={identity.workspace_kind} />
-              <Link className="button button-secondary" href="/app/media">
-                Media feed
-              </Link>
-              <Link className="button" href="/app/clients/new">
-                Add client
-              </Link>
-            </div>
+            <AccountMenu name={identity.name} email={identity.email} />
+          </div>
+          <div className="actions dashboard-actions">
+            <DemoSetupButton workspaceKind={identity.workspace_kind} />
+            <Link className="button button-secondary" href="/app/media">
+              Media feed
+            </Link>
+            <Link className="button" href="/app/clients/new">
+              Add client
+            </Link>
           </div>
         </header>
         <section aria-labelledby="opportunities-heading">

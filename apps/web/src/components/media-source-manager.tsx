@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, startTransition, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { publicApiUrl } from "@/lib/api";
@@ -22,12 +22,40 @@ export function MediaSourceManager({
   const [filter, setFilter] = useState<MediaSourceKind | "all">("all");
   const [open, setOpen] = useState(false);
   const [working, setWorking] = useState(false);
+  const managerRef = useRef<HTMLDivElement>(null);
   const visibleSources = sources.filter(
     (source) => filter === "all" || source.kind === filter,
   );
   const visibleSuggestions = suggestions.filter(
     (source) => filter === "all" || source.kind === filter,
   );
+
+  useEffect(() => {
+    if (!open) return;
+
+    function dismiss(event: PointerEvent | KeyboardEvent) {
+      if (
+        event.type === "keydown" &&
+        (event as KeyboardEvent).key === "Escape"
+      ) {
+        setOpen(false);
+        return;
+      }
+      if (
+        event.type === "pointerdown" &&
+        !managerRef.current?.contains(event.target as Node)
+      ) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", dismiss);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("keydown", dismiss);
+    };
+  }, [open]);
 
   async function ingest() {
     await request(
@@ -90,7 +118,7 @@ export function MediaSourceManager({
       }
       const result = response.status === 204 ? null : await response.json();
       onSuccess?.(result);
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch {
       toast.error("PressRadar is temporarily unavailable.");
     } finally {
@@ -99,7 +127,7 @@ export function MediaSourceManager({
   }
 
   return (
-    <div className="source-manager">
+    <div className="source-manager" ref={managerRef}>
       <div className="source-toolbar">
         <button
           type="button"

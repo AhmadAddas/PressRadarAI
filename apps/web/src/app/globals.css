@@ -193,8 +193,19 @@ nav {
   gap: 1rem;
 }
 
-.account-row {
+.dashboard-top-row {
   display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.dashboard-top-row > div:first-child {
+  min-width: 0;
+  margin-right: auto;
+}
+
+.dashboard-actions {
   justify-content: flex-end;
 }
 
@@ -776,6 +787,10 @@ nav {
     width: 100%;
     justify-content: flex-start;
   }
+
+  .dashboard-actions {
+    width: 100%;
+  }
 }
 
 @media (max-width: 48rem) {
@@ -804,6 +819,7 @@ nav {
 
   .page-header .actions,
   .page-header .actions > *,
+  .dashboard-actions > *,
   .demo-action button,
   .ingest-action button,
   .opportunity-action button,
@@ -822,6 +838,10 @@ nav {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .dashboard-top-row h1 {
+    font-size: clamp(1.45rem, 7vw, 2rem);
   }
 
   .page-header .actions > .account-menu {

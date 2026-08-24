@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { startTransition, useState } from "react";
 import { toast } from "sonner";
 
 import { publicApiUrl } from "@/lib/api";
@@ -42,11 +42,11 @@ export function OpportunityWorkflowActions({
             ? "Unable to approve this pitch."
             : "Delivery failed. The approved pitch can be retried.",
         );
-        router.refresh();
+        startTransition(() => router.refresh());
         return;
       }
       toast.success(action === "approve" ? "Pitch approved." : "Pitch sent.");
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch {
       toast.error("PressRadar is temporarily unavailable.");
     } finally {

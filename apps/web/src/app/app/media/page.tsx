@@ -55,7 +55,7 @@ export default async function MediaPage() {
       <section className="wide-card">
         <header className="page-header">
           <div>
-            <p className="eyebrow">Simulated source</p>
+            <p className="eyebrow">Source</p>
             <h1>Media feed</h1>
           </div>
           <div className="actions media-header-actions">

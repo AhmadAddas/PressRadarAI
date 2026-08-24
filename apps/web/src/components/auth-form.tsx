@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, startTransition, useState } from "react";
 
 import { publicApiUrl } from "@/lib/api";
 
@@ -38,7 +38,7 @@ export function AuthForm({ mode }: Readonly<{ mode: AuthMode }>) {
         return;
       }
       router.push("/app");
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch {
       setError("PressRadar is temporarily unavailable");
     } finally {

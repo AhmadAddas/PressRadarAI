@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, startTransition, useState } from "react";
 
 import { publicApiUrl } from "@/lib/api";
 import type { Client } from "@/lib/client-types";
@@ -50,7 +50,7 @@ export function ClientForm({ client }: Readonly<{ client?: Client }>) {
       }
       const saved = (await response.json()) as Client;
       router.push(`/app/clients/${saved.id}`);
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch {
       setError("PressRadar is temporarily unavailable.");
     } finally {

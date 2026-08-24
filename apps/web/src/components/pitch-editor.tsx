@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { startTransition, useState } from "react";
 import { toast } from "sonner";
 
 import { publicApiUrl } from "@/lib/api";
@@ -38,7 +38,7 @@ export function PitchEditor({
         return;
       }
       toast.success("Draft saved.");
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch {
       toast.error("PressRadar is temporarily unavailable.");
     } finally {

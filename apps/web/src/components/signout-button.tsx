@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { startTransition, useState } from "react";
 
 import { publicApiUrl } from "@/lib/api";
 
@@ -18,7 +18,7 @@ export function SignOutButton() {
       });
     } finally {
       router.replace("/signin");
-      router.refresh();
+      startTransition(() => router.refresh());
     }
   }
 

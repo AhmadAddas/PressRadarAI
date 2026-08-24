@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 
 import { SignOutButton } from "@/components/signout-button";
 
@@ -10,8 +11,38 @@ type AccountMenuProps = {
 };
 
 export function AccountMenu({ name, email }: Readonly<AccountMenuProps>) {
+  const menuRef = useRef<HTMLDetailsElement>(null);
+
+  useEffect(() => {
+    function dismiss(event: PointerEvent | KeyboardEvent) {
+      const menu = menuRef.current;
+      if (!menu?.open) return;
+      if (
+        event.type === "keydown" &&
+        (event as KeyboardEvent).key === "Escape"
+      ) {
+        menu.removeAttribute("open");
+        menu.querySelector("summary")?.focus();
+        return;
+      }
+      if (
+        event.type === "pointerdown" &&
+        !menu.contains(event.target as Node)
+      ) {
+        menu.removeAttribute("open");
+      }
+    }
+
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", dismiss);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("keydown", dismiss);
+    };
+  }, []);
+
   return (
-    <details className="account-menu">
+    <details className="account-menu" ref={menuRef}>
       <summary aria-label={`Open account menu for ${name}`}>
         <span className="avatar" aria-hidden="true">
           {initials(name)}

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { AccountMenu } from "./account-menu";
@@ -21,5 +21,17 @@ describe("AccountMenu", () => {
     expect(
       screen.getByRole("button", { name: "Sign out" }),
     ).toBeInTheDocument();
+  });
+
+  it("closes when the user presses outside the menu", () => {
+    render(<AccountMenu name="Amina Rahman" email="amina@example.com" />);
+
+    const summary = screen.getByLabelText("Open account menu for Amina Rahman");
+    const details = summary.closest("details");
+    fireEvent.click(summary);
+    expect(details).toHaveAttribute("open");
+
+    fireEvent.pointerDown(document.body);
+    expect(details).not.toHaveAttribute("open");
   });
 });
