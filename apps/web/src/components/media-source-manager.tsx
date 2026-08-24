@@ -22,12 +22,33 @@ export function MediaSourceManager({
   const [filter, setFilter] = useState<MediaSourceKind | "all">("all");
   const [open, setOpen] = useState(false);
   const [working, setWorking] = useState(false);
+  const [sourcePage, setSourcePage] = useState(1);
+  const [suggestionPage, setSuggestionPage] = useState(1);
   const managerRef = useRef<HTMLDivElement>(null);
   const visibleSources = sources.filter(
     (source) => filter === "all" || source.kind === filter,
   );
   const visibleSuggestions = suggestions.filter(
     (source) => filter === "all" || source.kind === filter,
+  );
+  const pageSize = 5;
+  const sourcePageCount = Math.max(
+    1,
+    Math.ceil(visibleSources.length / pageSize),
+  );
+  const suggestionPageCount = Math.max(
+    1,
+    Math.ceil(visibleSuggestions.length / pageSize),
+  );
+  const currentSourcePage = Math.min(sourcePage, sourcePageCount);
+  const currentSuggestionPage = Math.min(suggestionPage, suggestionPageCount);
+  const pagedSources = visibleSources.slice(
+    (currentSourcePage - 1) * pageSize,
+    currentSourcePage * pageSize,
+  );
+  const pagedSuggestions = visibleSuggestions.slice(
+    (currentSuggestionPage - 1) * pageSize,
+    currentSuggestionPage * pageSize,
   );
 
   useEffect(() => {
@@ -145,9 +166,11 @@ export function MediaSourceManager({
             Filter sources
             <select
               value={filter}
-              onChange={(event) =>
-                setFilter(event.target.value as MediaSourceKind | "all")
-              }
+              onChange={(event) => {
+                setFilter(event.target.value as MediaSourceKind | "all");
+                setSourcePage(1);
+                setSuggestionPage(1);
+              }}
             >
               <option value="all">All</option>
               <option value="rss">RSS</option>
@@ -158,7 +181,7 @@ export function MediaSourceManager({
             <h2>Configured sources</h2>
             {visibleSources.length ? (
               <ul>
-                {visibleSources.map((source) => (
+                {pagedSources.map((source) => (
                   <li key={source.id}>
                     <span>
                       <strong>{source.name}</strong>
@@ -178,11 +201,17 @@ export function MediaSourceManager({
             ) : (
               <p>No sources match this filter.</p>
             )}
+            <PaginationControls
+              label="configured sources"
+              page={currentSourcePage}
+              pageCount={sourcePageCount}
+              setPage={setSourcePage}
+            />
           </div>
           <div className="source-list">
             <h2>Suggested UAE sources</h2>
             <ul>
-              {visibleSuggestions.map((source) => (
+              {pagedSuggestions.map((source) => (
                 <li key={`${source.kind}-${source.name}`}>
                   <span>
                     <strong>{source.name}</strong>
@@ -199,6 +228,12 @@ export function MediaSourceManager({
                 </li>
               ))}
             </ul>
+            <PaginationControls
+              label="source suggestions"
+              page={currentSuggestionPage}
+              pageCount={suggestionPageCount}
+              setPage={setSuggestionPage}
+            />
           </div>
           <form className="source-form" onSubmit={addRss}>
             <h2>Add RSS source</h2>
@@ -230,5 +265,42 @@ export function MediaSourceManager({
         </section>
       ) : null}
     </div>
+  );
+}
+
+function PaginationControls({
+  label,
+  page,
+  pageCount,
+  setPage,
+}: Readonly<{
+  label: string;
+  page: number;
+  pageCount: number;
+  setPage: (page: number) => void;
+}>) {
+  if (pageCount <= 1) return null;
+  return (
+    <nav className="pagination" aria-label={`${label} pagination`}>
+      <button
+        className="button-secondary"
+        type="button"
+        disabled={page === 1}
+        onClick={() => setPage(page - 1)}
+      >
+        Previous
+      </button>
+      <span>
+        Page {page} of {pageCount}
+      </span>
+      <button
+        className="button-secondary"
+        type="button"
+        disabled={page === pageCount}
+        onClick={() => setPage(page + 1)}
+      >
+        Next
+      </button>
+    </nav>
   );
 }

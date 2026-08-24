@@ -339,6 +339,74 @@ nav {
   border-left: 0.4rem solid #d9822b;
 }
 
+.opportunity-list li:has(.urgency-critical),
+.opportunity-list li:has(.urgency-overdue) {
+  border-left: 0.4rem solid #c0392b;
+}
+
+.opportunity-list li:has(.urgency-upcoming) {
+  border-left: 0.4rem solid #d9822b;
+}
+
+.selectable-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.selection-toolbar,
+.item-selection,
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.selection-toolbar label,
+.item-selection label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.item-selection {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e5e9ee;
+}
+
+.button-compact {
+  min-height: 2.25rem;
+  padding: 0.45rem 0.75rem;
+}
+
+.pagination {
+  justify-content: center;
+  margin: 0.5rem 0 1rem;
+}
+
+.delete-warning {
+  padding: 1rem;
+  border: 1px solid #d9822b;
+  border-radius: 0.75rem;
+  background: #fff8ed;
+}
+
+.delete-warning p {
+  margin: 0.5rem 0 1rem;
+}
+
+.orphan-notice,
+.orphan-explanation {
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background: #fff8ed;
+}
+
+.orphan-explanation {
+  margin-top: 2rem;
+}
+
 .opportunity-heading,
 .opportunity-footer {
   display: flex;

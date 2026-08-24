@@ -13,9 +13,11 @@ export type Opportunity = {
   client_id: string;
   client_name: string;
   client_company: string;
+  client_deleted: boolean;
   media_item_id: string;
   source: string;
   headline: string;
+  media_deleted: boolean;
   journalist: string | null;
   published_at: string;
   deadline: string | null;

@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { IngestMediaButton } from "@/components/ingest-media-button";
 import { MediaSourceManager } from "@/components/media-source-manager";
+import { PaginatedSelectableList } from "@/components/paginated-selectable-list";
 import { internalApiUrl } from "@/lib/api";
 import type { MediaItem } from "@/lib/media-types";
 import type {
@@ -70,26 +71,33 @@ export default async function MediaPage() {
           </div>
         </header>
         {media.length ? (
-          <ul className="media-list">
-            {media.map((item) => (
-              <li key={item.id}>
-                <div className="media-meta">
-                  <span>{item.source_type.replace("_", " ")}</span>
-                  <span>{item.source}</span>
-                  {item.deadline ? (
-                    <strong>Deadline {formatTime(item.deadline)}</strong>
-                  ) : null}
-                </div>
-                <h2>{item.headline}</h2>
-                <p>{item.body}</p>
-                <div className="topics">
-                  {item.topics.map((topic) => (
-                    <span key={topic}>{topic}</span>
-                  ))}
-                </div>
-              </li>
-            ))}
-          </ul>
+          <PaginatedSelectableList
+            noun="media item"
+            endpoint="media"
+            className="media-list"
+            items={media.map((item) => ({
+              id: item.id,
+              label: item.headline,
+              content: (
+                <article>
+                  <div className="media-meta">
+                    <span>{item.source_type.replace("_", " ")}</span>
+                    <span>{item.source}</span>
+                    {item.deadline ? (
+                      <strong>Deadline {formatTime(item.deadline)}</strong>
+                    ) : null}
+                  </div>
+                  <h2>{item.headline}</h2>
+                  <p>{item.body}</p>
+                  <div className="topics">
+                    {item.topics.map((topic) => (
+                      <span key={topic}>{topic}</span>
+                    ))}
+                  </div>
+                </article>
+              ),
+            }))}
+          />
         ) : (
           <div className="empty-state">
             <h2>No media ingested</h2>
