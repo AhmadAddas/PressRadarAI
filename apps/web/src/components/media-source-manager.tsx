@@ -258,24 +258,26 @@ export function MediaSourceManager({
               setPage={setSuggestionPage}
             />
           </div>
-          <form className="source-form" onSubmit={addRss}>
-            <h2>Add RSS source</h2>
-            <label>
-              Source name
-              <input name="name" required maxLength={100} />
-            </label>
-            <label>
-              HTTPS feed URL
-              <input name="url" type="url" pattern="https://.*" required />
-            </label>
-            <button
-              className="button-secondary"
-              type="submit"
-              disabled={working}
-            >
-              Add RSS source
-            </button>
-          </form>
+          {filter !== "api" ? (
+            <form className="source-form" onSubmit={addRss}>
+              <h2>Add RSS source</h2>
+              <label>
+                Source name
+                <input name="name" required maxLength={100} />
+              </label>
+              <label>
+                HTTPS feed URL
+                <input name="url" type="url" pattern="https://.*" required />
+              </label>
+              <button
+                className="button-secondary"
+                type="submit"
+                disabled={working}
+              >
+                Add RSS source
+              </button>
+            </form>
+          ) : null}
           <button
             className="source-ingest"
             type="button"

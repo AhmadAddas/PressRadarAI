@@ -66,6 +66,18 @@ describe("MediaSourceManager", () => {
     });
   });
 
+  it("hides RSS creation while filtering API sources", () => {
+    render(<MediaSourceManager sources={sources} suggestions={[]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Media options" }));
+    fireEvent.change(screen.getByLabelText("Filter sources"), {
+      target: { value: "api" },
+    });
+
+    expect(
+      screen.queryByRole("button", { name: "Add RSS source" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("closes media options when the user presses outside", () => {
     render(<MediaSourceManager sources={sources} suggestions={[]} />);
     const toggle = screen.getByRole("button", { name: "Media options" });
