@@ -54,6 +54,10 @@ describe("LocalAIMenu", () => {
     fireEvent.click(screen.getByRole("button", { name: "Local AI" }));
 
     expect(await screen.findByText("Local AI inactive")).toBeVisible();
+    expect(
+      screen.getByText("Clone an Ollama model to activate Local AI."),
+    ).toBeVisible();
+    expect(screen.queryByText("llama3.2:3b")).not.toBeInTheDocument();
     expect(screen.queryByText("Active model license")).not.toBeInTheDocument();
     expect(
       screen.queryByText("Community license summary."),

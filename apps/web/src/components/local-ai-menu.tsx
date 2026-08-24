@@ -170,7 +170,15 @@ export function LocalAIMenu() {
                     ? "Local AI unavailable"
                     : "Local AI inactive"}
               </strong>
-              <span>{status?.model ?? "Ollama unavailable"}</span>
+              <span>
+                {status?.enabled && status.reachable
+                  ? status.model
+                  : status?.enabled
+                    ? "Connect Ollama to use Local AI."
+                    : status
+                      ? "Clone an Ollama model to activate Local AI."
+                      : "Checking Ollama…"}
+              </span>
             </div>
           </div>
           {status?.enabled && status.reachable ? (
