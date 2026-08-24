@@ -38,6 +38,7 @@ describe("PaginatedSelectableList", () => {
     expect(
       screen.getByText("Pagination appears when there are more than 5 items."),
     ).toBeVisible();
+    expect(screen.getByLabelText("Select all pages")).toBeVisible();
     expect(screen.queryByText("Content 6")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     expect(screen.getByText("Content 6")).toBeInTheDocument();
@@ -78,7 +79,8 @@ describe("PaginatedSelectableList", () => {
       />,
     );
 
-    fireEvent.click(screen.getByLabelText("Select all pages"));
+    expect(screen.queryByLabelText("Select all pages")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Select all"));
     fireEvent.click(
       screen.getByRole("button", { name: "Delete selected (2)" }),
     );

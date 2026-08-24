@@ -66,6 +66,7 @@ export default async function ApplicationPage() {
             <AccountMenu name={identity.name} email={identity.email} />
           </div>
           <div className="actions dashboard-actions">
+            <LocalAIMenu />
             <DemoSetupButton workspaceKind={identity.workspace_kind} />
             <Link className="button button-secondary" href="/app/media">
               Media feed
@@ -75,7 +76,6 @@ export default async function ApplicationPage() {
             </Link>
           </div>
         </header>
-        <LocalAIMenu />
         <section aria-labelledby="opportunities-heading">
           <h2 id="opportunities-heading">Opportunities</h2>
           {opportunities.length ? (

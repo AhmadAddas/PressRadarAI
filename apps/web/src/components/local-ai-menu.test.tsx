@@ -68,7 +68,7 @@ describe("LocalAIMenu", () => {
           JSON.stringify({ ...status, model: "qwen2.5:0.5b-instruct" }),
           { status: 200, headers: { "Content-Type": "application/json" } },
         ),
-    );
+      );
     render(<LocalAIMenu />);
     fireEvent.click(screen.getByRole("button", { name: "Local AI" }));
     await act(async () => Promise.resolve());

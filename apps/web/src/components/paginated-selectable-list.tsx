@@ -140,7 +140,7 @@ export function PaginatedSelectableList({
       <div className="selection-toolbar">
         <label>
           <input type="checkbox" checked={allSelected} onChange={toggleAll} />
-          Select all pages
+          {pageCount > 1 ? "Select all pages" : "Select all"}
         </label>
         <span className="selection-hint">
           Tip: Ctrl-select chooses a range.
