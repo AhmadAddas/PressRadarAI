@@ -26,6 +26,7 @@ export function MediaSourceManager({
   const [filter, setFilter] = useState<MediaSourceKind | "all">("all");
   const [open, setOpen] = useState(false);
   const [working, setWorking] = useState(false);
+  const [ingesting, setIngesting] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<MediaSource | null>(null);
   const [sourcePage, setSourcePage] = useState(1);
   const [suggestionPage, setSuggestionPage] = useState(1);
@@ -84,13 +85,20 @@ export function MediaSourceManager({
   }, [open]);
 
   async function ingest() {
+    setIngesting(true);
+    const loadingToast = toast.loading(
+      "Ingesting media and analyzing opportunities…",
+    );
     await request(
       `${publicApiUrl}/media/ingest`,
       { method: "POST" },
       (result) => {
         toast.success(ingestionSummary(result as IngestionCounts));
       },
+      false,
     );
+    toast.dismiss(loadingToast);
+    setIngesting(false);
   }
 
   async function addSuggestion(source: MediaSourceSuggestion) {
@@ -129,8 +137,9 @@ export function MediaSourceManager({
     url: string,
     init: RequestInit,
     onSuccess?: (result: unknown) => void,
+    lockControls = true,
   ) {
-    setWorking(true);
+    if (lockControls) setWorking(true);
     try {
       const response = await fetch(url, { ...init, credentials: "include" });
       if (!response.ok) {
@@ -148,7 +157,7 @@ export function MediaSourceManager({
       toast.error("PressRadar is temporarily unavailable.");
       return false;
     } finally {
-      setWorking(false);
+      if (lockControls) setWorking(false);
     }
   }
 
@@ -262,10 +271,9 @@ export function MediaSourceManager({
             className="source-ingest"
             type="button"
             onClick={ingest}
-            disabled={working}
-            aria-busy={working}
+            aria-busy={ingesting}
           >
-            Ingest media
+            {ingesting ? "Ingesting media…" : "Ingest media"}
           </button>
           <p className="field-hint">
             Each run imports up to 25 items per source and 100 items total.

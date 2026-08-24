@@ -8,7 +8,12 @@ const refresh = vi.fn();
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 vi.mock("sonner", () => ({
-  toast: { success: vi.fn(), error: vi.fn() },
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+    loading: vi.fn(() => 1),
+    dismiss: vi.fn(),
+  },
 }));
 
 const sources = [
