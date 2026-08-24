@@ -32,8 +32,7 @@ from pressradar.infrastructure.firestore import (
 )
 from pressradar.infrastructure.hubspot_crm import HubSpotCRMIntegration
 from pressradar.infrastructure.noop_analytics import NoOpAnalyticsStore
-from pressradar.infrastructure.ollama_pitch import OllamaPitchGenerator
-from pressradar.infrastructure.ollama_relevance import OllamaRelevanceAnalyzer
+from pressradar.infrastructure.ollama_runtime import OllamaRuntime
 from pressradar.infrastructure.security import PasswordHasher, SessionTokens
 from pressradar.infrastructure.simulated_media import SimulatedMediaProvider
 from pressradar.infrastructure.simulated_sender import SimulatedPitchSender
@@ -48,6 +47,7 @@ from pressradar.presentation.analytics import create_analytics_router
 from pressradar.presentation.auth import create_auth_router, require_identity
 from pressradar.presentation.clients import create_clients_router
 from pressradar.presentation.demo import create_demo_router
+from pressradar.presentation.local_ai import create_local_ai_router
 from pressradar.presentation.media import create_media_router
 from pressradar.presentation.media_sources import create_media_sources_router
 from pressradar.presentation.opportunities import create_opportunities_router
@@ -61,6 +61,7 @@ def create_app(
     notification_sender: NotificationSender | None = None,
     crm_integration: CRMIntegration | None = None,
     analytics_store: AnalyticsStore | None = None,
+    ollama_runtime: OllamaRuntime | None = None,
 ) -> FastAPI:
     settings = settings or get_settings()
     custom_demo_workflow = any(
@@ -131,26 +132,19 @@ def create_app(
         else:
             analytics_store = NoOpAnalyticsStore()
     analytics_service = AnalyticsService(analytics_store)
+    if ollama_runtime is None:
+        ollama_runtime = OllamaRuntime(
+            base_url=str(settings.ollama_base_url),
+            model=settings.ollama_model,
+            timeout_seconds=settings.ollama_timeout_seconds,
+            enabled=settings.ai_provider == "ollama",
+        )
     if relevance_analyzer is None:
         relevance_analyzer = (
-            FakeRelevanceAnalyzer()
-            if settings.ai_provider == "fake"
-            else OllamaRelevanceAnalyzer(
-                base_url=str(settings.ollama_base_url),
-                model=settings.ollama_model,
-                timeout_seconds=settings.ollama_timeout_seconds,
-            )
+            FakeRelevanceAnalyzer() if settings.ai_provider == "fake" else ollama_runtime
         )
     if pitch_generator is None:
-        pitch_generator = (
-            FakePitchGenerator()
-            if settings.ai_provider == "fake"
-            else OllamaPitchGenerator(
-                base_url=str(settings.ollama_base_url),
-                model=settings.ollama_model,
-                timeout_seconds=settings.ollama_timeout_seconds,
-            )
-        )
+        pitch_generator = FakePitchGenerator() if settings.ai_provider == "fake" else ollama_runtime
     if pitch_sender is None:
         pitch_senders = {"simulated": SimulatedPitchSender()}
         pitch_sender = pitch_senders[settings.pitch_sender]
@@ -254,6 +248,7 @@ def create_app(
     application.include_router(
         create_opportunities_router(opportunity_service, identity_dependency)
     )
+    application.include_router(create_local_ai_router(ollama_runtime, identity_dependency))
     application.include_router(create_analytics_router(analytics_service, identity_dependency))
     application.include_router(
         create_demo_router(
