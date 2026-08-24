@@ -462,6 +462,15 @@ nav {
   gap: 0.75rem;
 }
 
+.local-ai-pull-progress {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.local-ai-pull-progress progress {
+  width: 100%;
+}
+
 .selection-toolbar,
 .pagination {
   display: flex;

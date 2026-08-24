@@ -14,6 +14,7 @@ export function LocalAIMenu() {
   const [license, setLicense] = useState<LicenseDetails | null>(null);
   const [countdown, setCountdown] = useState(0);
   const [working, setWorking] = useState(false);
+  const [pulling, setPulling] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const modelActive = Boolean(
     status?.enabled && status.reachable && status.model_available,
@@ -110,6 +111,7 @@ export function LocalAIMenu() {
   async function clone(activate: boolean) {
     if (!license || countdown > 0) return;
     setWorking(true);
+    setPulling(true);
     try {
       const response = await fetch(`${publicApiUrl}/local-ai/models`, {
         method: "POST",
@@ -137,6 +139,7 @@ export function LocalAIMenu() {
     } catch {
       toast.error("PressRadar cannot reach the local AI service.");
     } finally {
+      setPulling(false);
       setWorking(false);
     }
   }
@@ -294,6 +297,12 @@ export function LocalAIMenu() {
                     : "Clone and activate"}
                 </button>
               </div>
+              {pulling ? (
+                <div className="local-ai-pull-progress" role="status">
+                  <progress aria-label={`Downloading ${model}`} />
+                  <small>Downloading {model}. Keep this page open.</small>
+                </div>
+              ) : null}
             </div>
           ) : null}
           {status ? (

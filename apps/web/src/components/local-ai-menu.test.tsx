@@ -152,6 +152,10 @@ describe("LocalAIMenu", () => {
 
   it("can clone the selected model without activating it", async () => {
     vi.useFakeTimers();
+    let resolvePull!: (response: Response) => void;
+    const pendingPull = new Promise<Response>((resolve) => {
+      resolvePull = resolve;
+    });
     const request = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(
@@ -171,12 +175,14 @@ describe("LocalAIMenu", () => {
           { status: 200, headers: { "Content-Type": "application/json" } },
         ),
       )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ ...status, enabled: false }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }),
-      );
+      .mockReturnValueOnce(pendingPull);
+    const completedPull = new Response(
+      JSON.stringify({ ...status, enabled: false }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
     render(<LocalAIMenu />);
     fireEvent.click(screen.getByRole("button", { name: "Local AI" }));
     await act(async () => Promise.resolve());
@@ -196,7 +202,12 @@ describe("LocalAIMenu", () => {
     }
 
     fireEvent.click(screen.getByRole("button", { name: "Clone only" }));
-    await act(async () => Promise.resolve());
+    expect(
+      screen.getByRole("progressbar", {
+        name: "Downloading qwen2.5:0.5b-instruct",
+      }),
+    ).toBeVisible();
+    await act(async () => resolvePull(completedPull));
 
     expect(request).toHaveBeenLastCalledWith(
       expect.stringContaining("/local-ai/models"),
