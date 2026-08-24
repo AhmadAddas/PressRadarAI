@@ -5,6 +5,10 @@ import { FormEvent, startTransition, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { publicApiUrl } from "@/lib/api";
+import {
+  ingestionSummary,
+  type IngestionCounts,
+} from "@/lib/ingestion-summary";
 import type {
   MediaSource,
   MediaSourceKind,
@@ -83,12 +87,7 @@ export function MediaSourceManager({
       `${publicApiUrl}/media/ingest`,
       { method: "POST" },
       (result) => {
-        const counts = result as { created: number; duplicates: number };
-        toast.success(
-          counts.created
-            ? `Added ${counts.created} media items.`
-            : `${counts.duplicates} media items were already ingested.`,
-        );
+        toast.success(ingestionSummary(result as IngestionCounts));
       },
     );
   }
@@ -262,6 +261,10 @@ export function MediaSourceManager({
           >
             Ingest media
           </button>
+          <p className="field-hint">
+            Each run imports up to 25 items per source and 100 items total.
+            Deleted items found again are restored with their existing history.
+          </p>
         </section>
       ) : null}
     </div>

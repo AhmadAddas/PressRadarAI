@@ -5,6 +5,10 @@ import { startTransition, useState } from "react";
 import { toast } from "sonner";
 
 import { publicApiUrl } from "@/lib/api";
+import {
+  ingestionSummary,
+  type IngestionCounts,
+} from "@/lib/ingestion-summary";
 
 export function IngestMediaButton() {
   const router = useRouter();
@@ -21,15 +25,8 @@ export function IngestMediaButton() {
         toast.error("Unable to ingest simulated media.");
         return;
       }
-      const result = (await response.json()) as {
-        created: number;
-        duplicates: number;
-      };
-      toast.success(
-        result.created
-          ? `Added ${result.created} media items.`
-          : `${result.duplicates} media items were already ingested.`,
-      );
+      const result = (await response.json()) as IngestionCounts;
+      toast.success(ingestionSummary(result));
       startTransition(() => router.refresh());
     } catch {
       toast.error("PressRadar is temporarily unavailable.");

@@ -61,9 +61,12 @@ describe("MediaSourceManager", () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ created: 2, duplicates: 0 }), {
-          status: 200,
-        }),
+        new Response(
+          JSON.stringify({ created: 2, restored: 0, duplicates: 0 }),
+          {
+            status: 200,
+          },
+        ),
       )
       .mockResolvedValueOnce(new Response(null, { status: 204 }));
     render(<MediaSourceManager sources={sources} suggestions={[]} />);

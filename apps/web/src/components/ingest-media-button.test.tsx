@@ -21,7 +21,7 @@ describe("IngestMediaButton", () => {
 
   it("reports newly ingested media and refreshes the feed", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ created: 3, duplicates: 0 }), {
+      new Response(JSON.stringify({ created: 3, restored: 0, duplicates: 0 }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       }),
@@ -40,7 +40,7 @@ describe("IngestMediaButton", () => {
 
   it("reports duplicate media without shifting the action area", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ created: 0, duplicates: 3 }), {
+      new Response(JSON.stringify({ created: 0, restored: 0, duplicates: 3 }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       }),
@@ -54,6 +54,26 @@ describe("IngestMediaButton", () => {
     await waitFor(() =>
       expect(toast.success).toHaveBeenCalledWith(
         "3 media items were already ingested.",
+      ),
+    );
+  });
+
+  it("reports restored media separately", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ created: 0, restored: 2, duplicates: 1 }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    render(<IngestMediaButton />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Ingest simulated media" }),
+    );
+
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith(
+        "Restored 2 previously deleted media items. 1 media item was already ingested.",
       ),
     );
   });
