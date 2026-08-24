@@ -6,6 +6,7 @@ from threading import RLock
 from typing import Any
 
 import httpx
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from pressradar.application.pitches import PitchGenerationError
 from pressradar.application.relevance import RelevanceAnalysisError
@@ -26,6 +27,12 @@ RECOMMENDATION = (
 
 class LocalAIError(Exception):
     """Raised when local model management cannot complete safely."""
+
+
+class _TranslationResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    translations: list[str]
 
 
 @dataclass(frozen=True)
@@ -94,6 +101,37 @@ class OllamaRuntime:
             model=model,
             timeout_seconds=self._timeout_seconds,
         ).generate(client=client, media_item=media_item)
+
+    def translate(self, *, texts: tuple[str, ...], language_code: str) -> tuple[str, ...]:
+        with self._lock:
+            if not self._enabled:
+                raise LocalAIError("Activate Local AI before translating")
+            model = self._model
+        try:
+            response = self._client.post(
+                f"{self._base_url}/api/generate",
+                json={
+                    "model": model,
+                    "stream": False,
+                    "format": _TranslationResult.model_json_schema(),
+                    "prompt": (
+                        f"Translate each JSON string into language code {language_code}. "
+                        "Preserve names, numbers, placeholders, punctuation, and item order. "
+                        "Return only JSON matching the schema with exactly one translation per "
+                        f"input. INPUT: {json.dumps(texts)}"
+                    ),
+                },
+                timeout=self._timeout_seconds,
+            )
+            response.raise_for_status()
+            envelope = response.json()
+            result = _TranslationResult.model_validate_json(envelope["response"])
+            translations = tuple(value.strip() for value in result.translations)
+            if len(translations) != len(texts) or any(not value for value in translations):
+                raise LocalAIError("Local AI returned an incomplete translation")
+            return translations
+        except (httpx.HTTPError, KeyError, TypeError, ValueError, ValidationError) as error:
+            raise LocalAIError("Local AI translation failed") from error
 
     def status(self) -> LocalAIStatus:
         with self._lock:

@@ -44,6 +44,14 @@ def runtime_with_mock_provider() -> tuple[OllamaRuntime, list[httpx.Request]]:
             if model in installed_models:
                 installed_models.remove(model)
             return httpx.Response(200, json={"status": "success"})
+        if request.url.path == "/api/generate":
+            payload = json.loads(request.content)
+            prompt = str(payload["prompt"])
+            assert "language code ar" in prompt
+            return httpx.Response(
+                200,
+                json={"response": '{"translations":["لوحة الفرص","إضافة عميل"]}'},
+            )
         if request.url.host == "huggingface.co":
             return httpx.Response(
                 200,
@@ -208,3 +216,18 @@ async def test_local_ai_rejects_unknown_or_changed_license_confirmation(
 
     assert response.status_code == 502
     assert not any(request.url.path == "/api/pull" for request in requests)
+
+
+async def test_local_ai_translates_an_ordered_text_batch(tmp_path: Path) -> None:
+    runtime, _ = runtime_with_mock_provider()
+    async with authenticated_client(tmp_path / "translation.db", runtime) as client:
+        response = await client.post(
+            "/local-ai/translate",
+            json={
+                "language_code": "ar",
+                "texts": ["Opportunity dashboard", "Add client"],
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["translations"] == ["لوحة الفرص", "إضافة عميل"]

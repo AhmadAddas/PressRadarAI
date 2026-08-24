@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, ConfigDict, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from pressradar.domain.auth import Identity
 from pressradar.infrastructure.ollama_runtime import (
@@ -46,6 +46,21 @@ class ModelRequest(BaseModel):
 class PullModelRequest(ModelRequest):
     accepted_license: str
     activate: bool = True
+
+
+LanguageCode = Annotated[
+    str, StringConstraints(pattern=r"^[a-z]{2,3}(?:-[A-Z]{2})?$", max_length=6)
+]
+TranslationText = Annotated[str, StringConstraints(min_length=1, max_length=1_000)]
+
+
+class TranslationRequest(BaseModel):
+    language_code: LanguageCode
+    texts: list[TranslationText] = Field(min_length=1, max_length=100)
+
+
+class TranslationResponse(BaseModel):
+    translations: list[str]
 
 
 def create_local_ai_router(
@@ -132,5 +147,18 @@ def create_local_ai_router(
         _identity: Annotated[Identity, Depends(current_identity)],
     ) -> LocalAIStatus:
         return runtime.deactivate()
+
+    @router.post("/translate", response_model=TranslationResponse)
+    def translate(
+        request: TranslationRequest,
+        _identity: Annotated[Identity, Depends(current_identity)],
+    ) -> TranslationResponse:
+        try:
+            translations = runtime.translate(
+                texts=tuple(request.texts), language_code=request.language_code
+            )
+        except LocalAIError as error:
+            raise HTTPException(status_code=503, detail=str(error)) from error
+        return TranslationResponse(translations=list(translations))
 
     return router
