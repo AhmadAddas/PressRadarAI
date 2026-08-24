@@ -734,6 +734,29 @@ nav {
   background: #1d5a37;
 }
 
+.button-success,
+.workflow-action-send > button {
+  background: #247044;
+}
+
+.workflow-action-send {
+  position: relative;
+}
+
+.send-pitch-menu {
+  position: absolute;
+  z-index: 20;
+  display: grid;
+  gap: 0.5rem;
+  width: min(20rem, calc(100vw - 2rem));
+  margin-top: 0.5rem;
+  padding: 1rem;
+  border: 1px solid #d8dee8;
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: 0 1rem 2rem rgb(23 32 42 / 18%);
+}
+
 .pitch-actions p {
   margin: 0;
 }

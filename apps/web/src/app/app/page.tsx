@@ -150,6 +150,12 @@ export default async function ApplicationPage() {
                                 opportunityId={opportunity.id}
                                 status={opportunity.status}
                                 hasPitch={opportunity.pitch !== null}
+                                clientEmail={
+                                  clients.find(
+                                    (client) =>
+                                      client.id === opportunity.client_id,
+                                  )?.email
+                                }
                               />
                             </>
                           }
@@ -187,6 +193,12 @@ export default async function ApplicationPage() {
                               opportunityId={opportunity.id}
                               status={opportunity.status}
                               hasPitch={opportunity.pitch !== null}
+                              clientEmail={
+                                clients.find(
+                                  (client) =>
+                                    client.id === opportunity.client_id,
+                                )?.email
+                              }
                             />
                           ) : null}
                         </div>

@@ -26,6 +26,7 @@ describe("OpportunityWorkflowActions", () => {
         opportunityId="opportunity-1"
         status="ready"
         hasPitch
+        clientEmail="press@example.com"
       />,
     );
 
@@ -46,10 +47,13 @@ describe("OpportunityWorkflowActions", () => {
         opportunityId="opportunity-1"
         status="approved"
         hasPitch
+        clientEmail="press@example.com"
       />,
     );
+    fireEvent.click(screen.getByRole("button", { name: "Send pitch" }));
     expect(
-      screen.getByRole("button", { name: "Send pitch" }),
-    ).toBeInTheDocument();
+      screen.getByRole("button", { name: "Email (simulated)" }),
+    ).toBeEnabled();
+    expect(screen.getByRole("button", { name: "SMS locked" })).toBeDisabled();
   });
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { startTransition, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { publicApiUrl } from "@/lib/api";
@@ -11,15 +11,28 @@ type WorkflowActionsProps = {
   opportunityId: string;
   status: OpportunityStatus;
   hasPitch: boolean;
+  clientEmail?: string | null;
 };
 
 export function OpportunityWorkflowActions({
   opportunityId,
   status,
   hasPitch,
+  clientEmail,
 }: WorkflowActionsProps) {
   const router = useRouter();
   const [working, setWorking] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!sendOpen) return;
+    const close = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setSendOpen(false);
+    };
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
+  }, [sendOpen]);
 
   const action =
     status === "ready" && hasPitch
@@ -55,6 +68,44 @@ export function OpportunityWorkflowActions({
   }
 
   if (!action && status !== "sending") return null;
+
+  if (action === "send") {
+    return (
+      <div className="workflow-action workflow-action-send" ref={menuRef}>
+        <button
+          className="button-success"
+          type="button"
+          onClick={() => setSendOpen((current) => !current)}
+          aria-expanded={sendOpen}
+        >
+          Send pitch
+        </button>
+        {sendOpen ? (
+          <div className="send-pitch-menu">
+            <button
+              className="button-success"
+              type="button"
+              onClick={runAction}
+              disabled={working || !clientEmail}
+            >
+              Email (simulated)
+            </button>
+            <small>{clientEmail ?? "Add a client email to send."}</small>
+            <button
+              className="button-secondary is-blocked"
+              type="button"
+              disabled
+            >
+              SMS locked
+            </button>
+            <small>
+              Add Twilio API keys and phone configuration to enable SMS.
+            </small>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className={`workflow-action workflow-action-${action ?? "pending"}`}>
