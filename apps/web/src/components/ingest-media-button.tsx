@@ -2,38 +2,37 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { publicApiUrl } from "@/lib/api";
 
 export function IngestMediaButton() {
   const router = useRouter();
-  const [status, setStatus] = useState("");
   const [disabled, setDisabled] = useState(false);
 
   async function ingest() {
     setDisabled(true);
-    setStatus("");
     try {
       const response = await fetch(`${publicApiUrl}/media/ingest`, {
         method: "POST",
         credentials: "include",
       });
       if (!response.ok) {
-        setStatus("Unable to ingest simulated media.");
+        toast.error("Unable to ingest simulated media.");
         return;
       }
       const result = (await response.json()) as {
         created: number;
         duplicates: number;
       };
-      setStatus(
+      toast.success(
         result.created
           ? `Added ${result.created} media items.`
           : `${result.duplicates} media items were already ingested.`,
       );
       router.refresh();
     } catch {
-      setStatus("PressRadar is temporarily unavailable.");
+      toast.error("PressRadar is temporarily unavailable.");
     } finally {
       setDisabled(false);
     }
@@ -41,12 +40,14 @@ export function IngestMediaButton() {
 
   return (
     <div className="ingest-action">
-      <button type="button" onClick={ingest} disabled={disabled}>
-        {disabled ? "Ingesting…" : "Ingest simulated media"}
+      <button
+        type="button"
+        onClick={ingest}
+        disabled={disabled}
+        aria-busy={disabled}
+      >
+        Ingest simulated media
       </button>
-      <p role="status" aria-live="polite">
-        {status}
-      </p>
     </div>
   );
 }

@@ -77,12 +77,8 @@ export function AuthForm({ mode }: Readonly<{ mode: AuthMode }>) {
           </label>
           {isSignup ? <small>Use at least 12 characters.</small> : null}
           {error ? <p role="alert">{error}</p> : null}
-          <button type="submit" disabled={submitting}>
-            {submitting
-              ? "Please wait…"
-              : isSignup
-                ? "Create account"
-                : "Sign in"}
+          <button type="submit" disabled={submitting} aria-busy={submitting}>
+            {isSignup ? "Create account" : "Sign in"}
           </button>
         </form>
         <p>

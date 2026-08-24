@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { toast } from "sonner";
 
 import { PitchEditor } from "./pitch-editor";
 
@@ -7,6 +8,9 @@ const refresh = vi.fn();
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh }),
+}));
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
 }));
 
 describe("PitchEditor", () => {
@@ -32,7 +36,9 @@ describe("PitchEditor", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
 
-    expect(await screen.findByRole("status")).toHaveTextContent("Draft saved.");
+    await vi.waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith("Draft saved."),
+    );
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining("/opportunities/opportunity-1/pitch"),
       expect.objectContaining({

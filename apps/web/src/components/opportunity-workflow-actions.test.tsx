@@ -1,11 +1,15 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { toast } from "sonner";
 
 import { OpportunityWorkflowActions } from "./opportunity-workflow-actions";
 
 const refresh = vi.fn();
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
+}));
 
 describe("OpportunityWorkflowActions", () => {
   beforeEach(() => {
@@ -26,8 +30,8 @@ describe("OpportunityWorkflowActions", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Approve pitch" }));
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      "Pitch approved.",
+    await vi.waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith("Pitch approved."),
     );
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining("/opportunities/opportunity-1/approve"),

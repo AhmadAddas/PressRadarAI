@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { toast } from "sonner";
 
 import { IngestMediaButton } from "./ingest-media-button";
 
@@ -7,6 +8,9 @@ const refresh = vi.fn();
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh }),
+}));
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
 }));
 
 describe("IngestMediaButton", () => {
@@ -24,14 +28,12 @@ describe("IngestMediaButton", () => {
     );
     render(<IngestMediaButton />);
 
-    expect(screen.getByRole("status")).toBeEmptyDOMElement();
-
     fireEvent.click(
       screen.getByRole("button", { name: "Ingest simulated media" }),
     );
 
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      "Added 3 media items.",
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith("Added 3 media items."),
     );
     expect(refresh).toHaveBeenCalledOnce();
   });
@@ -45,13 +47,27 @@ describe("IngestMediaButton", () => {
     );
     render(<IngestMediaButton />);
 
-    const status = screen.getByRole("status");
     fireEvent.click(
       screen.getByRole("button", { name: "Ingest simulated media" }),
     );
 
     await waitFor(() =>
-      expect(status).toHaveTextContent("3 media items were already ingested."),
+      expect(toast.success).toHaveBeenCalledWith(
+        "3 media items were already ingested.",
+      ),
     );
+  });
+
+  it("keeps its label stable while ingestion is pending", () => {
+    vi.spyOn(globalThis, "fetch").mockReturnValue(new Promise(() => {}));
+    render(<IngestMediaButton />);
+
+    const button = screen.getByRole("button", {
+      name: "Ingest simulated media",
+    });
+    fireEvent.click(button);
+
+    expect(button).toHaveAttribute("aria-busy", "true");
+    expect(button).toHaveTextContent("Ingest simulated media");
   });
 });

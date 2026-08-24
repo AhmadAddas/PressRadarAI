@@ -60,7 +60,7 @@ export default async function MediaPage() {
           </div>
           <div className="actions media-header-actions">
             <Link className="button button-secondary" href="/app">
-              Clients
+              Dashboard
             </Link>
             {identity.workspace_kind === "demo" ? (
               <IngestMediaButton />

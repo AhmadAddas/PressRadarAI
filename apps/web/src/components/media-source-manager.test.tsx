@@ -1,11 +1,15 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { toast } from "sonner";
 
 import { MediaSourceManager } from "./media-source-manager";
 
 const refresh = vi.fn();
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
+}));
 
 const sources = [
   {
@@ -55,8 +59,8 @@ describe("MediaSourceManager", () => {
     render(<MediaSourceManager sources={sources} suggestions={[]} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Ingest media" }));
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      "Added 2 media items.",
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith("Added 2 media items."),
     );
     fireEvent.click(screen.getByRole("button", { name: "Media options" }));
     fireEvent.click(screen.getAllByRole("button", { name: "Delete" })[0]);

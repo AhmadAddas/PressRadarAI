@@ -137,6 +137,11 @@ button:disabled {
   opacity: 0.65;
 }
 
+button[aria-busy="true"] {
+  cursor: progress;
+  opacity: 1;
+}
+
 nav {
   display: flex;
   align-items: center;
@@ -181,6 +186,16 @@ nav {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.dashboard-header {
+  display: grid;
+  gap: 1rem;
+}
+
+.account-row {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .page-header > *,
@@ -641,7 +656,7 @@ nav {
   border-color: #276749;
   background: #effaf4;
   color: #205c3e;
-  cursor: default;
+  cursor: pointer;
   opacity: 1;
 }
 
@@ -760,19 +775,6 @@ nav {
   .page-header .actions {
     width: 100%;
     justify-content: flex-start;
-  }
-
-  .page-header .account-menu {
-    display: flex;
-    order: -1;
-    width: 100%;
-    flex-basis: 100%;
-    justify-content: flex-end;
-    margin-left: 0;
-  }
-
-  .page-header .account-menu summary {
-    width: max-content;
   }
 }
 

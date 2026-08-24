@@ -56,6 +56,7 @@ export function AuditTrail({ opportunityId }: { opportunityId: string }) {
         type="button"
         onClick={toggle}
         disabled={loading}
+        aria-busy={loading}
         aria-expanded={expanded}
         aria-controls={panelId}
       >

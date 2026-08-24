@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { publicApiUrl } from "@/lib/api";
 
@@ -9,13 +10,11 @@ export function DemoSetupButton({
   workspaceKind,
 }: Readonly<{ workspaceKind: "demo" | "prod" }>) {
   const router = useRouter();
-  const [error, setError] = useState("");
   const [working, setWorking] = useState(false);
 
   async function setup() {
     const target = workspaceKind === "demo" ? "prod" : "demo";
     setWorking(true);
-    setError("");
     try {
       const response = await fetch(`${publicApiUrl}/auth/workspace`, {
         method: "POST",
@@ -24,7 +23,7 @@ export function DemoSetupButton({
         body: JSON.stringify({ workspace_kind: target }),
       });
       if (!response.ok) {
-        setError("Unable to switch workspaces.");
+        toast.error("Unable to switch workspaces.");
         return;
       }
       if (target === "demo") {
@@ -33,13 +32,13 @@ export function DemoSetupButton({
           credentials: "include",
         });
         if (!demoResponse.ok) {
-          setError("Demo selected, but its data could not be prepared.");
+          toast.error("Demo selected, but its data could not be prepared.");
           return;
         }
       }
       router.refresh();
     } catch {
-      setError("PressRadar is temporarily unavailable.");
+      toast.error("PressRadar is temporarily unavailable.");
     } finally {
       setWorking(false);
     }
@@ -52,6 +51,7 @@ export function DemoSetupButton({
         className="demo-toggle"
         onClick={setup}
         disabled={working}
+        aria-busy={working}
         aria-pressed={workspaceKind === "demo"}
         aria-label={
           working
@@ -66,7 +66,6 @@ export function DemoSetupButton({
         </span>
         <span>{workspaceKind === "demo" ? "Demo" : "Prod"} workspace</span>
       </button>
-      {error ? <p role="alert">{error}</p> : null}
     </div>
   );
 }

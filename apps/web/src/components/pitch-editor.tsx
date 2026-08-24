@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { publicApiUrl } from "@/lib/api";
 
@@ -18,12 +19,10 @@ export function PitchEditor({
 }: PitchEditorProps) {
   const router = useRouter();
   const [content, setContent] = useState(initialContent);
-  const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function save() {
     setSaving(true);
-    setStatus("");
     try {
       const response = await fetch(
         `${publicApiUrl}/opportunities/${opportunityId}/pitch`,
@@ -35,13 +34,13 @@ export function PitchEditor({
         },
       );
       if (!response.ok) {
-        setStatus("Unable to save the pitch draft.");
+        toast.error("Unable to save the pitch draft.");
         return;
       }
-      setStatus("Draft saved.");
+      toast.success("Draft saved.");
       router.refresh();
     } catch {
-      setStatus("PressRadar is temporarily unavailable.");
+      toast.error("PressRadar is temporarily unavailable.");
     } finally {
       setSaving(false);
     }
@@ -63,10 +62,10 @@ export function PitchEditor({
           type="button"
           onClick={save}
           disabled={saving || !content.trim()}
+          aria-busy={saving}
         >
-          {saving ? "Saving…" : "Save draft"}
+          Save draft
         </button>
-        {status ? <p role="status">{status}</p> : null}
       </div>
     </div>
   );

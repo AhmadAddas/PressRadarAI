@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { publicApiUrl } from "@/lib/api";
 import type { OpportunityStatus } from "@/lib/opportunity-types";
@@ -18,7 +19,6 @@ export function OpportunityWorkflowActions({
   hasPitch,
 }: WorkflowActionsProps) {
   const router = useRouter();
-  const [message, setMessage] = useState("");
   const [working, setWorking] = useState(false);
 
   const action =
@@ -31,14 +31,13 @@ export function OpportunityWorkflowActions({
   async function runAction() {
     if (!action) return;
     setWorking(true);
-    setMessage("");
     try {
       const response = await fetch(
         `${publicApiUrl}/opportunities/${opportunityId}/${action}`,
         { method: "POST", credentials: "include" },
       );
       if (!response.ok) {
-        setMessage(
+        toast.error(
           action === "approve"
             ? "Unable to approve this pitch."
             : "Delivery failed. The approved pitch can be retried.",
@@ -46,10 +45,10 @@ export function OpportunityWorkflowActions({
         router.refresh();
         return;
       }
-      setMessage(action === "approve" ? "Pitch approved." : "Pitch sent.");
+      toast.success(action === "approve" ? "Pitch approved." : "Pitch sent.");
       router.refresh();
     } catch {
-      setMessage("PressRadar is temporarily unavailable.");
+      toast.error("PressRadar is temporarily unavailable.");
     } finally {
       setWorking(false);
     }
@@ -63,18 +62,10 @@ export function OpportunityWorkflowActions({
         type="button"
         onClick={runAction}
         disabled={working || status === "sending"}
+        aria-busy={working || status === "sending"}
       >
-        {status === "sending"
-          ? "Sending…"
-          : working
-            ? action === "approve"
-              ? "Approving…"
-              : "Sending…"
-            : action === "approve"
-              ? "Approve pitch"
-              : "Send pitch"}
+        {action === "approve" ? "Approve pitch" : "Send pitch"}
       </button>
-      {message ? <p role="status">{message}</p> : null}
     </div>
   );
 }

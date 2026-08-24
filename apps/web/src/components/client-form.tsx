@@ -125,8 +125,8 @@ export function ClientForm({ client }: Readonly<{ client?: Client }>) {
       />
       {error ? <p role="alert">{error}</p> : null}
       <div className="actions">
-        <button type="submit" disabled={submitting}>
-          {submitting ? "Saving…" : client ? "Save changes" : "Create client"}
+        <button type="submit" disabled={submitting} aria-busy={submitting}>
+          {client ? "Save changes" : "Create client"}
         </button>
         <Link className="button button-secondary" href="/app">
           Cancel

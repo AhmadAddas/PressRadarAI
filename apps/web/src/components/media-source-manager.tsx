@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { toast } from "sonner";
 
 import { publicApiUrl } from "@/lib/api";
 import type {
@@ -21,7 +22,6 @@ export function MediaSourceManager({
   const [filter, setFilter] = useState<MediaSourceKind | "all">("all");
   const [open, setOpen] = useState(false);
   const [working, setWorking] = useState(false);
-  const [message, setMessage] = useState("");
   const visibleSources = sources.filter(
     (source) => filter === "all" || source.kind === filter,
   );
@@ -35,7 +35,7 @@ export function MediaSourceManager({
       { method: "POST" },
       (result) => {
         const counts = result as { created: number; duplicates: number };
-        setMessage(
+        toast.success(
           counts.created
             ? `Added ${counts.created} media items.`
             : `${counts.duplicates} media items were already ingested.`,
@@ -79,21 +79,20 @@ export function MediaSourceManager({
     onSuccess?: (result: unknown) => void,
   ) {
     setWorking(true);
-    setMessage("");
     try {
       const response = await fetch(url, { ...init, credentials: "include" });
       if (!response.ok) {
         const payload = (await response.json().catch(() => null)) as {
           detail?: string;
         } | null;
-        setMessage(payload?.detail ?? "Unable to update media sources.");
+        toast.error(payload?.detail ?? "Unable to update media sources.");
         return;
       }
       const result = response.status === 204 ? null : await response.json();
       onSuccess?.(result);
       router.refresh();
     } catch {
-      setMessage("PressRadar is temporarily unavailable.");
+      toast.error("PressRadar is temporarily unavailable.");
     } finally {
       setWorking(false);
     }
@@ -102,8 +101,13 @@ export function MediaSourceManager({
   return (
     <div className="source-manager">
       <div className="source-toolbar">
-        <button type="button" onClick={ingest} disabled={working}>
-          {working ? "Working…" : "Ingest media"}
+        <button
+          type="button"
+          onClick={ingest}
+          disabled={working}
+          aria-busy={working}
+        >
+          Ingest media
         </button>
         <button
           className="button-secondary"
@@ -115,7 +119,6 @@ export function MediaSourceManager({
           Media options
         </button>
       </div>
-      {message ? <p role="status">{message}</p> : null}
       {open ? (
         <section className="source-options" id="media-source-options">
           <label>
