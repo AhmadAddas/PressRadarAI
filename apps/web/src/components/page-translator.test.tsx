@@ -22,7 +22,7 @@ describe("PageTranslator", () => {
         headers: { "Content-Type": "application/json" },
       }),
     );
-    render(
+    const view = render(
       <PageTranslator>
         <h1>Opportunity dashboard</h1>
       </PageTranslator>,
@@ -39,6 +39,13 @@ describe("PageTranslator", () => {
       language_name: "Arabic",
       texts: ["Opportunity dashboard"],
     });
+
+    view.rerender(
+      <PageTranslator>
+        <h1>Opportunity dashboard</h1>
+      </PageTranslator>,
+    );
+    await waitFor(() => expect(screen.getByText("لوحة الفرص")).toBeVisible());
 
     act(() => {
       window.dispatchEvent(new CustomEvent(languageEvent, { detail: "en" }));

@@ -15,11 +15,14 @@ export function PageTranslator({
   const pathname = usePathname();
   const rootRef = useRef<HTMLDivElement>(null);
   const originals = useRef(new WeakMap<Text, string>());
+  const translatedByOriginal = useRef(new Map<string, string>());
+  const activeLanguage = useRef("en");
   const startupTimer = useRef<number | null>(null);
   const [translating, setTranslating] = useState(false);
 
   const translate = useCallback(async (code: string) => {
     const language = languageByCode(code);
+    activeLanguage.current = language.code;
     document.documentElement.lang = language.code;
     document.documentElement.dir = language.rtl ? "rtl" : "ltr";
     const nodes = textNodes(rootRef.current);
@@ -57,6 +60,10 @@ export function PageTranslator({
         const result = (await response.json()) as { translations: string[] };
         if (result.translations.length !== batch.length) throw new Error();
         batch.forEach((node, index) => {
+          translatedByOriginal.current.set(
+            texts[index] ?? "",
+            result.translations[index] ?? "",
+          );
           node.data = preserveWhitespace(
             originals.current.get(node) ?? node.data,
             result.translations[index] ?? "",
@@ -64,6 +71,7 @@ export function PageTranslator({
         });
       }
     } catch {
+      activeLanguage.current = "en";
       document.documentElement.lang = "en";
       document.documentElement.dir = "ltr";
       localStorage.setItem(languageStorageKey, "en");
@@ -98,6 +106,25 @@ export function PageTranslator({
     window.addEventListener(languageEvent, changeLanguage);
     return () => window.removeEventListener(languageEvent, changeLanguage);
   }, [translate]);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const restoreTranslatedText = () => {
+      if (activeLanguage.current === "en") return;
+      for (const node of textNodes(root)) {
+        const translated = translatedByOriginal.current.get(node.data.trim());
+        if (translated) node.data = preserveWhitespace(node.data, translated);
+      }
+    };
+    const observer = new MutationObserver(restoreTranslatedText);
+    observer.observe(root, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+    });
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <div ref={rootRef} className="translated-page" aria-busy={translating}>
