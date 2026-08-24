@@ -130,14 +130,6 @@ export function MediaSourceManager({
     <div className="source-manager" ref={managerRef}>
       <div className="source-toolbar">
         <button
-          type="button"
-          onClick={ingest}
-          disabled={working}
-          aria-busy={working}
-        >
-          Ingest media
-        </button>
-        <button
           className="button-secondary"
           type="button"
           onClick={() => setOpen((value) => !value)}
@@ -218,10 +210,23 @@ export function MediaSourceManager({
               HTTPS feed URL
               <input name="url" type="url" pattern="https://.*" required />
             </label>
-            <button type="submit" disabled={working}>
+            <button
+              className="button-secondary"
+              type="submit"
+              disabled={working}
+            >
               Add RSS source
             </button>
           </form>
+          <button
+            className="source-ingest"
+            type="button"
+            onClick={ingest}
+            disabled={working}
+            aria-busy={working}
+          >
+            Ingest media
+          </button>
         </section>
       ) : null}
     </div>

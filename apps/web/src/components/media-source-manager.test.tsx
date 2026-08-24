@@ -68,11 +68,21 @@ describe("MediaSourceManager", () => {
       .mockResolvedValueOnce(new Response(null, { status: 204 }));
     render(<MediaSourceManager sources={sources} suggestions={[]} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Ingest media" }));
+    expect(
+      screen.queryByRole("button", { name: "Ingest media" }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Media options" }));
+    const addRss = screen.getByRole("button", { name: "Add RSS source" });
+    const ingest = screen.getByRole("button", { name: "Ingest media" });
+    expect(addRss).toHaveClass("button-secondary");
+    expect(
+      addRss.compareDocumentPosition(ingest) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    fireEvent.click(ingest);
     await waitFor(() =>
       expect(toast.success).toHaveBeenCalledWith("Added 2 media items."),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Media options" }));
     fireEvent.click(screen.getAllByRole("button", { name: "Delete" })[0]);
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
