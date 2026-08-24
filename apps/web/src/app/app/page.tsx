@@ -10,6 +10,7 @@ import { OpportunityWorkflowActions } from "@/components/opportunity-workflow-ac
 import { PitchEditor } from "@/components/pitch-editor";
 import { PaginatedSelectableList } from "@/components/paginated-selectable-list";
 import { ExpandableText } from "@/components/expandable-text";
+import { LocalAIMenu } from "@/components/local-ai-menu";
 import { internalApiUrl } from "@/lib/api";
 import type { Client } from "@/lib/client-types";
 import type { Opportunity } from "@/lib/opportunity-types";
@@ -74,6 +75,7 @@ export default async function ApplicationPage() {
             </Link>
           </div>
         </header>
+        <LocalAIMenu />
         <section aria-labelledby="opportunities-heading">
           <h2 id="opportunities-heading">Opportunities</h2>
           {opportunities.length ? (

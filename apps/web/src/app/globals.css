@@ -353,6 +353,96 @@ nav {
   gap: 1rem;
 }
 
+.local-ai {
+  position: relative;
+  width: fit-content;
+  margin: 1rem 0 1.5rem;
+}
+
+.local-ai-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ollama-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.local-ai-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  display: grid;
+  width: min(31rem, calc(100vw - 2rem));
+  max-height: min(44rem, calc(100vh - 8rem));
+  gap: 1rem;
+  padding: 1rem;
+  overflow-y: auto;
+  border: 1px solid #dce1e7;
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: 0 1rem 2rem rgb(23 32 42 / 16%);
+}
+
+.local-ai-status {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.local-ai-status div,
+.license-summary,
+.recommendation {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.local-ai-status span,
+.license-summary span,
+.license-summary p,
+.recommendation p,
+.recommendation small {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.status-dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: #a12222;
+}
+
+.status-dot.is-active {
+  background: #247044;
+}
+
+.license-summary,
+.recommendation {
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background: #f4f7ff;
+}
+
+.license-summary > span:first-of-type {
+  color: #244ca7;
+  font-weight: 700;
+}
+
+.local-ai-form {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.license-confirmation {
+  display: grid;
+  gap: 0.75rem;
+}
+
 .selection-toolbar,
 .pagination {
   display: flex;
@@ -1162,6 +1252,21 @@ nav {
   .page-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .local-ai,
+  .local-ai-trigger {
+    width: 100%;
+  }
+
+  .local-ai-menu {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    bottom: 1rem;
+    left: 1rem;
+    width: auto;
+    max-height: none;
   }
 }
 
