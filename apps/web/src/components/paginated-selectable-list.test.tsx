@@ -76,7 +76,7 @@ describe("PaginatedSelectableList", () => {
     expect(new Set(request.mock.calls.map(([url]) => url)).size).toBe(2);
   });
 
-  it("selects cards and Shift-selects the records in between", () => {
+  it("selects cards and Ctrl-selects the records in between", () => {
     render(
       <PaginatedSelectableList
         items={items}
@@ -88,15 +88,14 @@ describe("PaginatedSelectableList", () => {
 
     const first = screen.getByLabelText("Select Item 1");
     fireEvent.click(first);
-    fireEvent.keyDown(first, { key: "Shift" });
+    fireEvent.keyDown(first, { key: "Control" });
     fireEvent.click(screen.getByLabelText("Select Item 4"));
-    fireEvent.keyUp(first, { key: "Shift" });
+    fireEvent.keyUp(first, { key: "Control" });
 
     expect(
       screen.getByRole("button", { name: "Delete selected (4)" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText("Tip: Shift-select chooses a range."),
-    ).toBeVisible();
+    expect(screen.getByText("Tip: Ctrl-select chooses a range.")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Delete Item 1" })).toBeVisible();
   });
 });

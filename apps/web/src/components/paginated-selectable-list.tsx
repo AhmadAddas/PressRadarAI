@@ -34,7 +34,7 @@ export function PaginatedSelectableList({
   const [countdown, setCountdown] = useState(0);
   const [deleting, setDeleting] = useState(false);
   const lastSelectedIndex = useRef<number | null>(null);
-  const shiftHeld = useRef(false);
+  const controlHeld = useRef(false);
   const items = initialItems.filter((item) => !deletedIds.has(item.id));
   const pageCount = Math.max(1, Math.ceil(items.length / pageSize));
   const currentPage = Math.min(page, pageCount);
@@ -54,12 +54,12 @@ export function PaginatedSelectableList({
     return () => window.clearTimeout(timer);
   }, [countdown]);
 
-  function toggle(id: string, shiftKey = false) {
+  function toggle(id: string, rangeSelection = false) {
     const index = items.findIndex((item) => item.id === id);
     const anchorIndex = lastSelectedIndex.current;
     setSelected((current) => {
       const next = new Set(current);
-      if (shiftKey && anchorIndex !== null && index >= 0) {
+      if (rangeSelection && anchorIndex !== null && index >= 0) {
         const start = Math.min(anchorIndex, index);
         const end = Math.max(anchorIndex, index);
         for (const item of items.slice(start, end + 1)) next.add(item.id);
@@ -73,7 +73,7 @@ export function PaginatedSelectableList({
   function selectFromCard(event: ReactMouseEvent, id: string) {
     const target = event.target as HTMLElement;
     if (target.closest("a, button, input, textarea, select, label")) return;
-    toggle(id, event.shiftKey || shiftHeld.current);
+    toggle(id, event.ctrlKey || controlHeld.current);
   }
 
   function toggleAll() {
@@ -131,10 +131,10 @@ export function PaginatedSelectableList({
     <div
       className="selectable-list"
       onKeyDown={(event) => {
-        if (event.key === "Shift") shiftHeld.current = true;
+        if (event.key === "Control") controlHeld.current = true;
       }}
       onKeyUp={(event) => {
-        if (event.key === "Shift") shiftHeld.current = false;
+        if (event.key === "Control") controlHeld.current = false;
       }}
     >
       <div className="selection-toolbar">
@@ -143,7 +143,7 @@ export function PaginatedSelectableList({
           Select all pages
         </label>
         <span className="selection-hint">
-          Tip: Shift-select chooses a range.
+          Tip: Ctrl-select chooses a range.
         </span>
         {selected.size ? (
           <button
@@ -168,7 +168,7 @@ export function PaginatedSelectableList({
                 aria-label={`Select ${item.label}`}
                 checked={selected.has(item.id)}
                 onClick={(event) =>
-                  toggle(item.id, event.shiftKey || shiftHeld.current)
+                  toggle(item.id, event.ctrlKey || controlHeld.current)
                 }
                 onChange={() => undefined}
               />
@@ -179,7 +179,8 @@ export function PaginatedSelectableList({
               type="button"
               onClick={() => warn([item.id])}
             >
-              Delete
+              <span aria-hidden="true">⌫</span>
+              <span className="visually-hidden">Delete {item.label}</span>
             </button>
           </li>
         ))}

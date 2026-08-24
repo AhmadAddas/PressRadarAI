@@ -58,9 +58,7 @@ describe("ClientForm", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Create client" }));
 
-    await waitFor(() =>
-      expect(push).toHaveBeenCalledWith("/app/clients/client-1"),
-    );
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/app"));
     const options = request.mock.calls[0]?.[1];
     expect(options).toEqual(
       expect.objectContaining({ method: "POST", credentials: "include" }),
@@ -103,6 +101,56 @@ describe("ClientForm", () => {
     await act(async () => Promise.resolve());
 
     expect(request).toHaveBeenCalledOnce();
+  });
+
+  it("warns before saving an incomplete edit and returns to the dashboard", async () => {
+    vi.useFakeTimers();
+    const request = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ id: "client-1" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    render(
+      <ClientForm
+        client={{
+          id: "client-1",
+          workspace_id: "workspace-1",
+          name: "Amina Noor",
+          company: "",
+          website: null,
+          industry: null,
+          description: null,
+          location: null,
+          expertise: [],
+          spokesperson_name: null,
+          spokesperson_title: null,
+          keywords: [],
+          excluded_keywords: [],
+          preferred_topics: [],
+          tone: null,
+          monitoring_rules: [],
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(request).not.toHaveBeenCalled();
+    expect(screen.getByRole("alertdialog")).toHaveTextContent(
+      "Save this client with incomplete context?",
+    );
+
+    for (let second = 0; second < 5; second += 1) {
+      await act(async () => vi.advanceTimersByTime(1000));
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Save anyway" }));
+    await act(async () => Promise.resolve());
+
+    expect(request).toHaveBeenCalledWith(
+      expect.stringMatching(/\/clients\/client-1$/),
+      expect.objectContaining({ method: "PUT" }),
+    );
+    expect(push).toHaveBeenCalledWith("/app");
   });
 
   it("presents cancel as a secondary action", () => {

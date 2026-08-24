@@ -46,7 +46,7 @@ export function ClientForm({ client }: Readonly<{ client?: Client }>) {
     };
 
     const missing = importantMissingFields(body);
-    if (!client && missing.length) {
+    if (missing.length) {
       setPendingBody(body);
       setMissingFields(missing);
       setCountdown(5);
@@ -71,8 +71,7 @@ export function ClientForm({ client }: Readonly<{ client?: Client }>) {
         setError("Check the client details and try again.");
         return;
       }
-      const saved = (await response.json()) as Client;
-      router.push(`/app/clients/${saved.id}`);
+      router.push("/app");
       startTransition(() => router.refresh());
     } catch {
       setError("PressRadar is temporarily unavailable.");
@@ -165,7 +164,9 @@ export function ClientForm({ client }: Readonly<{ client?: Client }>) {
             role="alertdialog"
             aria-modal="true"
           >
-            <strong>Create this client with incomplete context?</strong>
+            <strong>
+              {client ? "Save" : "Create"} this client with incomplete context?
+            </strong>
             <p>
               {formatList(missingFields)} will be empty. You can add them later,
               but matching and pitch context may be less accurate.
@@ -176,7 +177,11 @@ export function ClientForm({ client }: Readonly<{ client?: Client }>) {
                 disabled={countdown > 0 || submitting}
                 onClick={confirmIncompleteClient}
               >
-                {countdown > 0 ? `Confirm in ${countdown}s` : "Create anyway"}
+                {countdown > 0
+                  ? `Confirm in ${countdown}s`
+                  : client
+                    ? "Save anyway"
+                    : "Create anyway"}
               </button>
               <button
                 className="button-secondary"

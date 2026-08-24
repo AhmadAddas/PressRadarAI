@@ -365,6 +365,7 @@ nav {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  white-space: nowrap;
 }
 
 .selectable-item {
@@ -381,18 +382,56 @@ nav {
   place-items: center;
 }
 
+.item-checkbox input {
+  width: 1.2rem;
+  height: 1.2rem;
+  accent-color: #0891b2;
+}
+
 .item-content {
   min-width: 0;
 }
 
 .selectable-item.is-selected {
-  border-color: #3264d6;
-  box-shadow: 0 0 0 2px rgb(50 100 214 / 14%);
+  outline: 2px solid #22d3ee;
+  outline-offset: 2px;
 }
 
 .selection-hint {
   color: #53606d;
   font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.item-delete {
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0.2rem;
+  background: transparent;
+  color: #a12222;
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.client-list .item-checkbox,
+.client-list .item-delete {
+  margin-top: 1rem;
+}
+
+.opportunity-list .item-checkbox,
+.opportunity-list .item-delete {
+  margin-top: 1.45rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .button-compact {
@@ -863,6 +902,7 @@ nav {
   align-items: center;
   gap: 0.3rem;
   color: inherit;
+  text-decoration: none;
 }
 
 .client-list span,
