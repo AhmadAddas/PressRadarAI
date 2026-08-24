@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -92,10 +92,12 @@ def create_media_sources_router(
         kind: Annotated[MediaSourceKind | None, Query()] = None,
     ) -> list[MediaSourceSuggestion]:
         _require_prod(identity)
+        configured = sources.list(workspace_id=identity.workspace_id, kind=None)
         return [
             MediaSourceSuggestion.model_validate(item)
             for item in UAE_SOURCE_SUGGESTIONS
-            if kind is None or item["kind"] == kind
+            if (kind is None or item["kind"] == kind)
+            and not _is_configured_suggestion(item, configured)
         ]
 
     @router.delete("/{source_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -109,6 +111,20 @@ def create_media_sources_router(
             raise HTTPException(status_code=404, detail="Media source not found") from error
 
     return router
+
+
+def _is_configured_suggestion(
+    suggestion: Mapping[str, object], configured: list[MediaSource]
+) -> bool:
+    return any(
+        source.kind == suggestion["kind"]
+        and (
+            source.provider == suggestion["provider"]
+            if source.kind is MediaSourceKind.API
+            else source.url == suggestion["url"]
+        )
+        for source in configured
+    )
 
 
 def _require_prod(identity: Identity) -> None:

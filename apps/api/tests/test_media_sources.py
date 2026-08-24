@@ -77,6 +77,17 @@ async def test_source_validation_and_uae_suggestions(tmp_path: Path) -> None:
             json={"name": "Unsafe", "kind": "rss", "url": "http://localhost/feed"},
         )
         suggestions = await client.get("/media/sources/suggestions", params={"kind": "api"})
+        configured = await client.post(
+            "/media/sources",
+            json={"name": "My NewsAPI", "kind": "api", "provider": "newsapi"},
+        )
+        suggestions_after_add = await client.get(
+            "/media/sources/suggestions", params={"kind": "api"}
+        )
+        await client.delete(f"/media/sources/{configured.json()['id']}")
+        suggestions_after_delete = await client.get(
+            "/media/sources/suggestions", params={"kind": "api"}
+        )
 
     assert insecure.status_code == 422
     assert suggestions.json() == [
@@ -87,6 +98,8 @@ async def test_source_validation_and_uae_suggestions(tmp_path: Path) -> None:
             "url": None,
         }
     ]
+    assert suggestions_after_add.json() == []
+    assert suggestions_after_delete.json() == suggestions.json()
 
 
 async def test_prod_ingestion_uses_configured_sources_and_requires_provider_key(
