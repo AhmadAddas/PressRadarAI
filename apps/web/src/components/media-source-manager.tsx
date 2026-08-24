@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { FormEvent, startTransition, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -18,12 +18,15 @@ import type {
 export function MediaSourceManager({
   sources,
   suggestions,
+  initialFilter = "all",
 }: Readonly<{
   sources: MediaSource[];
   suggestions: MediaSourceSuggestion[];
+  initialFilter?: MediaSourceKind | "all";
 }>) {
   const router = useRouter();
-  const [filter, setFilter] = useState<MediaSourceKind | "all">("all");
+  const pathname = usePathname();
+  const [filter, setFilter] = useState<MediaSourceKind | "all">(initialFilter);
   const [open, setOpen] = useState(false);
   const [working, setWorking] = useState(false);
   const [ingesting, setIngesting] = useState(false);
@@ -181,9 +184,15 @@ export function MediaSourceManager({
             <select
               value={filter}
               onChange={(event) => {
-                setFilter(event.target.value as MediaSourceKind | "all");
+                const nextFilter = event.target.value as
+                  | MediaSourceKind
+                  | "all";
+                setFilter(nextFilter);
                 setSourcePage(1);
                 setSuggestionPage(1);
+                const query =
+                  nextFilter === "all" ? "" : `?source=${nextFilter}`;
+                router.replace(`${pathname}${query}`, { scroll: false });
               }}
             >
               <option value="all">All</option>

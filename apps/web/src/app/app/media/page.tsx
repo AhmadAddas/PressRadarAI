@@ -6,6 +6,7 @@ import { ExpandableText } from "@/components/expandable-text";
 import { MediaSourceManager } from "@/components/media-source-manager";
 import { PaginatedSelectableList } from "@/components/paginated-selectable-list";
 import { internalApiUrl } from "@/lib/api";
+import { filterMedia, type MediaFilter } from "@/lib/media-filter";
 import type { MediaItem } from "@/lib/media-types";
 import { formatSourceType } from "@/lib/media-presentation";
 import type {
@@ -14,8 +15,12 @@ import type {
 } from "@/lib/media-source-types";
 
 type Identity = { workspace_kind: "demo" | "prod" };
-
-export default async function MediaPage() {
+export default async function MediaPage({
+  searchParams,
+}: Readonly<{ searchParams: Promise<{ source?: string }> }>) {
+  const source = (await searchParams).source;
+  const mediaFilter: MediaFilter =
+    source === "api" || source === "rss" ? source : "all";
   const cookieHeader = (await cookies()).toString();
   const identityResponse = await fetch(`${internalApiUrl}/auth/me`, {
     headers: { cookie: cookieHeader },
@@ -32,7 +37,10 @@ export default async function MediaPage() {
   if (!response.ok) {
     throw new Error("Unable to load media");
   }
-  const media = (await response.json()) as MediaItem[];
+  const media = filterMedia(
+    (await response.json()) as MediaItem[],
+    mediaFilter,
+  );
   let sources: MediaSource[] = [];
   let suggestions: MediaSourceSuggestion[] = [];
   if (identity.workspace_kind === "prod") {
@@ -68,7 +76,11 @@ export default async function MediaPage() {
             {identity.workspace_kind === "demo" ? (
               <IngestMediaButton />
             ) : (
-              <MediaSourceManager sources={sources} suggestions={suggestions} />
+              <MediaSourceManager
+                sources={sources}
+                suggestions={suggestions}
+                initialFilter={mediaFilter}
+              />
             )}
           </div>
         </header>

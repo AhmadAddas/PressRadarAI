@@ -394,10 +394,15 @@ nav {
   gap: 1rem;
   padding: 1rem;
   overflow-y: auto;
+  scrollbar-width: none;
   border: 1px solid #dce1e7;
   border-radius: 0.75rem;
   background: #fff;
   box-shadow: 0 1rem 2rem rgb(23 32 42 / 16%);
+}
+
+.local-ai-menu::-webkit-scrollbar {
+  display: none;
 }
 
 .local-ai-status {

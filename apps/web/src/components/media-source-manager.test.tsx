@@ -6,7 +6,12 @@ import { MediaSourceManager } from "./media-source-manager";
 
 const refresh = vi.fn();
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
+const replace = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/app/media",
+  useRouter: () => ({ refresh, replace }),
+}));
 vi.mock("sonner", () => ({
   toast: {
     success: vi.fn(),
@@ -39,6 +44,7 @@ describe("MediaSourceManager", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     refresh.mockReset();
+    replace.mockReset();
   });
 
   it("filters configured RSS and API sources", () => {
@@ -55,6 +61,9 @@ describe("MediaSourceManager", () => {
       ),
     ).toHaveLength(2);
     expect(screen.queryByText("UAE NewsAPI")).not.toBeInTheDocument();
+    expect(replace).toHaveBeenCalledWith("/app/media?source=rss", {
+      scroll: false,
+    });
   });
 
   it("closes media options when the user presses outside", () => {
