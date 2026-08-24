@@ -42,6 +42,7 @@ class SQLiteClientRepository:
                 """
             )
             self._add_deleted_column(connection)
+            self._add_contact_columns(connection)
 
     def create(self, *, workspace_id: str, details: ClientDetails) -> Client:
         client_id = str(uuid4())
@@ -77,7 +78,7 @@ class SQLiteClientRepository:
                 """UPDATE clients SET name = ?, company = ?, website = ?, industry = ?,
                 description = ?, location = ?, expertise = ?, spokesperson_name = ?,
                 spokesperson_title = ?, keywords = ?, excluded_keywords = ?,
-                preferred_topics = ?, tone = ?
+                preferred_topics = ?, tone = ?, email = ?, phone = ?
                 WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL""",
                 (*self._detail_values(details), client_id, workspace_id),
             )
@@ -101,6 +102,14 @@ class SQLiteClientRepository:
         if "deleted_at" not in columns:
             connection.execute("ALTER TABLE clients ADD COLUMN deleted_at TEXT")
 
+    @staticmethod
+    def _add_contact_columns(connection: sqlite3.Connection) -> None:
+        columns = {str(row["name"]) for row in connection.execute("PRAGMA table_info(clients)")}
+        if "email" not in columns:
+            connection.execute("ALTER TABLE clients ADD COLUMN email TEXT")
+        if "phone" not in columns:
+            connection.execute("ALTER TABLE clients ADD COLUMN phone TEXT")
+
     def _insert_client(
         self,
         connection: sqlite3.Connection,
@@ -112,8 +121,8 @@ class SQLiteClientRepository:
             """INSERT INTO clients (
                 id, workspace_id, name, company, website, industry, description, location,
                 expertise, spokesperson_name, spokesperson_title, keywords,
-                excluded_keywords, preferred_topics, tone
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                excluded_keywords, preferred_topics, tone, email, phone
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (client_id, workspace_id, *self._detail_values(details)),
         )
 
@@ -133,6 +142,8 @@ class SQLiteClientRepository:
             json.dumps(details.excluded_keywords),
             json.dumps(details.preferred_topics),
             details.tone,
+            details.email,
+            details.phone,
         )
 
     @staticmethod
@@ -172,6 +183,8 @@ class SQLiteClientRepository:
             preferred_topics=tuple(json.loads(row["preferred_topics"])),
             tone=None if row["tone"] is None else str(row["tone"]),
             monitoring_rules=tuple(str(rule["query"]) for rule in rules),
+            email=None if row["email"] is None else str(row["email"]),
+            phone=None if row["phone"] is None else str(row["phone"]),
         )
 
     def _connect(self) -> sqlite3.Connection:

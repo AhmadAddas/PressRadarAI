@@ -758,6 +758,8 @@ def _client(client_id: str, data: dict[str, Any]) -> Client:
         preferred_topics=tuple(data.get("preferred_topics", [])),
         tone=cast(str | None, data.get("tone")),
         monitoring_rules=tuple(data.get("monitoring_rules", [])),
+        email=cast(str | None, data.get("email")),
+        phone=cast(str | None, data.get("phone")),
     )
 
 

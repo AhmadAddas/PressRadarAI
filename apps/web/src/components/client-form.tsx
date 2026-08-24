@@ -32,6 +32,8 @@ export function ClientForm({ client }: Readonly<{ client?: Client }>) {
       name: capitalizeFirst(String(form.get("name") ?? "").trim()),
       company: optional(form.get("company")),
       website: website(form.get("website")),
+      email: optional(form.get("email")),
+      phone: optional(form.get("phone")),
       industry: optional(form.get("industry")),
       description: optional(form.get("description")),
       location: optional(form.get("location")),
@@ -103,6 +105,20 @@ export function ClientForm({ client }: Readonly<{ client?: Client }>) {
           type="url"
           value={client?.website}
           autoUrl
+        />
+        <TextField
+          label="Email"
+          name="email"
+          type="email"
+          value={client?.email}
+        />
+        <TextField
+          label="Phone number"
+          name="phone"
+          type="tel"
+          value={client?.phone}
+          pattern="\+[1-9][0-9]{7,14}"
+          placeholder="+971501234567"
         />
         <TextField label="Industry" name="industry" value={client?.industry} />
         <TextField label="Location" name="location" value={client?.location} />
@@ -206,6 +222,8 @@ type FieldProps = {
   type?: string;
   required?: boolean;
   autoUrl?: boolean;
+  pattern?: string;
+  placeholder?: string;
 };
 
 function TextField({
@@ -215,6 +233,8 @@ function TextField({
   type = "text",
   required = false,
   autoUrl = false,
+  pattern,
+  placeholder,
 }: FieldProps) {
   return (
     <label>
@@ -224,6 +244,8 @@ function TextField({
         type={type}
         defaultValue={Array.isArray(value) ? value.join(", ") : (value ?? "")}
         required={required}
+        pattern={pattern}
+        placeholder={placeholder}
         onBlur={
           autoUrl
             ? (event) => {
@@ -241,6 +263,8 @@ type ClientPayload = {
   name: string;
   company: string | null;
   website: string | null;
+  email: string | null;
+  phone: string | null;
   industry: string | null;
   description: string | null;
   location: string | null;
@@ -264,6 +288,8 @@ function importantMissingFields(body: ClientPayload): string[] {
   return [
     ["Company", body.company],
     ["Website", body.website],
+    ["Email", body.email],
+    ["Phone number", body.phone],
     ["Expertise", body.expertise.length],
     ["Monitoring rules", body.monitoring_rules.length],
   ]

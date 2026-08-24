@@ -4,6 +4,8 @@ export type Client = {
   name: string;
   company: string;
   website: string | null;
+  email: string | null;
+  phone: string | null;
   industry: string | null;
   description: string | null;
   location: string | null;

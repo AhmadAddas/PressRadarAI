@@ -44,6 +44,12 @@ describe("ClientForm", () => {
       target: { value: "nexa.example.com" },
     });
     fireEvent.blur(screen.getByLabelText("Website"));
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "press@nexa.example.com" },
+    });
+    fireEvent.change(screen.getByLabelText("Phone number"), {
+      target: { value: "+971501234567" },
+    });
     fireEvent.change(screen.getByLabelText("Expertise (comma separated)"), {
       target: { value: "AI governance" },
     });
@@ -68,6 +74,8 @@ describe("ClientForm", () => {
         name: "Dr. Amina Noor",
         keywords: ["Nexa AI", "AI regulation"],
         website: "https://nexa.example.com",
+        email: "press@nexa.example.com",
+        phone: "+971501234567",
         monitoring_rules: ["Dubai AI startup", "UAE AI regulation"],
       }),
     );
@@ -89,7 +97,7 @@ describe("ClientForm", () => {
 
     expect(request).not.toHaveBeenCalled();
     expect(screen.getByRole("alertdialog")).toHaveTextContent(
-      "Company, Website, Expertise and Monitoring rules will be empty",
+      "Company, Website, Email, Phone number, Expertise and Monitoring rules will be empty",
     );
     expect(
       screen.getByRole("button", { name: "Confirm in 5s" }),
@@ -120,6 +128,8 @@ describe("ClientForm", () => {
           name: "Amina Noor",
           company: "",
           website: null,
+          email: null,
+          phone: null,
           industry: null,
           description: null,
           location: null,

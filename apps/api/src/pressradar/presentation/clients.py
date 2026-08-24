@@ -2,7 +2,15 @@ from collections.abc import Callable
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, StringConstraints, field_validator
+from pydantic import (
+    AnyHttpUrl,
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    StringConstraints,
+    field_validator,
+)
 
 from pressradar.application.clients import ClientNotFoundError, ClientService
 from pressradar.domain.auth import Identity
@@ -18,6 +26,8 @@ class ClientRequest(BaseModel):
     name: RequiredText
     company: str | None = Field(default=None, max_length=200)
     website: AnyHttpUrl | None = None
+    email: EmailStr | None = None
+    phone: str | None = Field(default=None, pattern=r"^\+[1-9]\d{7,14}$")
     industry: str | None = Field(default=None, max_length=100)
     description: str | None = Field(default=None, max_length=2000)
     location: str | None = Field(default=None, max_length=200)
@@ -62,6 +72,8 @@ class ClientRequest(BaseModel):
             preferred_topics=_unique(self.preferred_topics),
             tone=self.tone,
             monitoring_rules=_unique(self.monitoring_rules),
+            email=None if self.email is None else str(self.email),
+            phone=self.phone,
         )
 
 
@@ -73,6 +85,8 @@ class ClientResponse(BaseModel):
     name: str
     company: str
     website: str | None
+    email: str | None
+    phone: str | None
     industry: str | None
     description: str | None
     location: str | None

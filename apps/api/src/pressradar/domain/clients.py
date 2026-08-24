@@ -19,6 +19,8 @@ class Client:
     preferred_topics: tuple[str, ...]
     tone: str | None
     monitoring_rules: tuple[str, ...]
+    email: str | None = None
+    phone: str | None = None
 
 
 @dataclass(frozen=True)
@@ -37,3 +39,5 @@ class ClientDetails:
     preferred_topics: tuple[str, ...]
     tone: str | None
     monitoring_rules: tuple[str, ...]
+    email: str | None = None
+    phone: str | None = None

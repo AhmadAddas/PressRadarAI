@@ -24,6 +24,8 @@ def client_payload() -> dict[str, object]:
         "name": "Dr. Amina Noor",
         "company": "Nexa AI",
         "website": "https://nexa.example.com",
+        "email": "press@nexa.example.com",
+        "phone": "+971501234567",
         "industry": "Artificial intelligence",
         "description": "AI infrastructure for regulated industries.",
         "location": "Dubai, UAE",
@@ -46,6 +48,8 @@ async def test_create_list_and_view_client_with_monitoring_rules(tmp_path: Path)
         viewed = await client.get(f"/clients/{created.json()['id']}")
 
     assert created.status_code == 201
+    assert created.json()["email"] == "press@nexa.example.com"
+    assert created.json()["phone"] == "+971501234567"
     assert created.json()["monitoring_rules"] == ["Dubai AI startup", "UAE AI regulation"]
     assert listed.status_code == 200
     assert listed.json() == [created.json()]
@@ -107,6 +111,15 @@ async def test_client_input_rejects_invalid_urls_and_blank_rules(tmp_path: Path)
         "monitoring_rules": ["   "],
     }
     async with create_test_client(tmp_path / "clients.db") as client:
+        await sign_up(client, "owner@example.com")
+        response = await client.post("/clients", json=payload)
+
+    assert response.status_code == 422
+
+
+async def test_client_input_rejects_invalid_contact_details(tmp_path: Path) -> None:
+    payload = client_payload() | {"email": "not-email", "phone": "050 123 4567"}
+    async with create_test_client(tmp_path / "invalid-contact.db") as client:
         await sign_up(client, "owner@example.com")
         response = await client.post("/clients", json=payload)
 
