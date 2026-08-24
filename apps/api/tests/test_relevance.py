@@ -131,6 +131,13 @@ def test_ollama_analyzer_validates_structured_response(
     payload = request["json"]
     assert isinstance(payload, dict)
     assert payload["model"] == "test-model"
+    response_schema = payload["format"]
+    assert isinstance(response_schema, dict)
+    assert response_schema["required"] == ["score", "reason", "matched_topics"]
+    properties = response_schema["properties"]
+    assert isinstance(properties, dict)
+    assert "maxLength" not in properties["reason"]
+    assert "maxItems" not in properties["matched_topics"]
     assert "KNOWN CLIENT FACTS" in str(payload["prompt"])
     assert "MEDIA OPPORTUNITY" in str(payload["prompt"])
 

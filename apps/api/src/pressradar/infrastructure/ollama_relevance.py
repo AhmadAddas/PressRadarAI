@@ -17,6 +17,18 @@ class _OllamaResult(BaseModel):
     matched_topics: list[str] = Field(min_length=1, max_length=50)
 
 
+def _ollama_format_schema() -> dict[str, object]:
+    schema = _OllamaResult.model_json_schema()
+    properties = schema.get("properties", {})
+    if isinstance(properties, dict):
+        for value in properties.values():
+            if not isinstance(value, dict):
+                continue
+            for constraint in ("minLength", "maxLength", "minItems", "maxItems"):
+                value.pop(constraint, None)
+    return schema
+
+
 class OllamaRelevanceAnalyzer:
     def __init__(self, *, base_url: str, model: str, timeout_seconds: float) -> None:
         self._url = f"{base_url.rstrip('/')}/api/generate"
@@ -36,7 +48,10 @@ class OllamaRelevanceAnalyzer:
                 json={
                     "model": self._model,
                     "stream": False,
-                    "format": _OllamaResult.model_json_schema(),
+                    # Ollama converts this schema to a grammar. Large repetition
+                    # bounds are rejected by some versions before inference, so
+                    # length limits remain enforced when parsing the response.
+                    "format": _ollama_format_schema(),
                     "prompt": _prompt(client, media_item, matched_topics),
                 },
                 timeout=self._timeout,
