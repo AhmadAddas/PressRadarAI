@@ -44,6 +44,11 @@ describe("MediaSourceManager", () => {
     });
 
     expect(screen.getByText("UAE RSS")).toBeInTheDocument();
+    expect(
+      screen.getAllByText(
+        "Pagination appears when there are more than 5 items.",
+      ),
+    ).toHaveLength(2);
     expect(screen.queryByText("UAE NewsAPI")).not.toBeInTheDocument();
   });
 

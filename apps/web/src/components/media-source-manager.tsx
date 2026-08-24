@@ -282,28 +282,34 @@ function PaginationControls({
   pageCount: number;
   setPage: (page: number) => void;
 }>) {
-  if (pageCount <= 1) return null;
   return (
-    <nav className="pagination" aria-label={`${label} pagination`}>
-      <button
-        className="button-secondary"
-        type="button"
-        disabled={page === 1}
-        onClick={() => setPage(page - 1)}
-      >
-        Previous
-      </button>
-      <span>
-        Page {page} of {pageCount}
-      </span>
-      <button
-        className="button-secondary"
-        type="button"
-        disabled={page === pageCount}
-        onClick={() => setPage(page + 1)}
-      >
-        Next
-      </button>
-    </nav>
+    <>
+      <p className="pagination-note">
+        Pagination appears when there are more than 5 items.
+      </p>
+      {pageCount > 1 ? (
+        <nav className="pagination" aria-label={`${label} pagination`}>
+          <button
+            className="button-secondary"
+            type="button"
+            disabled={page === 1}
+            onClick={() => setPage(page - 1)}
+          >
+            Previous
+          </button>
+          <span>
+            Page {page} of {pageCount}
+          </span>
+          <button
+            className="button-secondary"
+            type="button"
+            disabled={page === pageCount}
+            onClick={() => setPage(page + 1)}
+          >
+            Next
+          </button>
+        </nav>
+      ) : null}
+    </>
   );
 }

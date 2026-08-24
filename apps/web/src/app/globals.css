@@ -407,14 +407,14 @@ nav {
   min-width: 2rem;
   min-height: 2rem;
   padding: 0.2rem;
-  background: transparent;
-  color: #8f1d1d;
+  background: #a12222;
+  color: #fff;
   line-height: 1;
 }
 
 .item-delete:hover {
-  background: #fce8e8;
-  color: #721c1c;
+  background: #721c1c;
+  color: #fff;
 }
 
 .trash-icon {
@@ -423,9 +423,12 @@ nav {
   height: 1.35rem;
 }
 
-.client-list .item-checkbox,
-.client-list .item-delete {
+.client-list .item-checkbox {
   margin-top: 1rem;
+}
+
+.client-list .item-delete {
+  align-self: center;
 }
 
 .opportunity-list .item-checkbox {
@@ -451,6 +454,17 @@ nav {
 .pagination {
   justify-content: center;
   margin: 0.5rem 0 1rem;
+}
+
+.pagination-note {
+  margin: 0;
+  color: #53606d;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.pagination button:disabled {
+  cursor: not-allowed;
 }
 
 .modal-backdrop {
@@ -578,6 +592,14 @@ nav {
   display: flex;
   align-items: center;
   gap: 1rem;
+}
+
+.pitch-actions .opportunity-action {
+  margin-left: auto;
+}
+
+.pitch-actions .opportunity-action + .workflow-action {
+  margin-left: 0;
 }
 
 .workflow-action-approve button {
@@ -1086,6 +1108,10 @@ nav {
   .pitch-actions {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .pitch-actions .opportunity-action {
+    margin-left: 0;
   }
 
   .opportunity-controls {

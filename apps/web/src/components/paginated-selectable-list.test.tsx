@@ -35,6 +35,9 @@ describe("PaginatedSelectableList", () => {
     );
 
     expect(screen.getByText("Content 1")).toBeInTheDocument();
+    expect(
+      screen.getByText("Pagination appears when there are more than 5 items."),
+    ).toBeVisible();
     expect(screen.queryByText("Content 6")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     expect(screen.getByText("Content 6")).toBeInTheDocument();

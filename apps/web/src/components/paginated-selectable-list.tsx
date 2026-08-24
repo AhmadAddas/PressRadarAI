@@ -185,6 +185,9 @@ export function PaginatedSelectableList({
           </li>
         ))}
       </ul>
+      <p className="pagination-note">
+        Pagination appears when there are more than {pageSize} items.
+      </p>
       {pageCount > 1 ? (
         <nav className="pagination" aria-label={`${noun} pagination`}>
           <button
