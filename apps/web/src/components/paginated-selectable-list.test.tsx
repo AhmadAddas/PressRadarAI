@@ -84,6 +84,9 @@ describe("PaginatedSelectableList", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Delete selected (2)" }),
     );
+    expect(screen.getByRole("alertdialog").parentElement).toHaveClass(
+      "modal-backdrop",
+    );
     expect(
       screen.getByRole("button", { name: "Confirm in 5s" }),
     ).toBeDisabled();

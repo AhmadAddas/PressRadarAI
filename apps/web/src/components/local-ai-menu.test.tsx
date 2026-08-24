@@ -274,9 +274,9 @@ describe("LocalAIMenu", () => {
     await screen.findByText("Active local AI");
 
     fireEvent.click(screen.getByRole("button", { name: "Delete selected" }));
-    expect(screen.getByRole("alertdialog")).toHaveTextContent(
-      "Delete llama3.2:3b?",
-    );
+    const confirmation = screen.getByRole("alertdialog");
+    expect(confirmation).toHaveTextContent("Delete llama3.2:3b?");
+    expect(confirmation.parentElement).toHaveClass("modal-backdrop");
     fireEvent.click(screen.getByRole("button", { name: "Delete model" }));
 
     await act(async () => Promise.resolve());

@@ -26,6 +26,7 @@ export function MediaSourceManager({
   const [filter, setFilter] = useState<MediaSourceKind | "all">("all");
   const [open, setOpen] = useState(false);
   const [working, setWorking] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<MediaSource | null>(null);
   const [sourcePage, setSourcePage] = useState(1);
   const [suggestionPage, setSuggestionPage] = useState(1);
   const managerRef = useRef<HTMLDivElement>(null);
@@ -115,10 +116,13 @@ export function MediaSourceManager({
     });
   }
 
-  async function remove(sourceId: string) {
-    await request(`${publicApiUrl}/media/sources/${sourceId}`, {
-      method: "DELETE",
-    });
+  async function remove() {
+    if (!pendingDelete) return;
+    const removed = await request(
+      `${publicApiUrl}/media/sources/${pendingDelete.id}`,
+      { method: "DELETE" },
+    );
+    if (removed) setPendingDelete(null);
   }
 
   async function request(
@@ -134,13 +138,15 @@ export function MediaSourceManager({
           detail?: string;
         } | null;
         toast.error(payload?.detail ?? "Unable to update media sources.");
-        return;
+        return false;
       }
       const result = response.status === 204 ? null : await response.json();
       onSuccess?.(result);
       startTransition(() => router.refresh());
+      return true;
     } catch {
       toast.error("PressRadar is temporarily unavailable.");
+      return false;
     } finally {
       setWorking(false);
     }
@@ -189,7 +195,7 @@ export function MediaSourceManager({
                     <button
                       className="button-danger"
                       type="button"
-                      onClick={() => remove(source.id)}
+                      onClick={() => setPendingDelete(source)}
                       disabled={working}
                     >
                       Delete
@@ -265,6 +271,39 @@ export function MediaSourceManager({
             Each run imports up to 25 items per source and 100 items total.
             Deleted items found again are restored with their existing history.
           </p>
+          {pendingDelete ? (
+            <div className="modal-backdrop" role="presentation">
+              <div
+                className="confirmation-modal"
+                role="alertdialog"
+                aria-modal="true"
+              >
+                <strong>Delete {pendingDelete.name}?</strong>
+                <p>
+                  PressRadar will stop ingesting new media from this source. You
+                  can add the source again later.
+                </p>
+                <div className="actions">
+                  <button
+                    className="button-danger"
+                    type="button"
+                    onClick={remove}
+                    disabled={working}
+                  >
+                    Delete source
+                  </button>
+                  <button
+                    className="button-secondary"
+                    type="button"
+                    onClick={() => setPendingDelete(null)}
+                    disabled={working}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </section>
       ) : null}
     </div>

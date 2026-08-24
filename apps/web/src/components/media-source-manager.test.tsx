@@ -92,6 +92,11 @@ describe("MediaSourceManager", () => {
       expect(toast.success).toHaveBeenCalledWith("Added 2 media items."),
     );
     fireEvent.click(screen.getAllByRole("button", { name: "Delete" })[0]);
+    const confirmation = screen.getByRole("alertdialog");
+    expect(confirmation).toHaveTextContent("Delete UAE RSS?");
+    expect(confirmation.parentElement).toHaveClass("modal-backdrop");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: "Delete source" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     expect(fetchMock).toHaveBeenNthCalledWith(

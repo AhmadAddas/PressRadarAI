@@ -450,32 +450,35 @@ export function LocalAIMenu() {
             </button>
           ) : null}
           {pendingDelete ? (
-            <div
-              className="confirmation-modal"
-              role="alertdialog"
-              aria-modal="true"
-            >
-              <p>
-                Delete {pendingDelete}? Ollama will remove its downloaded files
-                and you will need to clone it again to use it.
-              </p>
-              <div className="actions">
-                <button
-                  className="button-secondary"
-                  type="button"
-                  onClick={() => setPendingDelete(null)}
-                  disabled={working}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="button-danger"
-                  type="button"
-                  onClick={deleteSelected}
-                  disabled={working}
-                >
-                  Delete model
-                </button>
+            <div className="modal-backdrop" role="presentation">
+              <div
+                className="confirmation-modal"
+                role="alertdialog"
+                aria-modal="true"
+              >
+                <strong>Delete {pendingDelete}?</strong>
+                <p>
+                  Ollama will remove its downloaded files and you will need to
+                  clone it again to use it.
+                </p>
+                <div className="actions">
+                  <button
+                    className="button-danger"
+                    type="button"
+                    onClick={deleteSelected}
+                    disabled={working}
+                  >
+                    Delete model
+                  </button>
+                  <button
+                    className="button-secondary"
+                    type="button"
+                    onClick={() => setPendingDelete(null)}
+                    disabled={working}
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             </div>
           ) : null}
