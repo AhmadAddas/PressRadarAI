@@ -45,6 +45,7 @@ class SQLiteMediaRepository:
                 CREATE INDEX IF NOT EXISTS idx_media_published ON media_items(published_at DESC);
                 """
             )
+            self._add_deleted_column(connection)
 
     @staticmethod
     def _migrate_workspace_media(connection: sqlite3.Connection) -> None:
@@ -117,7 +118,7 @@ class SQLiteMediaRepository:
     def list(self, *, workspace_id: str, limit: int) -> list[MediaItem]:
         with self._connect() as connection:
             rows = connection.execute(
-                """SELECT * FROM media_items WHERE workspace_id = ?
+                """SELECT * FROM media_items WHERE workspace_id = ? AND deleted_at IS NULL
                 ORDER BY published_at DESC, id LIMIT ?""",
                 (workspace_id, limit),
             ).fetchall()
@@ -126,10 +127,30 @@ class SQLiteMediaRepository:
     def get(self, *, workspace_id: str, media_item_id: str) -> MediaItem | None:
         with self._connect() as connection:
             row = connection.execute(
-                "SELECT * FROM media_items WHERE id = ? AND workspace_id = ?",
+                """SELECT * FROM media_items
+                WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL""",
                 (media_item_id, workspace_id),
             ).fetchone()
         return None if row is None else self._media_item(row)
+
+    def delete(self, *, workspace_id: str, media_item_id: str) -> bool:
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """UPDATE media_items SET deleted_at = CURRENT_TIMESTAMP
+                WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL""",
+                (media_item_id, workspace_id),
+            )
+        return cursor.rowcount > 0
+
+    def clear(self, *, workspace_id: str) -> None:
+        with self._connect() as connection:
+            connection.execute("DELETE FROM media_items WHERE workspace_id = ?", (workspace_id,))
+
+    @staticmethod
+    def _add_deleted_column(connection: sqlite3.Connection) -> None:
+        columns = {str(row["name"]) for row in connection.execute("PRAGMA table_info(media_items)")}
+        if "deleted_at" not in columns:
+            connection.execute("ALTER TABLE media_items ADD COLUMN deleted_at TEXT")
 
     @staticmethod
     def _media_item(row: sqlite3.Row) -> MediaItem:

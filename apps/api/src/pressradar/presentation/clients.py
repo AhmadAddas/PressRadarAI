@@ -125,6 +125,16 @@ def create_clients_router(
         except ClientNotFoundError as error:
             raise _not_found() from error
 
+    @router.delete("/{client_id}", status_code=status.HTTP_204_NO_CONTENT)
+    def delete_client(
+        client_id: str,
+        identity: Annotated[Identity, Depends(current_identity)],
+    ) -> None:
+        try:
+            client_service.delete(workspace_id=identity.workspace_id, client_id=client_id)
+        except ClientNotFoundError as error:
+            raise _not_found() from error
+
     return router
 
 

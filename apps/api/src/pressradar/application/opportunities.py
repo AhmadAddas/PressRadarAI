@@ -66,6 +66,10 @@ class OpportunityRepository(Protocol):
 
     def get(self, *, workspace_id: str, opportunity_id: str) -> Opportunity | None: ...
 
+    def delete(self, *, workspace_id: str, opportunity_id: str) -> bool: ...
+
+    def clear(self, *, workspace_id: str) -> None: ...
+
     def update_status(
         self,
         *,
@@ -214,6 +218,13 @@ class OpportunityService:
 
     def list(self, *, workspace_id: str) -> list[Opportunity]:
         return self._opportunities.list(workspace_id=workspace_id)
+
+    def delete(self, *, workspace_id: str, opportunity_id: str) -> None:
+        if not self._opportunities.delete(workspace_id=workspace_id, opportunity_id=opportunity_id):
+            raise OpportunityNotFoundError
+
+    def clear(self, *, workspace_id: str) -> None:
+        self._opportunities.clear(workspace_id=workspace_id)
 
     def update_pitch(self, *, workspace_id: str, opportunity_id: str, content: str) -> Opportunity:
         pitch = GeneratedPitch(content=content.strip())

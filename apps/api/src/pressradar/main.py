@@ -63,6 +63,16 @@ def create_app(
     analytics_store: AnalyticsStore | None = None,
 ) -> FastAPI:
     settings = settings or get_settings()
+    custom_demo_workflow = any(
+        dependency is not None
+        for dependency in (
+            relevance_analyzer,
+            pitch_generator,
+            pitch_sender,
+            notification_sender,
+            crm_integration,
+        )
+    )
     auth_repository: AuthRepository
     client_repository: ClientRepository
     media_repository: MediaRepository
@@ -184,16 +194,20 @@ def create_app(
         crm_integration,
         analytics_service,
     )
-    demo_opportunity_service = OpportunityService(
-        client_repository,
-        media_repository,
-        opportunity_repository,
-        FakeRelevanceAnalyzer(),
-        FakePitchGenerator(),
-        SimulatedPitchSender(),
-        FakeNotificationSender(),
-        FakeCRMIntegration(),
-        analytics_service,
+    demo_opportunity_service = (
+        opportunity_service
+        if custom_demo_workflow
+        else OpportunityService(
+            client_repository,
+            media_repository,
+            opportunity_repository,
+            FakeRelevanceAnalyzer(),
+            FakePitchGenerator(),
+            SimulatedPitchSender(),
+            FakeNotificationSender(),
+            FakeCRMIntegration(),
+            analytics_service,
+        )
     )
     application = FastAPI(title="PressRadar API", version="0.1.0")
     application.add_middleware(
@@ -228,6 +242,7 @@ def create_app(
                 timeout_seconds=settings.external_provider_timeout_seconds,
             ),
             opportunity_service,
+            demo_opportunity_service,
             identity_dependency,
         )
     )

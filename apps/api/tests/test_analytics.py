@@ -42,6 +42,7 @@ async def test_product_events_feed_workspace_scoped_summary(tmp_path: Path) -> N
         await owner.post("/auth/workspace", json={"workspace_kind": "demo"})
         assert (await owner.post("/demo/setup")).status_code == 200
         assert (await owner.post("/demo/setup")).status_code == 200
+        assert (await owner.post("/media/ingest")).status_code == 200
         opportunities = (await owner.get("/opportunities")).json()
         nadia = next(item for item in opportunities if item["client_name"] == "Nadia Rahman")
         samir = next(item for item in opportunities if item["client_name"] == "Samir Qureshi")

@@ -119,6 +119,18 @@ class SQLiteOpportunityRepository:
             ).fetchone()
         return None if row is None else self._opportunity(row)
 
+    def delete(self, *, workspace_id: str, opportunity_id: str) -> bool:
+        with self._connect() as connection:
+            cursor = connection.execute(
+                "DELETE FROM opportunities WHERE id = ? AND workspace_id = ?",
+                (opportunity_id, workspace_id),
+            )
+        return cursor.rowcount > 0
+
+    def clear(self, *, workspace_id: str) -> None:
+        with self._connect() as connection:
+            connection.execute("DELETE FROM opportunities WHERE workspace_id = ?", (workspace_id,))
+
     def update_status(
         self,
         *,
@@ -446,9 +458,11 @@ class SQLiteOpportunityRepository:
             client_id=str(row["client_id"]),
             client_name=str(row["client_name"]),
             client_company=str(row["client_company"]),
+            client_deleted=bool(row["client_deleted"]),
             media_item_id=str(row["media_item_id"]),
             source=str(row["source"]),
             headline=str(row["headline"]),
+            media_deleted=bool(row["media_deleted"]),
             journalist=None if row["journalist"] is None else str(row["journalist"]),
             published_at=datetime.fromisoformat(str(row["published_at"])),
             deadline=(
@@ -537,7 +551,9 @@ class SQLiteOpportunityRepository:
 
 
 _SELECT = """SELECT o.*, c.name AS client_name, c.company AS client_company,
+    (c.deleted_at IS NOT NULL) AS client_deleted,
     m.source, m.headline, m.journalist, m.published_at, m.deadline,
+    (m.deleted_at IS NOT NULL) AS media_deleted,
     p.id AS pitch_id, p.content AS pitch_content,
     p.generated_at AS pitch_generated_at, p.updated_at AS pitch_updated_at,
     d.provider AS delivery_provider, d.reference AS delivery_reference,

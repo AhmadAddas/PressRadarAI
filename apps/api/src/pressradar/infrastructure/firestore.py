@@ -1,5 +1,6 @@
 import builtins
 import hashlib
+from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any, cast
 from uuid import uuid4
@@ -109,12 +110,17 @@ class FirestoreRepository:
             for document in self._db.collection("clients")
             .where("workspace_id", "==", workspace_id)
             .stream()
+            if document.get("deleted_at") is None
         ]
         return sorted(clients, key=lambda item: (item.name.casefold(), item.id))
 
     def get_client(self, *, workspace_id: str, client_id: str) -> Client | None:
         document = self._db.collection("clients").document(client_id).get()
-        if not document.exists or document.get("workspace_id") != workspace_id:
+        if (
+            not document.exists
+            or document.get("workspace_id") != workspace_id
+            or document.get("deleted_at") is not None
+        ):
             return None
         return _client(document.id, _data(document))
 
@@ -123,10 +129,26 @@ class FirestoreRepository:
     ) -> Client | None:
         reference = self._db.collection("clients").document(client_id)
         document = reference.get()
-        if not document.exists or document.get("workspace_id") != workspace_id:
+        if (
+            not document.exists
+            or document.get("workspace_id") != workspace_id
+            or document.get("deleted_at") is not None
+        ):
             return None
         reference.update(_client_details(details))
         return _client(client_id, {"workspace_id": workspace_id, **_client_details(details)})
+
+    def delete_client(self, *, workspace_id: str, client_id: str) -> bool:
+        reference = self._db.collection("clients").document(client_id)
+        document = reference.get()
+        if (
+            not document.exists
+            or document.get("workspace_id") != workspace_id
+            or document.get("deleted_at") is not None
+        ):
+            return False
+        reference.update({"deleted_at": datetime.now(UTC)})
+        return True
 
     def create_media_source(self, *, workspace_id: str, details: MediaSourceDetails) -> MediaSource:
         source_id = _key(f"{workspace_id}:{details.name.casefold()}")
@@ -190,14 +212,37 @@ class FirestoreRepository:
             for document in self._db.collection("media_items")
             .where("workspace_id", "==", workspace_id)
             .stream()
+            if document.get("deleted_at") is None
         ]
         return sorted(items, key=lambda item: (item.published_at, item.id), reverse=True)[:limit]
 
     def get_media(self, *, workspace_id: str, media_item_id: str) -> MediaItem | None:
         document = self._db.collection("media_items").document(media_item_id).get()
-        if not document.exists or document.get("workspace_id") != workspace_id:
+        if (
+            not document.exists
+            or document.get("workspace_id") != workspace_id
+            or document.get("deleted_at") is not None
+        ):
             return None
         return _media(document.id, _data(document))
+
+    def delete_media(self, *, workspace_id: str, media_item_id: str) -> bool:
+        reference = self._db.collection("media_items").document(media_item_id)
+        document = reference.get()
+        if (
+            not document.exists
+            or document.get("workspace_id") != workspace_id
+            or document.get("deleted_at") is not None
+        ):
+            return False
+        reference.update({"deleted_at": datetime.now(UTC)})
+        return True
+
+    def clear_media(self, *, workspace_id: str) -> None:
+        for document in (
+            self._db.collection("media_items").where("workspace_id", "==", workspace_id).stream()
+        ):
+            document.reference.delete()
 
     def create_matches(self, matches: tuple[OpportunityMatch, ...]) -> int:
         created = 0
@@ -243,7 +288,7 @@ class FirestoreRepository:
 
     def list_opportunities(self, *, workspace_id: str) -> list[Opportunity]:
         items = [
-            _opportunity(document.id, _data(document))
+            self._with_orphan_flags(_opportunity(document.id, _data(document)))
             for document in self._db.collection("opportunities")
             .where("workspace_id", "==", workspace_id)
             .stream()
@@ -263,7 +308,38 @@ class FirestoreRepository:
         document = self._db.collection("opportunities").document(opportunity_id).get()
         if not document.exists or document.get("workspace_id") != workspace_id:
             return None
-        return _opportunity(document.id, _data(document))
+        return self._with_orphan_flags(_opportunity(document.id, _data(document)))
+
+    def delete_opportunity(self, *, workspace_id: str, opportunity_id: str) -> bool:
+        reference = self._db.collection("opportunities").document(opportunity_id)
+        document = reference.get()
+        if not document.exists or document.get("workspace_id") != workspace_id:
+            return False
+        for event in reference.collection("audit_events").stream():
+            event.reference.delete()
+        reference.delete()
+        return True
+
+    def clear_opportunities(self, *, workspace_id: str) -> None:
+        documents = (
+            self._db.collection("opportunities").where("workspace_id", "==", workspace_id).stream()
+        )
+        for document in documents:
+            self.delete_opportunity(workspace_id=workspace_id, opportunity_id=document.id)
+
+    def _with_orphan_flags(self, opportunity: Opportunity) -> Opportunity:
+        return replace(
+            opportunity,
+            client_deleted=self.get_client(
+                workspace_id=opportunity.workspace_id, client_id=opportunity.client_id
+            )
+            is None,
+            media_deleted=self.get_media(
+                workspace_id=opportunity.workspace_id,
+                media_item_id=opportunity.media_item_id,
+            )
+            is None,
+        )
 
     def update_status(
         self,
@@ -540,6 +616,9 @@ class FirestoreClientRepository:
             workspace_id=workspace_id, client_id=client_id, details=details
         )
 
+    def delete(self, *, workspace_id: str, client_id: str) -> bool:
+        return self._repository.delete_client(workspace_id=workspace_id, client_id=client_id)
+
 
 class FirestoreMediaRepository:
     def __init__(self, repository: FirestoreRepository) -> None:
@@ -553,6 +632,12 @@ class FirestoreMediaRepository:
 
     def get(self, *, workspace_id: str, media_item_id: str) -> MediaItem | None:
         return self._repository.get_media(workspace_id=workspace_id, media_item_id=media_item_id)
+
+    def delete(self, *, workspace_id: str, media_item_id: str) -> bool:
+        return self._repository.delete_media(workspace_id=workspace_id, media_item_id=media_item_id)
+
+    def clear(self, *, workspace_id: str) -> None:
+        self._repository.clear_media(workspace_id=workspace_id)
 
 
 class FirestoreMediaSourceRepository(MediaSourceRepository):
@@ -574,7 +659,12 @@ class FirestoreOpportunityRepository:
         self._repository = repository
 
     def __getattr__(self, name: str) -> Any:
-        target = {"list": "list_opportunities", "get": "get_opportunity"}.get(name, name)
+        target = {
+            "list": "list_opportunities",
+            "get": "get_opportunity",
+            "delete": "delete_opportunity",
+            "clear": "clear_opportunities",
+        }.get(name, name)
         return getattr(self._repository, target)
 
 
@@ -674,9 +764,11 @@ def _opportunity(opportunity_id: str, data: dict[str, Any]) -> Opportunity:
         client_id=str(data["client_id"]),
         client_name=str(data["client_name"]),
         client_company=str(data["client_company"]),
+        client_deleted=False,
         media_item_id=str(data["media_item_id"]),
         source=str(data["source"]),
         headline=str(data["headline"]),
+        media_deleted=False,
         journalist=cast(str | None, data.get("journalist")),
         published_at=_datetime(data["published_at"]),
         deadline=None if data.get("deadline") is None else _datetime(data["deadline"]),

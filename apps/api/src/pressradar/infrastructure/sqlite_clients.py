@@ -41,6 +41,7 @@ class SQLiteClientRepository:
                 CREATE INDEX IF NOT EXISTS idx_rules_client ON monitoring_rules(client_id);
                 """
             )
+            self._add_deleted_column(connection)
 
     def create(self, *, workspace_id: str, details: ClientDetails) -> Client:
         client_id = str(uuid4())
@@ -55,7 +56,8 @@ class SQLiteClientRepository:
     def list(self, *, workspace_id: str) -> list[Client]:
         with self._connect() as connection:
             rows = connection.execute(
-                "SELECT * FROM clients WHERE workspace_id = ? ORDER BY name COLLATE NOCASE, id",
+                """SELECT * FROM clients WHERE workspace_id = ? AND deleted_at IS NULL
+                ORDER BY name COLLATE NOCASE, id""",
                 (workspace_id,),
             ).fetchall()
             return [self._client(connection, row) for row in rows]
@@ -63,7 +65,8 @@ class SQLiteClientRepository:
     def get(self, *, workspace_id: str, client_id: str) -> Client | None:
         with self._connect() as connection:
             row = connection.execute(
-                "SELECT * FROM clients WHERE id = ? AND workspace_id = ?",
+                """SELECT * FROM clients
+                WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL""",
                 (client_id, workspace_id),
             ).fetchone()
             return None if row is None else self._client(connection, row)
@@ -74,13 +77,29 @@ class SQLiteClientRepository:
                 """UPDATE clients SET name = ?, company = ?, website = ?, industry = ?,
                 description = ?, location = ?, expertise = ?, spokesperson_name = ?,
                 spokesperson_title = ?, keywords = ?, excluded_keywords = ?,
-                preferred_topics = ?, tone = ? WHERE id = ? AND workspace_id = ?""",
+                preferred_topics = ?, tone = ?
+                WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL""",
                 (*self._detail_values(details), client_id, workspace_id),
             )
             if cursor.rowcount == 0:
                 return None
             self._replace_rules(connection, client_id, details.monitoring_rules)
         return self.get(workspace_id=workspace_id, client_id=client_id)
+
+    def delete(self, *, workspace_id: str, client_id: str) -> bool:
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """UPDATE clients SET deleted_at = CURRENT_TIMESTAMP
+                WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL""",
+                (client_id, workspace_id),
+            )
+        return cursor.rowcount > 0
+
+    @staticmethod
+    def _add_deleted_column(connection: sqlite3.Connection) -> None:
+        columns = {str(row["name"]) for row in connection.execute("PRAGMA table_info(clients)")}
+        if "deleted_at" not in columns:
+            connection.execute("ALTER TABLE clients ADD COLUMN deleted_at TEXT")
 
     def _insert_client(
         self,

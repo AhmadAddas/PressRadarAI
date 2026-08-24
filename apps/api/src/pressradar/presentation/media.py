@@ -5,7 +5,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict
 
-from pressradar.application.media import InvalidMediaItemError, MediaIngestionService
+from pressradar.application.media import (
+    InvalidMediaItemError,
+    MediaIngestionService,
+    MediaItemNotFoundError,
+)
 from pressradar.application.opportunities import OpportunityService
 from pressradar.domain.auth import Identity, WorkspaceKind
 from pressradar.domain.media import IngestionResult, MediaItem, MediaSourceType
@@ -42,6 +46,7 @@ def create_media_router(
     media_service: MediaIngestionService,
     configured_media_service: ConfiguredMediaIngestionService,
     opportunity_service: OpportunityService,
+    demo_opportunity_service: OpportunityService,
     current_identity: Callable[..., Identity],
 ) -> APIRouter:
     router = APIRouter(prefix="/media", tags=["media"])
@@ -56,7 +61,11 @@ def create_media_router(
                 if identity.workspace_kind is WorkspaceKind.DEMO
                 else configured_media_service.ingest(workspace_id=identity.workspace_id)
             )
-            opportunity_service.detect(workspace_id=identity.workspace_id)
+            (
+                demo_opportunity_service
+                if identity.workspace_kind is WorkspaceKind.DEMO
+                else opportunity_service
+            ).detect(workspace_id=identity.workspace_id)
             return result
         except MediaSourceConfigurationError as error:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
@@ -72,5 +81,17 @@ def create_media_router(
         limit: Annotated[int, Query(ge=1, le=100)] = 100,
     ) -> list[MediaItem]:
         return media_service.list(workspace_id=identity.workspace_id, limit=limit)
+
+    @router.delete("/{media_item_id}", status_code=status.HTTP_204_NO_CONTENT)
+    def delete_media(
+        media_item_id: str,
+        identity: Annotated[Identity, Depends(current_identity)],
+    ) -> None:
+        try:
+            media_service.delete(workspace_id=identity.workspace_id, media_item_id=media_item_id)
+        except MediaItemNotFoundError as error:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Media item not found"
+            ) from error
 
     return router

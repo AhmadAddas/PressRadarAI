@@ -25,6 +25,8 @@ class DemoSetupService:
         self._opportunities = opportunities
 
     def setup(self, *, workspace_id: str) -> DemoSetupResult:
+        self._opportunities.clear(workspace_id=workspace_id)
+        self._media.clear(workspace_id=workspace_id)
         existing = {
             (client.name.casefold(), client.company.casefold())
             for client in self._clients.list(workspace_id=workspace_id)
@@ -37,12 +39,10 @@ class DemoSetupService:
                 existing.add(key)
                 clients_created += 1
 
-        ingestion = self._media.ingest(workspace_id=workspace_id)
-        opportunities_created = self._opportunities.detect(workspace_id=workspace_id)
         return DemoSetupResult(
             clients_created=clients_created,
-            media_created=ingestion.created,
-            opportunities_created=opportunities_created,
+            media_created=0,
+            opportunities_created=0,
         )
 
 

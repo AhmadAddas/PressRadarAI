@@ -57,9 +57,11 @@ class OpportunityResponse(BaseModel):
     client_id: str
     client_name: str
     client_company: str
+    client_deleted: bool
     media_item_id: str
     source: str
     headline: str
+    media_deleted: bool
     journalist: str | None
     published_at: datetime
     deadline: datetime | None
@@ -94,6 +96,16 @@ def create_opportunities_router(
         identity: Annotated[Identity, Depends(current_identity)],
     ) -> list[Opportunity]:
         return opportunities.list(workspace_id=identity.workspace_id)
+
+    @router.delete("/{opportunity_id}", status_code=status.HTTP_204_NO_CONTENT)
+    def delete_opportunity(
+        opportunity_id: str,
+        identity: Annotated[Identity, Depends(current_identity)],
+    ) -> None:
+        try:
+            opportunities.delete(workspace_id=identity.workspace_id, opportunity_id=opportunity_id)
+        except OpportunityNotFoundError as error:
+            raise _not_found() from error
 
     @router.patch("/{opportunity_id}/status", response_model=OpportunityResponse)
     def transition_opportunity(

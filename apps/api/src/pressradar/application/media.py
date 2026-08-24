@@ -20,9 +20,17 @@ class MediaRepository(Protocol):
 
     def get(self, *, workspace_id: str, media_item_id: str) -> MediaItem | None: ...
 
+    def delete(self, *, workspace_id: str, media_item_id: str) -> bool: ...
+
+    def clear(self, *, workspace_id: str) -> None: ...
+
 
 class InvalidMediaItemError(Exception):
     """Raised when a provider returns unsafe or incomplete media data."""
+
+
+class MediaItemNotFoundError(Exception):
+    """Raised when a media item is not visible in the current workspace."""
 
 
 class MediaIngestionService:
@@ -38,6 +46,13 @@ class MediaIngestionService:
 
     def list(self, *, workspace_id: str, limit: int = 100) -> list[MediaItem]:
         return self._repository.list(workspace_id=workspace_id, limit=limit)
+
+    def delete(self, *, workspace_id: str, media_item_id: str) -> None:
+        if not self._repository.delete(workspace_id=workspace_id, media_item_id=media_item_id):
+            raise MediaItemNotFoundError
+
+    def clear(self, *, workspace_id: str) -> None:
+        self._repository.clear(workspace_id=workspace_id)
 
     @staticmethod
     def dedupe_key(item: IncomingMediaItem) -> str:

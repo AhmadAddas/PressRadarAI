@@ -18,6 +18,8 @@ class ClientRepository(Protocol):
         self, *, workspace_id: str, client_id: str, details: ClientDetails
     ) -> Client | None: ...
 
+    def delete(self, *, workspace_id: str, client_id: str) -> bool: ...
+
 
 class ClientService:
     def __init__(self, repository: ClientRepository) -> None:
@@ -42,3 +44,7 @@ class ClientService:
         if client is None:
             raise ClientNotFoundError
         return client
+
+    def delete(self, *, workspace_id: str, client_id: str) -> None:
+        if not self._repository.delete(workspace_id=workspace_id, client_id=client_id):
+            raise ClientNotFoundError
