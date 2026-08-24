@@ -4,7 +4,7 @@ dev:
 	docker compose up --build
 
 test:
-	docker compose run --rm -e AI_PROVIDER=ollama api pytest
+	docker compose run --rm -e AI_PROVIDER=ollama -e NEWSAPI_API_KEY= api pytest
 	docker compose run --rm web-tools npm test
 
 lint:
