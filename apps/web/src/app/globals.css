@@ -205,8 +205,17 @@ nav {
   margin-right: auto;
 }
 
-.dashboard-actions {
-  justify-content: flex-start;
+.actions.dashboard-actions {
+  flex-wrap: nowrap;
+  justify-content: space-between;
+}
+
+.dashboard-primary-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-left: auto;
 }
 
 .page-header > *,
@@ -1137,12 +1146,20 @@ nav {
   .page-header .actions,
   .page-header .actions > *,
   .dashboard-actions > *,
+  .dashboard-primary-actions,
+  .dashboard-primary-actions > *,
   .demo-action button,
   .ingest-action button,
   .opportunity-action button,
   .workflow-action button,
   .pitch-actions button {
     width: 100%;
+  }
+
+  .dashboard-primary-actions {
+    align-items: stretch;
+    flex-direction: column;
+    margin-left: 0;
   }
 
   .page-header .actions > a:not(.button) {

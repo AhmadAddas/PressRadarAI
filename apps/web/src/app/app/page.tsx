@@ -67,13 +67,15 @@ export default async function ApplicationPage() {
           </div>
           <div className="actions dashboard-actions">
             <LocalAIMenu />
-            <DemoSetupButton workspaceKind={identity.workspace_kind} />
-            <Link className="button button-secondary" href="/app/media">
-              Media feed
-            </Link>
-            <Link className="button" href="/app/clients/new">
-              Add client
-            </Link>
+            <div className="dashboard-primary-actions">
+              <DemoSetupButton workspaceKind={identity.workspace_kind} />
+              <Link className="button button-secondary" href="/app/media">
+                Media feed
+              </Link>
+              <Link className="button" href="/app/clients/new">
+                Add client
+              </Link>
+            </div>
           </div>
         </header>
         <section aria-labelledby="opportunities-heading">
