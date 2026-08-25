@@ -3,11 +3,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { internalApiUrl } from "@/lib/api";
+import { ProfileSecurity } from "@/components/profile-security";
 
 type Identity = {
   name: string;
   email: string;
   workspace_id: string;
+  totp_enabled: boolean;
 };
 
 export default async function ProfilePage() {
@@ -46,6 +48,7 @@ export default async function ProfilePage() {
             <dd className="workspace-id">{identity.workspace_id}</dd>
           </div>
         </dl>
+        <ProfileSecurity totpEnabled={identity.totp_enabled} />
       </section>
     </main>
   );

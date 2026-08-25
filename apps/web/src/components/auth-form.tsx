@@ -13,6 +13,11 @@ export function AuthForm({ mode }: Readonly<{ mode: AuthMode }>) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [totpRequired, setTotpRequired] = useState(false);
+  const [signupChallenge, setSignupChallenge] = useState<{
+    user_id: string;
+    challenge_id: string;
+  } | null>(null);
   const isSignup = mode === "signup";
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -41,6 +46,7 @@ export function AuthForm({ mode }: Readonly<{ mode: AuthMode }>) {
       });
       if (!response.ok) {
         const payload = (await response.json()) as { detail?: string };
+        if (response.status === 428) setTotpRequired(true);
         setError(
           typeof payload.detail === "string"
             ? payload.detail
@@ -48,7 +54,54 @@ export function AuthForm({ mode }: Readonly<{ mode: AuthMode }>) {
         );
         return;
       }
-      router.push("/app");
+      const payload = (await response.json()) as {
+        onboarding_completed?: boolean;
+        verification_required?: boolean;
+        user_id?: string;
+        challenge_id?: string;
+      };
+      if (
+        response.status === 202 &&
+        payload.verification_required &&
+        payload.user_id &&
+        payload.challenge_id
+      ) {
+        setSignupChallenge({
+          user_id: payload.user_id,
+          challenge_id: payload.challenge_id,
+        });
+        return;
+      }
+      router.push(
+        payload.onboarding_completed === false ? "/onboarding" : "/app",
+      );
+      startTransition(() => router.refresh());
+    } catch {
+      setError("PressRadar is temporarily unavailable");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function verifySignup(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!signupChallenge) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      const code = String(new FormData(event.currentTarget).get("code") ?? "");
+      const response = await fetch(`${publicApiUrl}/auth/signup/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ ...signupChallenge, code }),
+      });
+      if (!response.ok) {
+        const payload = (await response.json()) as { detail?: string };
+        setError(payload.detail ?? "Unable to verify this code");
+        return;
+      }
+      router.push("/onboarding");
       startTransition(() => router.refresh());
     } catch {
       setError("PressRadar is temporarily unavailable");
@@ -65,34 +118,72 @@ export function AuthForm({ mode }: Readonly<{ mode: AuthMode }>) {
         <h1 id="auth-title">
           {isSignup ? "Create your workspace" : "Welcome back"}
         </h1>
-        <form onSubmit={submit}>
-          {isSignup ? (
+        {signupChallenge ? (
+          <form onSubmit={verifySignup}>
+            <p>Enter the six-digit code sent to your email address.</p>
             <label>
-              Name
-              <input name="name" autoComplete="name" required maxLength={100} />
+              Email verification code
+              <input
+                name="code"
+                inputMode="numeric"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                required
+                autoFocus
+              />
             </label>
-          ) : null}
-          <label>
-            Email
-            <input name="email" type="email" autoComplete="email" required />
-          </label>
-          <label>
-            Password
-            <input
-              name="password"
-              type="password"
-              autoComplete={isSignup ? "new-password" : "current-password"}
-              minLength={isSignup ? 12 : 1}
-              maxLength={128}
-              required
-            />
-          </label>
-          {isSignup ? <small>Use at least 12 characters.</small> : null}
-          {error ? <p role="alert">{error}</p> : null}
-          <button type="submit" disabled={submitting} aria-busy={submitting}>
-            {isSignup ? "Create account" : "Sign in"}
-          </button>
-        </form>
+            {error ? <p role="alert">{error}</p> : null}
+            <button type="submit" disabled={submitting} aria-busy={submitting}>
+              Verify email
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={submit}>
+            {isSignup ? (
+              <label>
+                Name
+                <input
+                  name="name"
+                  autoComplete="name"
+                  required
+                  maxLength={100}
+                />
+              </label>
+            ) : null}
+            <label>
+              Email
+              <input name="email" type="email" autoComplete="email" required />
+            </label>
+            {totpRequired ? (
+              <label>
+                Authenticator code
+                <input
+                  name="totp_code"
+                  inputMode="numeric"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  required
+                />
+              </label>
+            ) : null}
+            <label>
+              Password
+              <input
+                name="password"
+                type="password"
+                autoComplete={isSignup ? "new-password" : "current-password"}
+                minLength={isSignup ? 12 : 1}
+                maxLength={128}
+                required
+              />
+            </label>
+            {isSignup ? <small>Use at least 12 characters.</small> : null}
+            {error ? <p role="alert">{error}</p> : null}
+            <button type="submit" disabled={submitting} aria-busy={submitting}>
+              {isSignup ? "Create account" : "Sign in"}
+            </button>
+          </form>
+        )}
         <p>
           {isSignup ? "Already have an account?" : "New to PressRadar?"}{" "}
           <Link href={isSignup ? "/signin" : "/signup"}>

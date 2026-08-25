@@ -1249,6 +1249,53 @@ nav {
   margin: 0 auto;
 }
 
+.totp-card {
+  display: grid;
+  justify-items: center;
+}
+
+.totp-qr {
+  width: min(15rem, 100%);
+  height: auto;
+}
+
+.manual-key {
+  display: grid;
+  max-width: 100%;
+  gap: 0.4rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background: #f4f7ff;
+}
+
+.manual-key code {
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.sms-unavailable {
+  color: #6b7280;
+}
+
+.profile-security {
+  display: grid;
+  gap: 1.5rem;
+  margin-top: 2rem;
+  text-align: left;
+}
+
+.profile-security > section {
+  padding-top: 1rem;
+  border-top: 1px solid #dce1e7;
+}
+
+.totp-profile-setup {
+  display: grid;
+  justify-items: start;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
 .profile-details {
   display: grid;
   gap: 0;

@@ -14,5 +14,9 @@ export default async function ProtectedLayout({
   if (!response?.ok) {
     redirect("/signin");
   }
+  const identity = (await response.json()) as { onboarding_completed: boolean };
+  if (!identity.onboarding_completed) {
+    redirect("/onboarding");
+  }
   return children;
 }
