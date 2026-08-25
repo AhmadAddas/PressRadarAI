@@ -21,9 +21,9 @@ export function LanguageMenu({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Language>(defaultLanguage);
-  const [aiStatus, setAIStatus] = useState<PublicLocalAIStatus | null>(
-    status ?? null,
-  );
+  const [fetchedStatus, setFetchedStatus] =
+    useState<PublicLocalAIStatus | null>(null);
+  const aiStatus = status === undefined ? fetchedStatus : status;
   const menuRef = useRef<HTMLDivElement>(null);
   const matches = languages.filter((language) =>
     `${language.name} ${language.code}`
@@ -32,19 +32,16 @@ export function LanguageMenu({
   );
 
   useEffect(() => {
-    if (status !== undefined) {
-      setAIStatus(status);
-      return;
-    }
+    if (status !== undefined) return;
     let cancelled = false;
     void fetch(`${publicApiUrl}/local-ai/public-status`)
       .then(async (response) => {
         if (!response.ok) return;
         const result = (await response.json()) as PublicLocalAIStatus;
-        if (!cancelled) setAIStatus(result);
+        if (!cancelled) setFetchedStatus(result);
       })
       .catch(() => {
-        if (!cancelled) setAIStatus(null);
+        if (!cancelled) setFetchedStatus(null);
       });
     return () => {
       cancelled = true;
