@@ -50,4 +50,24 @@ describe("PitchEditor", () => {
     expect(refresh).toHaveBeenCalledOnce();
     expect(screen.getByRole("button", { name: "Approve pitch" })).toBeVisible();
   });
+
+  it("keeps the draft editor outside page translation", () => {
+    const { container } = render(
+      <PitchEditor
+        opportunityId="opportunity-1"
+        initialContent="Generated draft"
+        generationError={null}
+      />,
+    );
+
+    expect(container.querySelector(".pitch-editor")).toHaveAttribute(
+      "data-no-translate",
+    );
+    fireEvent.change(screen.getByLabelText("Pitch draft"), {
+      target: { value: "Editable after translation" },
+    });
+    expect(screen.getByLabelText("Pitch draft")).toHaveValue(
+      "Editable after translation",
+    );
+  });
 });

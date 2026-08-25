@@ -50,7 +50,7 @@ export function PitchEditor({
   }
 
   return (
-    <div className="pitch-editor">
+    <div className="pitch-editor" data-no-translate>
       <label htmlFor={`pitch-${opportunityId}`}>Pitch draft</label>
       {generationError ? <p role="alert">{generationError}</p> : null}
       <textarea
