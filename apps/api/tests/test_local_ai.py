@@ -50,6 +50,8 @@ def runtime_with_mock_provider() -> tuple[OllamaRuntime, list[httpx.Request]]:
             assert "into Arabic (locale ar)" in prompt
             source_texts = json.loads(prompt.split("INPUT: ", maxsplit=1)[1])
             translations = [f"عربي {index}" for index, _ in enumerate(source_texts)]
+            if len(source_texts) > 1 and source_texts[0].startswith("Retry"):
+                translations.pop()
             return httpx.Response(
                 200,
                 json={"response": json.dumps({"translations": translations})},
@@ -253,5 +255,25 @@ async def test_local_ai_splits_large_translation_requests_for_small_models(
 
     assert response.status_code == 200
     assert len(response.json()["translations"]) == len(texts)
+    generate_requests = [request for request in requests if request.url.path == "/api/generate"]
+    assert len(generate_requests) == 3
+
+
+async def test_local_ai_retries_incomplete_batches_as_smaller_requests(
+    tmp_path: Path,
+) -> None:
+    runtime, requests = runtime_with_mock_provider()
+    async with authenticated_client(tmp_path / "translation-retry.db", runtime) as client:
+        response = await client.post(
+            "/local-ai/translate",
+            json={
+                "language_code": "ar",
+                "language_name": "Arabic",
+                "texts": ["Retry first", "Retry second"],
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["translations"] == ["عربي 0", "عربي 0"]
     generate_requests = [request for request in requests if request.url.path == "/api/generate"]
     assert len(generate_requests) == 3

@@ -118,7 +118,7 @@ class OllamaRuntime:
         translations: list[str] = []
         for offset in range(0, len(texts), self._TRANSLATION_BATCH_SIZE):
             translations.extend(
-                self._translate_batch(
+                self._translate_resilient(
                     texts=texts[offset : offset + self._TRANSLATION_BATCH_SIZE],
                     language_code=language_code,
                     language_name=language_name,
@@ -126,6 +126,37 @@ class OllamaRuntime:
                 )
             )
         return tuple(translations)
+
+    def _translate_resilient(
+        self,
+        *,
+        texts: tuple[str, ...],
+        language_code: str,
+        language_name: str,
+        model: str,
+    ) -> tuple[str, ...]:
+        try:
+            return self._translate_batch(
+                texts=texts,
+                language_code=language_code,
+                language_name=language_name,
+                model=model,
+            )
+        except LocalAIError:
+            if len(texts) == 1:
+                raise
+            midpoint = len(texts) // 2
+            return self._translate_resilient(
+                texts=texts[:midpoint],
+                language_code=language_code,
+                language_name=language_name,
+                model=model,
+            ) + self._translate_resilient(
+                texts=texts[midpoint:],
+                language_code=language_code,
+                language_name=language_name,
+                model=model,
+            )
 
     def _translate_batch(
         self,
