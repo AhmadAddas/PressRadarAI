@@ -55,9 +55,7 @@ class OllamaPitchGenerator:
             return None
         return _display_headline(result.headline, headline)
 
-    def _request(
-        self, *, prompt: str, schema: dict[str, object] | None, num_predict: int
-    ) -> str:
+    def _request(self, *, prompt: str, schema: dict[str, object] | None, num_predict: int) -> str:
         payload: dict[str, object] = {
             "model": self._model,
             "stream": False,

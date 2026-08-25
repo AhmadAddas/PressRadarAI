@@ -272,9 +272,7 @@ def test_ollama_pitch_survives_headline_summary_failure(
                 "She can provide useful context."
             )
         )
-        return httpx.Response(
-            200, request=httpx.Request("POST", url), json={"response": response}
-        )
+        return httpx.Response(200, request=httpx.Request("POST", url), json={"response": response})
 
     monkeypatch.setattr(httpx, "post", post)
     media = replace(
