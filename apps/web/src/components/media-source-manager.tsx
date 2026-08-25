@@ -88,6 +88,9 @@ export function MediaSourceManager({
   }, [open]);
 
   async function ingest() {
+    toast.info(
+      "Switching Local AI to Qwen for media analysis and pitch generation.",
+    );
     setIngesting(true);
     const loadingToast = toast.loading(
       "Ingesting media and analyzing opportunities…",

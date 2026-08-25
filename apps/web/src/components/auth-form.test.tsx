@@ -84,6 +84,9 @@ describe("AuthForm", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(
       "First name must be 25 characters or fewer.",
     );
-    expect(request).not.toHaveBeenCalled();
+    expect(request).not.toHaveBeenCalledWith(
+      expect.stringContaining("/auth/signup"),
+      expect.anything(),
+    );
   });
 });

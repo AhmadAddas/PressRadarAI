@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, startTransition, useState } from "react";
 
 import { publicApiUrl } from "@/lib/api";
+import { PublicAIControls } from "@/components/public-ai-controls";
 
 type AuthMode = "signin" | "signup";
 
@@ -58,6 +59,7 @@ export function AuthForm({ mode }: Readonly<{ mode: AuthMode }>) {
 
   return (
     <main className="centered-shell auth-shell">
+      <PublicAIControls />
       <section className="card" aria-labelledby="auth-title">
         <p className="eyebrow">PressRadar</p>
         <h1 id="auth-title">

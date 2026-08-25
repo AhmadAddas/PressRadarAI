@@ -16,6 +16,9 @@ export function IngestMediaButton() {
 
   async function ingest() {
     setDisabled(true);
+    toast.info(
+      "Switching Local AI to Qwen for media analysis and pitch generation.",
+    );
     try {
       const response = await fetch(`${publicApiUrl}/media/ingest`, {
         method: "POST",

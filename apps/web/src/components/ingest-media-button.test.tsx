@@ -10,7 +10,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh }),
 }));
 vi.mock("sonner", () => ({
-  toast: { success: vi.fn(), error: vi.fn() },
+  toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
 
 describe("IngestMediaButton", () => {

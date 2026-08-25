@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Toaster } from "sonner";
+import { PageTranslator } from "@/components/page-translator";
 
 import "./globals.css";
 
@@ -15,7 +16,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        {children}
+        <PageTranslator>{children}</PageTranslator>
         <Toaster richColors closeButton position="top-right" />
       </body>
     </html>
