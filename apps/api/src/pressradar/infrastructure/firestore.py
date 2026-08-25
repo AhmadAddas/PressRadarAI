@@ -28,7 +28,9 @@ class FirestoreRepository:
     def __init__(self, *, project: str, database: str = "(default)") -> None:
         self._db = firestore.Client(project=project, database=database)
 
-    def create_identity(self, *, email: str, name: str, password_hash: str) -> Identity:
+    def create_identity(
+        self, *, email: str, name: str, password_hash: str, email_verified: bool
+    ) -> Identity:
         user_id, workspace_id, demo_workspace_id = str(uuid4()), str(uuid4()), str(uuid4())
         email_ref = self._db.collection("user_emails").document(_key(email))
         transaction = self._db.transaction()
@@ -51,6 +53,9 @@ class FirestoreRepository:
                     "email": email,
                     "name": name,
                     "password_hash": password_hash,
+                    "email_verified": email_verified,
+                    "totp_enabled": False,
+                    "onboarding_completed": False,
                 },
             )
             transaction.create(email_ref, {"user_id": user_id})
@@ -67,7 +72,29 @@ class FirestoreRepository:
         if not user_doc.exists:
             return None
         data = _data(user_doc)
+        if not bool(data.get("email_verified", True)):
+            return None
         return _identity(user_doc.id, data), str(data["password_hash"])
+
+    def find_identity(self, user_id: str) -> Identity | None:
+        user = self._db.collection("users").document(user_id).get()
+        return None if not user.exists else _identity(user.id, _data(user))
+
+    def verify_email(self, user_id: str) -> None:
+        self._db.collection("users").document(user_id).update({"email_verified": True})
+
+    def delete_unverified_identity(self, user_id: str) -> None:
+        reference = self._db.collection("users").document(user_id)
+        user = reference.get()
+        if not user.exists or bool(user.get("email_verified")):
+            return
+        data = _data(user)
+        self._db.collection("user_emails").document(_key(str(data["email"]))).delete()
+        self._db.collection("workspaces").document(str(data["workspace_id"])).delete()
+        demo_workspace_id = data.get("demo_workspace_id")
+        if demo_workspace_id:
+            self._db.collection("workspaces").document(str(demo_workspace_id)).delete()
+        reference.delete()
 
     def create_session(self, *, token_hash: str, user_id: str, expires_at: datetime) -> None:
         self._db.collection("sessions").document(token_hash).create(
@@ -96,6 +123,73 @@ class FirestoreRepository:
 
     def delete_session(self, token_hash: str) -> None:
         self._db.collection("sessions").document(token_hash).delete()
+
+    def get_security(self, user_id: str) -> tuple[str | None, bool]:
+        user = self._db.collection("users").document(user_id).get()
+        if not user.exists:
+            return None, False
+        secret = user.get("totp_secret")
+        return None if secret is None else str(secret), bool(user.get("totp_enabled") or False)
+
+    def save_totp(self, *, user_id: str, secret: str, enabled: bool) -> None:
+        self._db.collection("users").document(user_id).update(
+            {"totp_secret": secret, "totp_enabled": enabled}
+        )
+
+    def complete_onboarding(self, user_id: str) -> None:
+        self._db.collection("users").document(user_id).update({"onboarding_completed": True})
+
+    def update_password(self, *, user_id: str, password_hash: str) -> None:
+        self._db.collection("users").document(user_id).update({"password_hash": password_hash})
+
+    def save_email_challenge(
+        self,
+        *,
+        challenge_id: str,
+        user_id: str,
+        purpose: str,
+        code_hash: str,
+        expires_at: datetime,
+    ) -> None:
+        self._db.collection("email_otp_challenges").document(challenge_id).create(
+            {
+                "user_id": user_id,
+                "purpose": purpose,
+                "code_hash": code_hash,
+                "expires_at": expires_at,
+                "consumed_at": None,
+                "attempts": 0,
+            }
+        )
+
+    def consume_email_challenge(
+        self,
+        *,
+        challenge_id: str,
+        user_id: str,
+        purpose: str,
+        code_hash: str,
+        now: datetime,
+    ) -> bool:
+        reference = self._db.collection("email_otp_challenges").document(challenge_id)
+        transaction = self._db.transaction()
+        document = reference.get(transaction=transaction)
+        if (
+            not document.exists
+            or document.get("user_id") != user_id
+            or document.get("purpose") != purpose
+            or document.get("consumed_at") is not None
+            or int(document.get("attempts") or 0) >= 5
+            or _datetime(document.get("expires_at")) <= now
+        ):
+            return False
+        if document.get("code_hash") != code_hash:
+            transaction.update(reference, {"attempts": firestore.Increment(1)})
+            transaction.commit()
+            return False
+        transaction.update(reference, {"consumed_at": now})
+        transaction.commit()
+        return True
 
     def create(self, *, workspace_id: str, details: ClientDetails) -> Client:
         client_id = str(uuid4())
@@ -722,6 +816,8 @@ def _identity(
         email=str(data["email"]),
         name=str(data["name"]),
         workspace_kind=workspace_kind,
+        totp_enabled=bool(data.get("totp_enabled", False)),
+        onboarding_completed=bool(data.get("onboarding_completed", True)),
     )
 
 

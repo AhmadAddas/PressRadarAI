@@ -28,6 +28,26 @@ TranslateGemma translation model are downloaded before the API starts. Models ar
 
 Stop the services with `docker compose down`.
 
+### Outlook email verification and pitch delivery
+
+The default `EMAIL_PROVIDER=fake` never sends email. To verify new accounts with email OTPs and
+send approved pitches through the internal Nodemailer adapter, set these values in `.env`:
+
+```env
+EMAIL_PROVIDER=nodemailer
+PITCH_SENDER=email
+MAILER_INTERNAL_TOKEN=replace-with-a-long-random-internal-token
+SMTP_HOST=smtp.office365.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-account@outlook.com
+SMTP_PASSWORD=your-outlook-app-password
+SMTP_FROM=your-account@outlook.com
+```
+
+Do not commit the Outlook address, app password, or internal token. The Outlook account must permit
+authenticated SMTP. SMS remains disabled unless the optional Twilio configuration is provided.
+
 Local accounts, workspaces, and sessions are stored in the `api-data` Docker volume. Downloaded
 models are stored in `ollama-data`. Use `docker compose down --volumes` only when you intentionally
 want to remove both local application data and downloaded models.
@@ -57,6 +77,7 @@ All commands run inside containers, so host installations of Python and Node.js 
 ```text
 apps/api/   FastAPI backend
 apps/web/   Next.js frontend
+apps/mailer/ Internal Nodemailer SMTP adapter
 docs/       Engineering guidance
 infra/      Terraform and production deployment guidance
 ```

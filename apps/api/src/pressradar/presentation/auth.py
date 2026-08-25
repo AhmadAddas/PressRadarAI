@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
 from pydantic import BaseModel, EmailStr, Field, StringConstraints, field_validator
@@ -8,7 +8,10 @@ from pressradar.application.auth import (
     AuthService,
     DuplicateEmailError,
     InvalidCredentialsError,
+    InvalidOTPError,
+    TOTPRequiredError,
 )
+from pressradar.application.email import EmailDeliveryError
 from pressradar.domain.auth import Identity, WorkspaceKind
 
 SESSION_COOKIE = "pressradar_session"
@@ -32,6 +35,46 @@ class SignUpRequest(BaseModel):
 class SignInRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=128)
+    totp_code: str | None = Field(default=None, pattern=r"^\d{6}$")
+
+
+class TOTPSetupResponse(BaseModel):
+    secret: str
+    provisioning_uri: str
+
+
+class TOTPCodeRequest(BaseModel):
+    code: str = Field(pattern=r"^\d{6}$")
+
+
+class SecurityOTPRequest(BaseModel):
+    purpose: Literal["setup_2fa", "disable_2fa"]
+
+
+class SecurityOTPResponse(BaseModel):
+    challenge_id: str
+
+
+class ProtectedTOTPRequest(BaseModel):
+    challenge_id: str = Field(min_length=20, max_length=200)
+    code: str = Field(pattern=r"^\d{6}$")
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=12, max_length=128)
+
+
+class SignupVerificationResponse(BaseModel):
+    verification_required: bool = True
+    user_id: str
+    challenge_id: str
+
+
+class SignupVerificationRequest(BaseModel):
+    user_id: str = Field(min_length=1, max_length=100)
+    challenge_id: str = Field(min_length=20, max_length=200)
+    code: str = Field(pattern=r"^\d{6}$")
 
 
 class IdentityResponse(BaseModel):
@@ -40,6 +83,8 @@ class IdentityResponse(BaseModel):
     email: str
     name: str
     workspace_kind: WorkspaceKind
+    totp_enabled: bool
+    onboarding_completed: bool
 
 
 class WorkspaceSelectionRequest(BaseModel):
@@ -53,9 +98,21 @@ def create_auth_router(
 
     current_identity = require_identity(auth_service)
 
-    @router.post("/signup", response_model=IdentityResponse, status_code=status.HTTP_201_CREATED)
-    def sign_up(request: SignUpRequest, response: Response) -> Identity:
+    @router.post(
+        "/signup",
+        response_model=IdentityResponse | SignupVerificationResponse,
+        status_code=status.HTTP_201_CREATED,
+    )
+    def sign_up(
+        request: SignUpRequest, response: Response
+    ) -> Identity | SignupVerificationResponse:
         try:
+            if auth_service.requires_email_verification:
+                user_id, challenge_id = auth_service.begin_sign_up(
+                    email=str(request.email), name=request.name, password=request.password
+                )
+                response.status_code = status.HTTP_202_ACCEPTED
+                return SignupVerificationResponse(user_id=user_id, challenge_id=challenge_id)
             session = auth_service.sign_up(
                 email=str(request.email), name=request.name, password=request.password
             )
@@ -63,13 +120,42 @@ def create_auth_router(
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT, detail="An account already uses this email"
             ) from error
+        except EmailDeliveryError as error:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Verification email could not be sent",
+            ) from error
+        _set_session_cookie(response, session.token, secure=secure_cookies, max_age=session_max_age)
+        return session.identity
+
+    @router.post("/signup/verify", response_model=IdentityResponse)
+    def verify_signup(request: SignupVerificationRequest, response: Response) -> Identity:
+        try:
+            session = auth_service.verify_sign_up(
+                user_id=request.user_id,
+                challenge_id=request.challenge_id,
+                code=request.code,
+            )
+        except InvalidOTPError as error:
+            raise HTTPException(
+                status_code=400, detail="Invalid or expired verification code"
+            ) from error
         _set_session_cookie(response, session.token, secure=secure_cookies, max_age=session_max_age)
         return session.identity
 
     @router.post("/signin", response_model=IdentityResponse)
     def sign_in(request: SignInRequest, response: Response) -> Identity:
         try:
-            session = auth_service.sign_in(email=str(request.email), password=request.password)
+            session = auth_service.sign_in(
+                email=str(request.email),
+                password=request.password,
+                totp_code=request.totp_code,
+            )
+        except TOTPRequiredError as error:
+            raise HTTPException(
+                status_code=status.HTTP_428_PRECONDITION_REQUIRED,
+                detail="A valid authenticator code is required",
+            ) from error
         except InvalidCredentialsError as error:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password"
@@ -118,6 +204,81 @@ def create_auth_router(
     @router.get("/me", response_model=IdentityResponse)
     def me(identity: Annotated[Identity, Depends(current_identity)]) -> Identity:
         return identity
+
+    @router.post("/2fa/setup", response_model=TOTPSetupResponse)
+    def setup_totp(
+        identity: Annotated[Identity, Depends(current_identity)],
+        request: ProtectedTOTPRequest | None = None,
+    ) -> TOTPSetupResponse:
+        if identity.onboarding_completed:
+            if request is None:
+                raise HTTPException(status_code=428, detail="Email verification is required")
+            try:
+                auth_service.verify_security_otp(
+                    identity,
+                    challenge_id=request.challenge_id,
+                    code=request.code,
+                    purpose="setup_2fa",
+                )
+            except InvalidOTPError as error:
+                raise HTTPException(
+                    status_code=400, detail="Invalid or expired email code"
+                ) from error
+        secret, uri = auth_service.begin_totp_setup(identity)
+        return TOTPSetupResponse(secret=secret, provisioning_uri=uri)
+
+    @router.post("/2fa/email-code", response_model=SecurityOTPResponse)
+    def request_2fa_email_code(
+        request: SecurityOTPRequest,
+        identity: Annotated[Identity, Depends(current_identity)],
+    ) -> SecurityOTPResponse:
+        try:
+            challenge_id = auth_service.request_security_otp(identity, request.purpose)
+        except EmailDeliveryError as error:
+            raise HTTPException(
+                status_code=503, detail="Verification email could not be sent"
+            ) from error
+        return SecurityOTPResponse(challenge_id=challenge_id)
+
+    @router.post("/2fa/disable", status_code=status.HTTP_204_NO_CONTENT)
+    def disable_totp(
+        request: ProtectedTOTPRequest,
+        identity: Annotated[Identity, Depends(current_identity)],
+    ) -> None:
+        try:
+            auth_service.verify_security_otp(
+                identity,
+                challenge_id=request.challenge_id,
+                code=request.code,
+                purpose="disable_2fa",
+            )
+        except InvalidOTPError as error:
+            raise HTTPException(status_code=400, detail="Invalid or expired email code") from error
+        auth_service.disable_totp(identity)
+
+    @router.post("/2fa/enable", status_code=status.HTTP_204_NO_CONTENT)
+    def enable_totp(
+        request: TOTPCodeRequest,
+        identity: Annotated[Identity, Depends(current_identity)],
+    ) -> None:
+        try:
+            auth_service.enable_totp(identity, request.code)
+        except TOTPRequiredError as error:
+            raise HTTPException(status_code=400, detail="Invalid authenticator code") from error
+
+    @router.post("/2fa/skip", status_code=status.HTTP_204_NO_CONTENT)
+    def skip_totp(identity: Annotated[Identity, Depends(current_identity)]) -> None:
+        auth_service.skip_totp(identity)
+
+    @router.post("/password", status_code=status.HTTP_204_NO_CONTENT)
+    def change_password(
+        request: PasswordChangeRequest,
+        identity: Annotated[Identity, Depends(current_identity)],
+    ) -> None:
+        try:
+            auth_service.change_password(identity, request.current_password, request.new_password)
+        except InvalidCredentialsError as error:
+            raise HTTPException(status_code=400, detail="Current password is incorrect") from error
 
     return router
 

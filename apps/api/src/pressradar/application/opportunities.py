@@ -265,6 +265,7 @@ class OpportunityService:
             return opportunity
         if opportunity.status is not OpportunityStatus.APPROVED or opportunity.pitch is None:
             raise PitchApprovalError
+        client = self._clients.get(workspace_id=workspace_id, client_id=opportunity.client_id)
         claimed = self._opportunities.claim_send(
             workspace_id=workspace_id, opportunity_id=opportunity_id
         )
@@ -274,7 +275,11 @@ class OpportunityService:
             receipt = self._pitch_sender.send(
                 DeliveryRequest(
                     opportunity_id=opportunity.id,
-                    recipient=opportunity.journalist or opportunity.source,
+                    recipient=(
+                        client.email
+                        if client is not None and client.email
+                        else opportunity.journalist or opportunity.source
+                    ),
                     content=opportunity.pitch.content,
                 )
             )

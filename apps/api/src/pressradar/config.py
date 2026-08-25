@@ -20,7 +20,10 @@ class Settings(BaseSettings):
     web_origin: str = "http://localhost:3000"
     media_provider: Literal["simulated"] = "simulated"
     ai_provider: Literal["fake", "ollama"] = "ollama"
-    pitch_sender: Literal["simulated"] = "simulated"
+    pitch_sender: Literal["simulated", "email"] = "simulated"
+    email_provider: Literal["fake", "nodemailer"] = "fake"
+    mailer_base_url: AnyHttpUrl = AnyHttpUrl("http://localhost:3001")
+    mailer_internal_token: SecretStr | None = None
     notification_provider: Literal["fake", "twilio"] = "fake"
     crm_provider: Literal["fake", "hubspot"] = "fake"
     analytics_provider: Literal["none", "sqlite", "bigquery"] = "sqlite"
@@ -78,6 +81,13 @@ class Settings(BaseSettings):
         )
         if self.crm_provider == "hubspot" and not hubspot_token.strip():
             raise ValueError("HUBSPOT_ACCESS_TOKEN is required")
+        if self.email_provider == "nodemailer" and (
+            self.mailer_internal_token is None
+            or not self.mailer_internal_token.get_secret_value().strip()
+        ):
+            raise ValueError("MAILER_INTERNAL_TOKEN is required for Nodemailer")
+        if self.pitch_sender == "email" and self.email_provider != "nodemailer":
+            raise ValueError("PITCH_SENDER=email requires EMAIL_PROVIDER=nodemailer")
         if self.app_mode == "gcp":
             if not self.gcp_project_id or not self.gcp_project_id.strip():
                 raise ValueError("GCP_PROJECT_ID is required in gcp mode")

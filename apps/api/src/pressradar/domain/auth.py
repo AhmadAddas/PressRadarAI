@@ -14,3 +14,5 @@ class Identity:
     email: str
     name: str
     workspace_kind: WorkspaceKind = WorkspaceKind.PROD
+    totp_enabled: bool = False
+    onboarding_completed: bool = False

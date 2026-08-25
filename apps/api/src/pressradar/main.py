@@ -8,6 +8,7 @@ from pressradar.application.auth import AuthRepository, AuthService
 from pressradar.application.clients import ClientRepository, ClientService
 from pressradar.application.delivery import PitchSender
 from pressradar.application.demo import DemoSetupService
+from pressradar.application.email import EmailSender, FakeEmailSender
 from pressradar.application.integrations import CRMIntegration, NotificationSender
 from pressradar.application.media import MediaIngestionService, MediaRepository
 from pressradar.application.media_sources import MediaSourceRepository, MediaSourceService
@@ -17,6 +18,7 @@ from pressradar.application.relevance import RelevanceAnalyzer
 from pressradar.config import Settings, get_settings
 from pressradar.infrastructure.bigquery_analytics import BigQueryAnalyticsStore
 from pressradar.infrastructure.configured_media import ConfiguredMediaIngestionService
+from pressradar.infrastructure.email_pitch_sender import EmailPitchSender
 from pressradar.infrastructure.fake_integrations import (
     FakeCRMIntegration,
     FakeNotificationSender,
@@ -31,6 +33,7 @@ from pressradar.infrastructure.firestore import (
     FirestoreRepository,
 )
 from pressradar.infrastructure.hubspot_crm import HubSpotCRMIntegration
+from pressradar.infrastructure.nodemailer import NodemailerEmailSender
 from pressradar.infrastructure.noop_analytics import NoOpAnalyticsStore
 from pressradar.infrastructure.ollama_runtime import OllamaRuntime
 from pressradar.infrastructure.security import PasswordHasher, SessionTokens
@@ -42,6 +45,7 @@ from pressradar.infrastructure.sqlite_clients import SQLiteClientRepository
 from pressradar.infrastructure.sqlite_media import SQLiteMediaRepository
 from pressradar.infrastructure.sqlite_media_sources import SQLiteMediaSourceRepository
 from pressradar.infrastructure.sqlite_opportunities import SQLiteOpportunityRepository
+from pressradar.infrastructure.totp import TOTP
 from pressradar.infrastructure.twilio_notifications import TwilioNotificationSender
 from pressradar.presentation.analytics import create_analytics_router
 from pressradar.presentation.auth import create_auth_router, require_identity
@@ -62,6 +66,7 @@ def create_app(
     crm_integration: CRMIntegration | None = None,
     analytics_store: AnalyticsStore | None = None,
     ollama_runtime: OllamaRuntime | None = None,
+    email_sender: EmailSender | None = None,
 ) -> FastAPI:
     settings = settings or get_settings()
     custom_demo_workflow = any(
@@ -104,11 +109,28 @@ def create_app(
         sqlite_opportunities = SQLiteOpportunityRepository(settings.database_path)
         sqlite_opportunities.initialize()
         opportunity_repository = sqlite_opportunities
+    if email_sender is None:
+        email_sender = (
+            FakeEmailSender()
+            if settings.email_provider == "fake"
+            else NodemailerEmailSender(
+                base_url=str(settings.mailer_base_url),
+                internal_token=(
+                    ""
+                    if settings.mailer_internal_token is None
+                    else settings.mailer_internal_token.get_secret_value()
+                ),
+                timeout_seconds=settings.external_provider_timeout_seconds,
+            )
+        )
     auth_service = AuthService(
         auth_repository,
         PasswordHasher(),
         SessionTokens(),
         timedelta(hours=settings.session_ttl_hours),
+        TOTP(),
+        email_sender,
+        settings.email_provider == "nodemailer",
     )
     client_service = ClientService(client_repository)
     media_providers = {"simulated": SimulatedMediaProvider()}
@@ -147,7 +169,10 @@ def create_app(
     if pitch_generator is None:
         pitch_generator = FakePitchGenerator() if settings.ai_provider == "fake" else ollama_runtime
     if pitch_sender is None:
-        pitch_senders = {"simulated": SimulatedPitchSender()}
+        pitch_senders: dict[str, PitchSender] = {
+            "simulated": SimulatedPitchSender(),
+            "email": EmailPitchSender(email_sender),
+        }
         pitch_sender = pitch_senders[settings.pitch_sender]
     if notification_sender is None:
         notification_sender = (

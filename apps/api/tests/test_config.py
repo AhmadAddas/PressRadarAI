@@ -28,6 +28,8 @@ def test_settings_reject_unknown_runtime_mode() -> None:
     [
         {"notification_provider": "twilio"},
         {"crm_provider": "hubspot"},
+        {"email_provider": "nodemailer"},
+        {"pitch_sender": "email"},
     ],
 )
 def test_settings_require_credentials_for_real_providers(values: dict[str, str]) -> None:
@@ -44,10 +46,15 @@ def test_settings_accept_explicit_real_provider_credentials() -> None:
         twilio_to_number="+15550000002",
         crm_provider="hubspot",
         hubspot_access_token=SecretStr("hubspot-secret"),
+        email_provider="nodemailer",
+        pitch_sender="email",
+        mailer_internal_token=SecretStr("mailer-secret"),
     )
 
     assert settings.notification_provider == "twilio"
     assert settings.crm_provider == "hubspot"
+    assert settings.email_provider == "nodemailer"
+    assert settings.pitch_sender == "email"
 
 
 def test_settings_require_separate_operational_and_analytics_databases() -> None:
