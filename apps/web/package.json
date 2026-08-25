@@ -25,6 +25,7 @@
     "@types/node": "22.18.1",
     "@types/react": "19.1.12",
     "@types/react-dom": "19.1.9",
+    "axe-core": "^4.10.3",
     "eslint": "9.35.0",
     "eslint-config-next": "16.3.2",
     "jsdom": "26.1.0",
