@@ -31,6 +31,9 @@ describe("OpportunityWorkflowActions", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Approve pitch" }));
+    expect(screen.getByRole("button", { name: "Approve pitch" })).toHaveClass(
+      "button-success-secondary",
+    );
     expect(
       screen.getByRole("button", { name: "Approve pitch" }).parentElement,
     ).toHaveClass("workflow-action-approve");

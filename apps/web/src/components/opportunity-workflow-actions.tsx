@@ -115,6 +115,7 @@ export function OpportunityWorkflowActions({
   return (
     <div className={`workflow-action workflow-action-${action ?? "pending"}`}>
       <button
+        className="button-success-secondary"
         type="button"
         onClick={runAction}
         disabled={working || status === "sending"}

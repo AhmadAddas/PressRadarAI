@@ -523,10 +523,11 @@ nav {
 .public-ai-controls {
   position: absolute;
   top: 1rem;
-  right: 1rem;
+  left: 50%;
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  transform: translateX(-50%);
   z-index: 10;
 }
 
@@ -555,6 +556,7 @@ nav {
     justify-content: center;
     flex-wrap: wrap;
     margin-bottom: 1rem;
+    transform: none;
   }
 }
 
@@ -685,7 +687,7 @@ nav {
 }
 
 .opportunity-list .item-checkbox {
-  margin-top: 1.45rem;
+  margin-top: 2.1rem;
 }
 
 .visually-hidden {
@@ -855,12 +857,14 @@ nav {
   margin-left: 0;
 }
 
-.workflow-action-approve button {
-  background: #247044;
+.button-success-secondary {
+  border: 1px solid #247044;
+  background: #fff;
+  color: #247044;
 }
 
-.workflow-action-approve button:hover {
-  background: #1d5a37;
+.button-success-secondary:hover {
+  background: #e7f6ed;
 }
 
 .button-success,
