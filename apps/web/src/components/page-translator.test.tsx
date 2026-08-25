@@ -54,4 +54,30 @@ describe("PageTranslator", () => {
     expect(document.documentElement).toHaveAttribute("dir", "ltr");
     expect(request).toHaveBeenCalledOnce();
   });
+
+  it("finishes when Local AI preserves an untranslatable English label", async () => {
+    const request = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ translations: ["Brand name"] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    render(
+      <PageTranslator>
+        <p>Brand name</p>
+      </PageTranslator>,
+    );
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(languageEvent, { detail: "ar" }));
+    });
+
+    await waitFor(() =>
+      expect(
+        screen.queryByText("Translating with Local AI…"),
+      ).not.toBeInTheDocument(),
+    );
+    expect(screen.getByText("Brand name")).toBeVisible();
+    expect(request).toHaveBeenCalledOnce();
+  });
 });

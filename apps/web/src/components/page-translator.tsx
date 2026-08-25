@@ -9,6 +9,8 @@ import { languageEvent, languageStorageKey } from "@/components/language-menu";
 import { publicApiUrl } from "@/lib/api";
 import { languageByCode, translationLanguageName } from "@/lib/languages";
 
+const translationBatchSize = 8;
+
 export function PageTranslator({
   children,
 }: Readonly<{ children: ReactNode }>) {
@@ -41,8 +43,12 @@ export function PageTranslator({
     if (!translatable.length) return;
     setTranslating(true);
     try {
-      for (let offset = 0; offset < translatable.length; offset += 100) {
-        const batch = translatable.slice(offset, offset + 100);
+      for (
+        let offset = 0;
+        offset < translatable.length;
+        offset += translationBatchSize
+      ) {
+        const batch = translatable.slice(offset, offset + translationBatchSize);
         const texts = batch.map((node) =>
           (originals.current.get(node) ?? node.data).trim(),
         );
@@ -60,13 +66,14 @@ export function PageTranslator({
         const result = (await response.json()) as { translations: string[] };
         if (result.translations.length !== batch.length) throw new Error();
         batch.forEach((node, index) => {
-          translatedByOriginal.current.set(
-            texts[index] ?? "",
-            result.translations[index] ?? "",
-          );
+          const original = texts[index] ?? "";
+          const translated = result.translations[index]?.trim() ?? "";
+          if (translated && translated !== original) {
+            translatedByOriginal.current.set(original, translated);
+          }
           node.data = preserveWhitespace(
             originals.current.get(node) ?? node.data,
-            result.translations[index] ?? "",
+            translated || original,
           );
         });
       }
@@ -114,7 +121,9 @@ export function PageTranslator({
       if (activeLanguage.current === "en") return;
       for (const node of textNodes(root)) {
         const translated = translatedByOriginal.current.get(node.data.trim());
-        if (translated) node.data = preserveWhitespace(node.data, translated);
+        if (translated && translated !== node.data.trim()) {
+          node.data = preserveWhitespace(node.data, translated);
+        }
       }
     };
     const observer = new MutationObserver(restoreTranslatedText);

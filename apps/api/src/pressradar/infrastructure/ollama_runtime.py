@@ -192,6 +192,11 @@ class OllamaRuntime:
             translations = tuple(value.strip() for value in result.translations)
             if len(translations) != len(texts) or any(not value for value in translations):
                 raise LocalAIError("Local AI returned an incomplete translation")
+            if any(
+                not _translation_matches_language(source, translated, language_code)
+                for source, translated in zip(texts, translations, strict=True)
+            ):
+                raise LocalAIError("Local AI returned text in the wrong language")
             return translations
         except (httpx.HTTPError, KeyError, TypeError, ValueError, ValidationError) as error:
             raise LocalAIError("Local AI translation failed") from error
@@ -364,6 +369,12 @@ def validate_model_name(model: str) -> str:
     if len(normalized) > 200 or not MODEL_PATTERN.fullmatch(normalized):
         raise LocalAIError("Enter a valid Ollama model name, such as qwen2.5:0.5b-instruct")
     return normalized
+
+
+def _translation_matches_language(source: str, translated: str, language_code: str) -> bool:
+    if language_code != "ar" or translated == source:
+        return True
+    return bool(re.search(r"[\u0600-\u06ff]", translated))
 
 
 def license_details(name: str, source_url: str | None) -> LicenseDetails:

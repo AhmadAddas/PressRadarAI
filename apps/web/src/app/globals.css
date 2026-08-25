@@ -457,6 +457,14 @@ nav {
   left: auto;
 }
 
+[dir="rtl"] .dashboard-header {
+  direction: ltr;
+}
+
+[dir="rtl"] .dashboard-header :where(h1, p, a, button, span) {
+  direction: rtl;
+}
+
 .local-ai-trigger {
   display: inline-flex;
   align-items: center;

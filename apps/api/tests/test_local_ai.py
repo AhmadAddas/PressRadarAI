@@ -55,6 +55,8 @@ def runtime_with_mock_provider() -> tuple[OllamaRuntime, list[httpx.Request]]:
                 translations.pop()
             if source_texts == ["Cannot translate"]:
                 translations.clear()
+            if source_texts == ["Chinese hallucination"]:
+                translations = ["工作区"]
             return httpx.Response(
                 200,
                 json={"response": json.dumps({"translations": translations})},
@@ -278,6 +280,24 @@ async def test_local_ai_preserves_an_individually_untranslatable_string(
 
     assert response.status_code == 200
     assert response.json()["translations"] == ["Cannot translate"]
+
+
+async def test_local_ai_rejects_wrong_script_for_arabic_translation(
+    tmp_path: Path,
+) -> None:
+    runtime, _ = runtime_with_mock_provider()
+    async with authenticated_client(tmp_path / "translation-script.db", runtime) as client:
+        response = await client.post(
+            "/local-ai/translate",
+            json={
+                "language_code": "ar",
+                "language_name": "Arabic",
+                "texts": ["Chinese hallucination"],
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["translations"] == ["Chinese hallucination"]
 
 
 async def test_local_ai_retries_incomplete_batches_as_smaller_requests(
