@@ -38,7 +38,10 @@ class Settings(BaseSettings):
     ollama_base_url: AnyHttpUrl = AnyHttpUrl("http://localhost:11434")
     ollama_model: Annotated[
         str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)
-    ] = "llama3.2:3b"
+    ] = "qwen2.5:0.5b-instruct"
+    ollama_translation_model: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)
+    ] = "translategemma:4b"
     ollama_timeout_seconds: float = Field(default=30, gt=0, le=300)
 
     @property

@@ -136,6 +136,7 @@ def create_app(
         ollama_runtime = OllamaRuntime(
             base_url=str(settings.ollama_base_url),
             model=settings.ollama_model,
+            translation_model=settings.ollama_translation_model,
             timeout_seconds=settings.ollama_timeout_seconds,
             enabled=settings.ai_provider == "ollama",
         )

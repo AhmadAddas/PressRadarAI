@@ -34,6 +34,10 @@ class LocalAIResponse(BaseModel):
     model_available: bool
     installed_models: list[str]
     model: str
+    analysis_model: str
+    analysis_model_available: bool
+    translation_model: str
+    translation_model_available: bool
     license: LicenseResponse
     recommended_model: str
     recommendation: str
@@ -73,10 +77,21 @@ class TranslationResponse(BaseModel):
     translations: list[str]
 
 
+class PublicLocalAIResponse(BaseModel):
+    active: bool
+    translation_available: bool
+    analysis_model: str
+    translation_model: str
+
+
 def create_local_ai_router(
     runtime: OllamaRuntime, current_identity: Callable[..., Identity]
 ) -> APIRouter:
     router = APIRouter(prefix="/local-ai", tags=["local AI"])
+
+    @router.get("/public-status", response_model=PublicLocalAIResponse)
+    def public_status() -> PublicLocalAIResponse:
+        return PublicLocalAIResponse.model_validate(runtime.availability(), from_attributes=True)
 
     @router.get("", response_model=LocalAIResponse)
     def get_status(
@@ -161,7 +176,6 @@ def create_local_ai_router(
     @router.post("/translate", response_model=TranslationResponse)
     def translate(
         request: TranslationRequest,
-        _identity: Annotated[Identity, Depends(current_identity)],
     ) -> TranslationResponse:
         try:
             translations = runtime.translate(

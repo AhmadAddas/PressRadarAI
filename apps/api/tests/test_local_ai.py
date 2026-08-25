@@ -4,9 +4,10 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import httpx
+import pytest
 
 from pressradar.config import Settings
-from pressradar.infrastructure.ollama_runtime import OllamaRuntime
+from pressradar.infrastructure.ollama_runtime import LocalAIError, OllamaRuntime
 from pressradar.main import create_app
 
 
@@ -46,6 +47,7 @@ def runtime_with_mock_provider() -> tuple[OllamaRuntime, list[httpx.Request]]:
             return httpx.Response(200, json={"status": "success"})
         if request.url.path == "/api/generate":
             payload = json.loads(request.content)
+            assert payload["model"] == "translategemma:4b"
             prompt = str(payload["prompt"])
             assert "into Arabic (locale ar)" in prompt
             assert payload["options"] == {"temperature": 0, "num_predict": 512}
@@ -318,3 +320,40 @@ async def test_local_ai_retries_incomplete_batches_as_smaller_requests(
     assert response.json()["translations"] == ["عربي 0", "عربي 0"]
     generate_requests = [request for request in requests if request.url.path == "/api/generate"]
     assert len(generate_requests) == 3
+
+
+async def test_public_pages_can_read_status_and_translate_without_a_session(
+    tmp_path: Path,
+) -> None:
+    runtime, _ = runtime_with_mock_provider()
+    app = create_app(
+        Settings(database_path=str(tmp_path / "public-local-ai.db"), ai_provider="ollama"),
+        ollama_runtime=runtime,
+    )
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        status = await client.get("/local-ai/public-status")
+        translation = await client.post(
+            "/local-ai/translate",
+            json={
+                "language_code": "ar",
+                "language_name": "Arabic",
+                "texts": ["Sign in"],
+            },
+        )
+
+    assert status.status_code == 200
+    assert status.json()["active"] is False
+    assert status.json()["translation_model"] == "translategemma:4b"
+    assert translation.status_code == 200
+    assert translation.json()["translations"] == ["عربي 0"]
+
+
+def test_required_analysis_and_translation_models_cannot_be_deleted() -> None:
+    runtime, _ = runtime_with_mock_provider()
+
+    with pytest.raises(LocalAIError, match="Required Local AI models"):
+        runtime.delete_model("llama3.2:3b")
+    with pytest.raises(LocalAIError, match="Required Local AI models"):
+        runtime.delete_model("translategemma:4b")

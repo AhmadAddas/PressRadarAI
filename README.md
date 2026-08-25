@@ -22,8 +22,9 @@ docker compose up --build
 
 Open the web application at <http://localhost:3000>. The API health endpoint is available at <http://localhost:8000/health> and interactive API documentation at <http://localhost:8000/docs>.
 
-Docker Compose runs Ollama internally and stores downloaded models in the
-`ollama-data` volume. The first model download can take several minutes.
+Docker Compose runs Ollama internally and ensures both the configured Qwen analysis model and
+TranslateGemma translation model are downloaded before the API starts. Models are stored in the
+`ollama-data` volume; the first download is several gigabytes and can take several minutes.
 
 Stop the services with `docker compose down`.
 

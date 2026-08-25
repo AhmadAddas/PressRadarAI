@@ -50,9 +50,21 @@ class LocalAIStatus:
     model_available: bool
     installed_models: tuple[str, ...]
     model: str
+    analysis_model: str
+    analysis_model_available: bool
+    translation_model: str
+    translation_model_available: bool
     license: LicenseDetails
     recommended_model: str = RECOMMENDED_MODEL
     recommendation: str = RECOMMENDATION
+
+
+@dataclass(frozen=True)
+class LocalAIAvailability:
+    active: bool
+    translation_available: bool
+    analysis_model: str
+    translation_model: str
 
 
 class OllamaRuntime:
@@ -65,12 +77,15 @@ class OllamaRuntime:
         *,
         base_url: str,
         model: str,
+        translation_model: str = "translategemma:4b",
         timeout_seconds: float,
         enabled: bool,
         client: httpx.Client | None = None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
-        self._model = validate_model_name(model)
+        self._analysis_model = validate_model_name(model)
+        self._translation_model = validate_model_name(translation_model)
+        self._model = self._analysis_model
         self._timeout_seconds = timeout_seconds
         self._enabled = enabled
         self._client = client or httpx.Client(timeout=timeout_seconds)
@@ -86,7 +101,8 @@ class OllamaRuntime:
         with self._lock:
             if not self._enabled:
                 raise RelevanceAnalysisError("Local AI is deactivated")
-            model = self._model
+            model = self._analysis_model
+            self._model = model
         return OllamaRelevanceAnalyzer(
             base_url=self._base_url,
             model=model,
@@ -97,7 +113,8 @@ class OllamaRuntime:
         with self._lock:
             if not self._enabled:
                 raise PitchGenerationError("Local AI is deactivated")
-            model = self._model
+            model = self._analysis_model
+            self._model = model
         return OllamaPitchGenerator(
             base_url=self._base_url,
             model=model,
@@ -114,7 +131,8 @@ class OllamaRuntime:
         with self._lock:
             if not self._enabled:
                 raise LocalAIError("Activate Local AI before translating")
-            model = self._model
+            model = self._translation_model
+            self._model = model
         translations: list[str] = []
         for offset in range(0, len(texts), self._TRANSLATION_BATCH_SIZE):
             translations.extend(
@@ -212,7 +230,24 @@ class OllamaRuntime:
             model_available=model in installed_models,
             installed_models=installed_models,
             model=model,
+            analysis_model=self._analysis_model,
+            analysis_model_available=self._analysis_model in installed_models,
+            translation_model=self._translation_model,
+            translation_model_available=self._translation_model in installed_models,
             license=self.inspect_license(model),
+        )
+
+    def availability(self) -> LocalAIAvailability:
+        with self._lock:
+            enabled = self._enabled
+        reachable, installed_models = self._ollama_status()
+        analysis_available = self._analysis_model in installed_models
+        translation_available = self._translation_model in installed_models
+        return LocalAIAvailability(
+            active=enabled and reachable and analysis_available and translation_available,
+            translation_available=enabled and reachable and translation_available,
+            analysis_model=self._analysis_model,
+            translation_model=self._translation_model,
         )
 
     def inspect_license(self, model: str) -> LicenseDetails:
@@ -304,6 +339,8 @@ class OllamaRuntime:
 
     def delete_model(self, model: str) -> LocalAIStatus:
         model = validate_model_name(model)
+        if model in {self._analysis_model, self._translation_model}:
+            raise LocalAIError("Required Local AI models cannot be deleted")
         try:
             response = self._client.request(
                 "DELETE",
