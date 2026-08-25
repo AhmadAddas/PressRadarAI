@@ -14,7 +14,12 @@ class _OllamaPitchResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     content: str = Field(min_length=1, max_length=3_000)
-    display_headline: str | None = None
+
+
+class _OllamaHeadlineResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    headline: str = Field(min_length=1, max_length=300)
 
 
 def _ollama_format_schema() -> dict[str, object]:
@@ -36,26 +41,56 @@ class OllamaPitchGenerator:
 
     def generate(self, *, client: Client, media_item: MediaItem) -> GeneratedPitch:
         try:
-            response = httpx.post(
-                self._url,
-                json={
-                    "model": self._model,
-                    "stream": False,
-                    "format": _ollama_format_schema(),
-                    "prompt": _prompt(client, media_item),
-                    "options": {"temperature": 0, "num_predict": 384},
-                },
-                timeout=self._timeout,
+            result = _OllamaPitchResult.model_validate_json(
+                self._request(
+                    prompt=_prompt(client, media_item),
+                    schema=_ollama_format_schema(),
+                    num_predict=192,
+                )
             )
-            response.raise_for_status()
-            envelope = response.json()
-            result = _OllamaPitchResult.model_validate_json(envelope["response"])
             return GeneratedPitch(
                 content=_normalize_content(result.content, client.name),
-                display_headline=_display_headline(result.display_headline, media_item.headline),
+                display_headline=self._summarize_headline(media_item.headline),
             )
         except (httpx.HTTPError, KeyError, TypeError, ValueError, ValidationError) as error:
             raise PitchGenerationError("Ollama pitch generation failed") from error
+
+    def _summarize_headline(self, headline: str) -> str | None:
+        if len(headline.split()) <= 13:
+            return None
+        try:
+            result = _OllamaHeadlineResult.model_validate_json(
+                self._request(
+                    prompt=(
+                        "Return only JSON matching the schema. Faithfully summarize this headline "
+                        "in at most 13 words. Preserve important names and do not add facts:\n"
+                        f"{json.dumps(headline)}"
+                    ),
+                    schema=_OllamaHeadlineResult.model_json_schema(),
+                    num_predict=64,
+                )
+            )
+        except (httpx.HTTPError, KeyError, TypeError, ValueError, ValidationError):
+            return None
+        return _display_headline(result.headline, headline)
+
+    def _request(
+        self, *, prompt: str, schema: dict[str, object], num_predict: int
+    ) -> str:
+        response = httpx.post(
+            self._url,
+            json={
+                "model": self._model,
+                "stream": False,
+                "format": schema,
+                "prompt": prompt,
+                "options": {"temperature": 0, "num_predict": num_predict},
+            },
+            timeout=self._timeout,
+        )
+        response.raise_for_status()
+        envelope = response.json()
+        return str(envelope["response"])
 
 
 def _prompt(client: Client, media_item: MediaItem) -> str:
@@ -92,13 +127,7 @@ def _prompt(client: Client, media_item: MediaItem) -> str:
         "OUTPUT REQUIREMENTS\nReturn only JSON matching the schema. Write exactly three "
         f"sentences and explicitly mention the client name {json.dumps(client.name)}. The content "
         "must be concise, useful, and human-sounding without generic "
-        "promotional language. Do not imply that it has been approved or sent. "
-        + (
-            "Also set display_headline to a faithful summary of the media headline using at "
-            "most 13 words. Preserve important names and do not add facts."
-            if len(media_item.headline.split()) > 13
-            else "Set display_headline to null."
-        )
+        "promotional language. Do not imply that it has been approved or sent."
     )
 
 
