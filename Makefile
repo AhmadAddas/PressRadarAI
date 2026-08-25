@@ -6,6 +6,7 @@ dev:
 test:
 	docker compose run --rm -e AI_PROVIDER=ollama -e NEWSAPI_API_KEY= api pytest
 	docker compose run --rm web-tools npm test
+	docker compose run --rm mailer npm test
 
 lint:
 	docker compose run --rm api ruff check src tests
