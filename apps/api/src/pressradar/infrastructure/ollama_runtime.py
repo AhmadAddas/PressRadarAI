@@ -144,7 +144,7 @@ class OllamaRuntime:
             )
         except LocalAIError:
             if len(texts) == 1:
-                raise
+                return texts
             midpoint = len(texts) // 2
             return self._translate_resilient(
                 texts=texts[:midpoint],
@@ -173,7 +173,7 @@ class OllamaRuntime:
                     "model": model,
                     "stream": False,
                     "format": _TranslationResult.model_json_schema(),
-                    "options": {"temperature": 0},
+                    "options": {"temperature": 0, "num_predict": 512},
                     "prompt": (
                         f"Translate each JSON string into {language_name} "
                         f"(locale {language_code}). Write every translation using the normal "

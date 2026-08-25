@@ -48,10 +48,13 @@ def runtime_with_mock_provider() -> tuple[OllamaRuntime, list[httpx.Request]]:
             payload = json.loads(request.content)
             prompt = str(payload["prompt"])
             assert "into Arabic (locale ar)" in prompt
+            assert payload["options"] == {"temperature": 0, "num_predict": 512}
             source_texts = json.loads(prompt.split("INPUT: ", maxsplit=1)[1])
             translations = [f"عربي {index}" for index, _ in enumerate(source_texts)]
             if len(source_texts) > 1 and source_texts[0].startswith("Retry"):
                 translations.pop()
+            if source_texts == ["Cannot translate"]:
+                translations.clear()
             return httpx.Response(
                 200,
                 json={"response": json.dumps({"translations": translations})},
@@ -257,6 +260,24 @@ async def test_local_ai_splits_large_translation_requests_for_small_models(
     assert len(response.json()["translations"]) == len(texts)
     generate_requests = [request for request in requests if request.url.path == "/api/generate"]
     assert len(generate_requests) == 3
+
+
+async def test_local_ai_preserves_an_individually_untranslatable_string(
+    tmp_path: Path,
+) -> None:
+    runtime, _ = runtime_with_mock_provider()
+    async with authenticated_client(tmp_path / "translation-fallback.db", runtime) as client:
+        response = await client.post(
+            "/local-ai/translate",
+            json={
+                "language_code": "ar",
+                "language_name": "Arabic",
+                "texts": ["Cannot translate"],
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["translations"] == ["Cannot translate"]
 
 
 async def test_local_ai_retries_incomplete_batches_as_smaller_requests(
