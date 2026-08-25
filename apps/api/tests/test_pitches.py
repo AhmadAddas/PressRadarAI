@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
@@ -5,7 +6,11 @@ from typing import Any, cast
 import httpx
 import pytest
 
-from pressradar.application.pitches import PitchGenerationError, PitchGenerator
+from pressradar.application.pitches import (
+    PitchGenerationError,
+    PitchGenerator,
+    validate_generated_pitch,
+)
 from pressradar.config import Settings
 from pressradar.domain.clients import Client
 from pressradar.domain.media import MediaItem, MediaSourceType
@@ -197,6 +202,7 @@ def test_ollama_pitch_generator_uses_separated_context(
     payload = request["json"]
     assert isinstance(payload, dict)
     assert payload["model"] == "test-model"
+    assert payload["options"] == {"temperature": 0, "num_predict": 384}
     response_schema = payload["format"]
     assert isinstance(response_schema, dict)
     properties = response_schema["properties"]
@@ -205,6 +211,45 @@ def test_ollama_pitch_generator_uses_separated_context(
     assert "KNOWN CLIENT FACTS" in str(payload["prompt"])
     assert "MEDIA OPPORTUNITY" in str(payload["prompt"])
     assert "Never invent" in str(payload["prompt"])
+
+
+def test_ollama_pitch_generator_summarizes_only_long_headlines(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def post(url: str, **_kwargs: object) -> httpx.Response:
+        return httpx.Response(
+            200,
+            request=httpx.Request("POST", url),
+            json={
+                "response": (
+                    '{"content":"Nadia Rahman can address this request. '
+                    "Her expertise matches the supplied topic. "
+                    'She can provide useful context.",'
+                    '"display_headline":"Emirates Engineering launches studio for future '
+                    'aviation innovators"}'
+                )
+            },
+        )
+
+    monkeypatch.setattr(httpx, "post", post)
+    media = replace(
+        _media_item(),
+        headline=(
+            "Emirates Engineering launches Material Futures Studio to inspire the next "
+            "generation of aviation innovators"
+        ),
+    )
+
+    pitch = OllamaPitchGenerator(
+        base_url="http://ollama:11434", model="test-model", timeout_seconds=4
+    ).generate(client=_client(), media_item=media)
+
+    assert pitch.display_headline == (
+        "Emirates Engineering launches studio for future aviation innovators"
+    )
+    assert len(pitch.display_headline.split()) <= 13
+    validated = validate_generated_pitch(pitch, client=_client(), media_item=media)
+    assert validated.display_headline == pitch.display_headline
 
 
 def test_ollama_pitch_generator_normalizes_verbose_unattributed_output(

@@ -91,7 +91,7 @@ export default async function ApplicationPage() {
                 const urgency = urgencyLevel(opportunity.deadline);
                 return {
                   id: opportunity.id,
-                  label: opportunity.headline,
+                  label: opportunity.display_headline ?? opportunity.headline,
                   content: (
                     <article className={`urgency-${urgency}`}>
                       <div className="opportunity-heading">
@@ -100,7 +100,10 @@ export default async function ApplicationPage() {
                             {opportunity.client_name} ·{" "}
                             {opportunity.client_company}
                           </p>
-                          <h3>{opportunity.headline}</h3>
+                          <h3 title={opportunity.headline}>
+                            {opportunity.display_headline ??
+                              opportunity.headline}
+                          </h3>
                         </div>
                         <span className={`status status-${opportunity.status}`}>
                           {statusLabels[opportunity.status]}

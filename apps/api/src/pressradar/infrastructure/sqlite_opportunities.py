@@ -31,6 +31,7 @@ class SQLiteOpportunityRepository:
                     relevance_reason TEXT,
                     analysis_error TEXT,
                     pitch_error TEXT,
+                    display_headline TEXT,
                     send_error TEXT,
                     status TEXT NOT NULL,
                     detected_at TEXT NOT NULL,
@@ -241,6 +242,10 @@ class SQLiteOpportunityRepository:
             )
             if cursor.rowcount == 0:
                 return None
+            connection.execute(
+                "UPDATE opportunities SET display_headline = ?, pitch_error = NULL WHERE id = ?",
+                (pitch.display_headline, opportunity_id),
+            )
             self._audit(
                 connection,
                 workspace_id=workspace_id,
@@ -462,6 +467,9 @@ class SQLiteOpportunityRepository:
             media_item_id=str(row["media_item_id"]),
             source=str(row["source"]),
             headline=str(row["headline"]),
+            display_headline=(
+                None if row["display_headline"] is None else str(row["display_headline"])
+            ),
             media_deleted=bool(row["media_deleted"]),
             journalist=None if row["journalist"] is None else str(row["journalist"]),
             published_at=datetime.fromisoformat(str(row["published_at"])),
@@ -519,6 +527,7 @@ class SQLiteOpportunityRepository:
             "relevance_reason": "TEXT",
             "analysis_error": "TEXT",
             "pitch_error": "TEXT",
+            "display_headline": "TEXT",
             "send_error": "TEXT",
         }
         for name, data_type in additions.items():

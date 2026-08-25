@@ -14,6 +14,7 @@ class _OllamaPitchResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     content: str = Field(min_length=1, max_length=3_000)
+    display_headline: str | None = None
 
 
 def _ollama_format_schema() -> dict[str, object]:
@@ -42,13 +43,17 @@ class OllamaPitchGenerator:
                     "stream": False,
                     "format": _ollama_format_schema(),
                     "prompt": _prompt(client, media_item),
+                    "options": {"temperature": 0, "num_predict": 384},
                 },
                 timeout=self._timeout,
             )
             response.raise_for_status()
             envelope = response.json()
             result = _OllamaPitchResult.model_validate_json(envelope["response"])
-            return GeneratedPitch(content=_normalize_content(result.content, client.name))
+            return GeneratedPitch(
+                content=_normalize_content(result.content, client.name),
+                display_headline=_display_headline(result.display_headline, media_item.headline),
+            )
         except (httpx.HTTPError, KeyError, TypeError, ValueError, ValidationError) as error:
             raise PitchGenerationError("Ollama pitch generation failed") from error
 
@@ -87,7 +92,13 @@ def _prompt(client: Client, media_item: MediaItem) -> str:
         "OUTPUT REQUIREMENTS\nReturn only JSON matching the schema. Write exactly three "
         f"sentences and explicitly mention the client name {json.dumps(client.name)}. The content "
         "must be concise, useful, and human-sounding without generic "
-        "promotional language. Do not imply that it has been approved or sent."
+        "promotional language. Do not imply that it has been approved or sent. "
+        + (
+            "Also set display_headline to a faithful summary of the media headline using at "
+            "most 13 words. Preserve important names and do not add facts."
+            if len(media_item.headline.split()) > 13
+            else "Set display_headline to null."
+        )
     )
 
 
@@ -98,3 +109,10 @@ def _normalize_content(content: str, client_name: str) -> str:
     if client_name.casefold() not in concise.casefold():
         concise = f"{client_name}: {concise}"
     return concise
+
+
+def _display_headline(candidate: str | None, original: str) -> str | None:
+    if len(original.split()) <= 13 or candidate is None:
+        return None
+    words = candidate.strip().split()
+    return " ".join(words[:13]) or None

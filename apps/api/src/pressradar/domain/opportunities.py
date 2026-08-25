@@ -40,6 +40,7 @@ class Opportunity:
     media_item_id: str
     source: str
     headline: str
+    display_headline: str | None
     media_deleted: bool
     journalist: str | None
     published_at: datetime

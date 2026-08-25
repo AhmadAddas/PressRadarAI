@@ -289,6 +289,7 @@ class FirestoreRepository:
                         "media_item_id": media.id,
                         "source": media.source,
                         "headline": media.headline,
+                        "display_headline": None,
                         "journalist": media.journalist,
                         "published_at": media.published_at,
                         "deadline": media.deadline,
@@ -442,7 +443,9 @@ class FirestoreRepository:
                     "content": pitch.content,
                     "generated_at": now,
                     "updated_at": now,
-                }
+                },
+                "display_headline": pitch.display_headline,
+                "pitch_error": None,
             }
         )
         self._audit(workspace_id, opportunity_id, AuditAction.PITCH_GENERATED)
@@ -794,6 +797,7 @@ def _opportunity(opportunity_id: str, data: dict[str, Any]) -> Opportunity:
         media_item_id=str(data["media_item_id"]),
         source=str(data["source"]),
         headline=str(data["headline"]),
+        display_headline=cast(str | None, data.get("display_headline")),
         media_deleted=False,
         journalist=cast(str | None, data.get("journalist")),
         published_at=_datetime(data["published_at"]),

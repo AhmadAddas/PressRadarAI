@@ -43,4 +43,4 @@ def validate_generated_pitch(
     normalized = content.casefold()
     if not any(term.casefold() in normalized for term in client_terms):
         raise PitchGenerationError("Generated pitch does not reference known client context")
-    return GeneratedPitch(content=content)
+    return GeneratedPitch(content=content, display_headline=pitch.display_headline)
