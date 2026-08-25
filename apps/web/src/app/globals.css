@@ -16,6 +16,23 @@ body {
   line-height: 1.5;
 }
 
+.skip-link {
+  position: fixed;
+  z-index: 1000;
+  top: 0.75rem;
+  left: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  background: #17202a;
+  color: #fff;
+  font-weight: 700;
+  transform: translateY(-200%);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
 .centered-shell {
   display: grid;
   min-height: 100vh;
@@ -88,6 +105,17 @@ input {
   font: inherit;
 }
 
+select {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #aab4c0;
+  border-radius: 0.5rem;
+  background: #fff;
+  color: #17202a;
+  font: inherit;
+}
+
 textarea {
   width: 100%;
   min-width: 0;
@@ -117,9 +145,18 @@ button:focus-visible,
 .button:focus-visible,
 a:focus-visible,
 input:focus-visible,
+select:focus-visible,
+summary:focus-visible,
 textarea:focus-visible {
-  outline: 0.2rem solid #88aaff;
+  outline: 0.2rem solid #1746a2;
   outline-offset: 0.15rem;
+}
+
+button,
+.button,
+summary,
+input[type="checkbox"] {
+  min-height: 2.75rem;
 }
 
 .button-secondary {
@@ -659,8 +696,8 @@ nav {
 }
 
 .item-delete {
-  min-width: 2rem;
-  min-height: 2rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
   padding: 0.2rem;
   background: #a12222;
   color: #fff;
@@ -743,6 +780,28 @@ nav {
 
 .confirmation-modal p {
   margin: 0.5rem 0 1rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .selectable-item.is-selected,
+  .language-list button.is-selected {
+    outline: 0.2rem solid Highlight;
+  }
+
+  .status-dot {
+    border: 0.15rem solid CanvasText;
+  }
 }
 
 .orphan-notice,

@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { publicApiUrl } from "@/lib/api";
+import { AccessibleDialog } from "@/components/accessible-dialog";
 import type { LicenseDetails, LocalAIStatus } from "@/lib/local-ai-types";
 
 export function LocalAIMenu() {
@@ -450,37 +451,30 @@ export function LocalAIMenu() {
             </button>
           ) : null}
           {pendingDelete ? (
-            <div className="modal-backdrop" role="presentation">
-              <div
-                className="confirmation-modal"
-                role="alertdialog"
-                aria-modal="true"
-              >
-                <strong>Delete {pendingDelete}?</strong>
-                <p>
-                  Ollama will remove its downloaded files and you will need to
-                  clone it again to use it.
-                </p>
-                <div className="actions">
-                  <button
-                    className="button-danger"
-                    type="button"
-                    onClick={deleteSelected}
-                    disabled={working}
-                  >
-                    Delete model
-                  </button>
-                  <button
-                    className="button-secondary"
-                    type="button"
-                    onClick={() => setPendingDelete(null)}
-                    disabled={working}
-                  >
-                    Cancel
-                  </button>
-                </div>
+            <AccessibleDialog
+              title={`Delete ${pendingDelete}?`}
+              description="Ollama will remove its downloaded files and you will need to clone it again to use it."
+              onClose={() => setPendingDelete(null)}
+            >
+              <div className="actions">
+                <button
+                  className="button-danger"
+                  type="button"
+                  onClick={deleteSelected}
+                  disabled={working}
+                >
+                  Delete model
+                </button>
+                <button
+                  className="button-secondary"
+                  type="button"
+                  onClick={() => setPendingDelete(null)}
+                  disabled={working}
+                >
+                  Cancel
+                </button>
               </div>
-            </div>
+            </AccessibleDialog>
           ) : null}
         </section>
       ) : null}

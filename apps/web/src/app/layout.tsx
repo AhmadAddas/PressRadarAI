@@ -16,8 +16,20 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <PageTranslator>{children}</PageTranslator>
-        <Toaster richColors closeButton position="top-right" />
+        <PageTranslator>
+          <a className="skip-link" href="#main-content">
+            Skip to main content
+          </a>
+          {children}
+        </PageTranslator>
+        <Toaster
+          richColors
+          closeButton
+          position="top-right"
+          toastOptions={{
+            closeButtonAriaLabel: "Dismiss notification",
+          }}
+        />
       </body>
     </html>
   );

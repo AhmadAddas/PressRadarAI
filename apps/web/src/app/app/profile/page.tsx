@@ -23,7 +23,7 @@ export default async function ProfilePage() {
   const identity = (await response.json()) as Identity;
 
   return (
-    <main className="page-shell profile-page">
+    <main id="main-content" className="page-shell profile-page" tabIndex={-1}>
       <section className="wide-card profile-card">
         <header className="page-header">
           <div>

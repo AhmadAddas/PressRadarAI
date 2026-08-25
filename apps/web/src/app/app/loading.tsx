@@ -1,6 +1,12 @@
 export default function ApplicationLoading() {
   return (
-    <main className="page-shell" aria-busy="true" aria-live="polite">
+    <main
+      id="main-content"
+      className="page-shell"
+      tabIndex={-1}
+      aria-busy="true"
+      aria-live="polite"
+    >
       <section className="wide-card loading-state">
         <p className="eyebrow">PressRadar</p>
         <h1>Loading your workspace…</h1>

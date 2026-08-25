@@ -5,6 +5,7 @@ import { FormEvent, startTransition, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { publicApiUrl } from "@/lib/api";
+import { AccessibleDialog } from "@/components/accessible-dialog";
 import {
   ingestionSummary,
   type IngestionCounts,
@@ -294,37 +295,30 @@ export function MediaSourceManager({
             Deleted items found again are restored with their existing history.
           </p>
           {pendingDelete ? (
-            <div className="modal-backdrop" role="presentation">
-              <div
-                className="confirmation-modal"
-                role="alertdialog"
-                aria-modal="true"
-              >
-                <strong>Delete {pendingDelete.name}?</strong>
-                <p>
-                  PressRadar will stop ingesting new media from this source. You
-                  can add the source again later.
-                </p>
-                <div className="actions">
-                  <button
-                    className="button-danger"
-                    type="button"
-                    onClick={remove}
-                    disabled={working}
-                  >
-                    Delete source
-                  </button>
-                  <button
-                    className="button-secondary"
-                    type="button"
-                    onClick={() => setPendingDelete(null)}
-                    disabled={working}
-                  >
-                    Cancel
-                  </button>
-                </div>
+            <AccessibleDialog
+              title={`Delete ${pendingDelete.name}?`}
+              description="PressRadar will stop ingesting new media from this source. You can add the source again later."
+              onClose={() => setPendingDelete(null)}
+            >
+              <div className="actions">
+                <button
+                  className="button-danger"
+                  type="button"
+                  onClick={remove}
+                  disabled={working}
+                >
+                  Delete source
+                </button>
+                <button
+                  className="button-secondary"
+                  type="button"
+                  onClick={() => setPendingDelete(null)}
+                  disabled={working}
+                >
+                  Cancel
+                </button>
               </div>
-            </div>
+            </AccessibleDialog>
           ) : null}
         </section>
       ) : null}

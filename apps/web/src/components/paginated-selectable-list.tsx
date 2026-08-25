@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { publicApiUrl } from "@/lib/api";
+import { AccessibleDialog } from "@/components/accessible-dialog";
 
 type SelectableItem = {
   id: string;
@@ -212,40 +213,36 @@ export function PaginatedSelectableList({
         </nav>
       ) : null}
       {pending.length ? (
-        <div className="modal-backdrop" role="presentation">
-          <div
-            className="confirmation-modal"
-            role="alertdialog"
-            aria-modal="true"
-          >
-            <strong>
-              Delete {pending.length} selected {noun}?
-            </strong>
-            <p>
+        <AccessibleDialog
+          title={`Delete ${pending.length} selected ${noun}?`}
+          description={
+            <>
               Only the selected {noun} will be deleted. Related records are kept
               for history and marked as orphaned when their original link is
               gone.
-            </p>
-            <div className="actions">
-              <button
-                className="button-danger"
-                type="button"
-                disabled={countdown > 0 || deleting}
-                onClick={confirmDelete}
-              >
-                {countdown > 0 ? `Confirm in ${countdown}s` : "Confirm delete"}
-              </button>
-              <button
-                className="button-secondary"
-                type="button"
-                disabled={deleting}
-                onClick={() => setPending([])}
-              >
-                Cancel
-              </button>
-            </div>
+            </>
+          }
+          onClose={() => setPending([])}
+        >
+          <div className="actions">
+            <button
+              className="button-danger"
+              type="button"
+              disabled={countdown > 0 || deleting}
+              onClick={confirmDelete}
+            >
+              {countdown > 0 ? `Confirm in ${countdown}s` : "Confirm delete"}
+            </button>
+            <button
+              className="button-secondary"
+              type="button"
+              disabled={deleting}
+              onClick={() => setPending([])}
+            >
+              Cancel
+            </button>
           </div>
-        </div>
+        </AccessibleDialog>
       ) : null}
     </div>
   );

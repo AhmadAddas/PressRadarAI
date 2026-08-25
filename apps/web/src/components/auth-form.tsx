@@ -111,7 +111,7 @@ export function AuthForm({ mode }: Readonly<{ mode: AuthMode }>) {
   }
 
   return (
-    <main className="centered-shell auth-shell">
+    <main id="main-content" className="centered-shell auth-shell" tabIndex={-1}>
       <PublicAIControls />
       <section className="card" aria-labelledby="auth-title">
         <p className="eyebrow">PressRadar</p>

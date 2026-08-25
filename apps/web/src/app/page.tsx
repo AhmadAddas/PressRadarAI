@@ -3,7 +3,11 @@ import { PublicAIControls } from "@/components/public-ai-controls";
 
 export default function Home() {
   return (
-    <main className="centered-shell landing-shell">
+    <main
+      id="main-content"
+      className="centered-shell landing-shell"
+      tabIndex={-1}
+    >
       <PublicAIControls />
       <section className="card">
         <p className="eyebrow">PressRadar</p>

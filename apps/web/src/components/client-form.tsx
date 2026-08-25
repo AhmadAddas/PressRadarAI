@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, startTransition, useEffect, useState } from "react";
 
 import { publicApiUrl } from "@/lib/api";
+import { AccessibleDialog } from "@/components/accessible-dialog";
 import type { Client } from "@/lib/client-types";
 
 export function ClientForm({ client }: Readonly<{ client?: Client }>) {
@@ -179,42 +180,38 @@ export function ClientForm({ client }: Readonly<{ client?: Client }>) {
         </Link>
       </div>
       {pendingBody ? (
-        <div className="modal-backdrop" role="presentation">
-          <div
-            className="confirmation-modal"
-            role="alertdialog"
-            aria-modal="true"
-          >
-            <strong>
-              {client ? "Save" : "Create"} this client with incomplete context?
-            </strong>
-            <p>
+        <AccessibleDialog
+          title={`${client ? "Save" : "Create"} this client with incomplete context?`}
+          description={
+            <>
               {formatList(missingFields)} will be empty. You can add them later,
               but matching and pitch context may be less accurate.
-            </p>
-            <div className="actions">
-              <button
-                type="button"
-                disabled={countdown > 0 || submitting}
-                onClick={confirmIncompleteClient}
-              >
-                {countdown > 0
-                  ? `Confirm in ${countdown}s`
-                  : client
-                    ? "Save anyway"
-                    : "Create anyway"}
-              </button>
-              <button
-                className="button-secondary"
-                type="button"
-                disabled={submitting}
-                onClick={() => setPendingBody(null)}
-              >
-                Continue editing
-              </button>
-            </div>
+            </>
+          }
+          onClose={() => setPendingBody(null)}
+        >
+          <div className="actions">
+            <button
+              type="button"
+              disabled={countdown > 0 || submitting}
+              onClick={confirmIncompleteClient}
+            >
+              {countdown > 0
+                ? `Confirm in ${countdown}s`
+                : client
+                  ? "Save anyway"
+                  : "Create anyway"}
+            </button>
+            <button
+              className="button-secondary"
+              type="button"
+              disabled={submitting}
+              onClick={() => setPendingBody(null)}
+            >
+              Continue editing
+            </button>
           </div>
-        </div>
+        </AccessibleDialog>
       ) : null}
     </form>
   );

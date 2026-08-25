@@ -28,7 +28,7 @@ export default async function ClientPage({
   const client = (await response.json()) as Client;
 
   return (
-    <main className="page-shell">
+    <main id="main-content" className="page-shell" tabIndex={-1}>
       <section className="wide-card">
         <p className="eyebrow">Client management</p>
         <h1>Edit {client.name}</h1>

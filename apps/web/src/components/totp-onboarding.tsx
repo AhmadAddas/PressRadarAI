@@ -7,6 +7,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { publicApiUrl } from "@/lib/api";
+import { AccessibleDialog } from "@/components/accessible-dialog";
 
 type Setup = { secret: string; provisioning_uri: string };
 
@@ -130,30 +131,24 @@ export function TOTPOnboarding() {
         SMS setup is unavailable until Twilio API keys are configured.
       </p>
       {skipOpen ? (
-        <div className="modal-backdrop">
-          <section
-            className="confirmation-modal"
-            role="alertdialog"
-            aria-modal="true"
-          >
-            <h2>Continue without 2FA?</h2>
-            <p>
-              Your account will have less protection against stolen passwords.
-            </p>
-            <div className="actions">
-              <button
-                className="button-secondary"
-                type="button"
-                onClick={() => setSkipOpen(false)}
-              >
-                Keep 2FA
-              </button>
-              <button type="button" disabled={countdown > 0} onClick={skip}>
-                {countdown > 0 ? `Skip in ${countdown}s` : "Skip 2FA"}
-              </button>
-            </div>
-          </section>
-        </div>
+        <AccessibleDialog
+          title="Continue without 2FA?"
+          description="Your account will have less protection against stolen passwords."
+          onClose={() => setSkipOpen(false)}
+        >
+          <div className="actions">
+            <button
+              className="button-secondary"
+              type="button"
+              onClick={() => setSkipOpen(false)}
+            >
+              Keep 2FA
+            </button>
+            <button type="button" disabled={countdown > 0} onClick={skip}>
+              {countdown > 0 ? `Skip in ${countdown}s` : "Skip 2FA"}
+            </button>
+          </div>
+        </AccessibleDialog>
       ) : null}
     </section>
   );

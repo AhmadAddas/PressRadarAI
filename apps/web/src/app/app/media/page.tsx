@@ -62,7 +62,7 @@ export default async function MediaPage({
   }
 
   return (
-    <main className="page-shell">
+    <main id="main-content" className="page-shell" tabIndex={-1}>
       <section className="wide-card">
         <header className="page-header">
           <div>

@@ -56,7 +56,7 @@ export default async function ApplicationPage() {
   }
   const opportunities = (await opportunitiesResponse.json()) as Opportunity[];
   return (
-    <main className="page-shell">
+    <main id="main-content" className="page-shell" tabIndex={-1}>
       <section className="wide-card">
         <header className="dashboard-header">
           <div className="dashboard-top-row">

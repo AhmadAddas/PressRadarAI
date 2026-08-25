@@ -2,7 +2,7 @@
 
 export default function ApplicationError({ reset }: { reset: () => void }) {
   return (
-    <main className="page-shell">
+    <main id="main-content" className="page-shell" tabIndex={-1}>
       <section className="wide-card error-state" role="alert">
         <p className="eyebrow">Workspace unavailable</p>
         <h1>We couldn&apos;t load PressRadar.</h1>
