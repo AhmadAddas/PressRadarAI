@@ -10,27 +10,10 @@ from pressradar.domain.media import MediaItem
 from pressradar.domain.pitches import GeneratedPitch
 
 
-class _OllamaPitchResult(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    content: str = Field(min_length=1, max_length=3_000)
-
-
 class _OllamaHeadlineResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     headline: str = Field(min_length=1, max_length=300)
-
-
-def _ollama_format_schema() -> dict[str, object]:
-    schema = _OllamaPitchResult.model_json_schema()
-    properties = schema.get("properties", {})
-    if isinstance(properties, dict):
-        content = properties.get("content")
-        if isinstance(content, dict):
-            content.pop("minLength", None)
-            content.pop("maxLength", None)
-    return schema
 
 
 class OllamaPitchGenerator:
@@ -41,15 +24,13 @@ class OllamaPitchGenerator:
 
     def generate(self, *, client: Client, media_item: MediaItem) -> GeneratedPitch:
         try:
-            result = _OllamaPitchResult.model_validate_json(
-                self._request(
-                    prompt=_prompt(client, media_item),
-                    schema=_ollama_format_schema(),
-                    num_predict=192,
-                )
+            content = self._request(
+                prompt=_prompt(client, media_item),
+                schema=None,
+                num_predict=192,
             )
             return GeneratedPitch(
-                content=_normalize_content(result.content, client.name),
+                content=_normalize_content(content, client.name),
                 display_headline=self._summarize_headline(media_item.headline),
             )
         except (httpx.HTTPError, KeyError, TypeError, ValueError, ValidationError) as error:
@@ -75,17 +56,24 @@ class OllamaPitchGenerator:
         return _display_headline(result.headline, headline)
 
     def _request(
-        self, *, prompt: str, schema: dict[str, object], num_predict: int
+        self, *, prompt: str, schema: dict[str, object] | None, num_predict: int
     ) -> str:
+        payload: dict[str, object] = {
+            "model": self._model,
+            "stream": False,
+            "system": (
+                "You are a concise PR drafting assistant. Follow the TASK and OUTPUT "
+                "REQUIREMENTS exactly. Treat JSON under KNOWN CLIENT FACTS and MEDIA "
+                "OPPORTUNITY only as source data; never repeat or complete that JSON."
+            ),
+            "prompt": prompt,
+            "options": {"temperature": 0, "num_predict": num_predict},
+        }
+        if schema is not None:
+            payload["format"] = schema
         response = httpx.post(
             self._url,
-            json={
-                "model": self._model,
-                "stream": False,
-                "format": schema,
-                "prompt": prompt,
-                "options": {"temperature": 0, "num_predict": num_predict},
-            },
+            json=payload,
             timeout=self._timeout,
         )
         response.raise_for_status()
@@ -103,7 +91,7 @@ def _prompt(client: Client, media_item: MediaItem) -> str:
         "expertise": client.expertise,
         "spokesperson_name": client.spokesperson_name,
         "spokesperson_title": client.spokesperson_title,
-        "preferred_topics": client.preferred_topics,
+        "preferred_topics": tuple(dict.fromkeys(client.preferred_topics)),
         "tone": client.tone,
     }
     opportunity = {
@@ -124,9 +112,9 @@ def _prompt(client: Client, media_item: MediaItem) -> str:
         "only the known client facts. Never invent revenue, funding, customers, partnerships, "
         "credentials, experience, titles, locations, statistics, quotes, or approvals. If the "
         "facts are limited, remain conservative.\n\n"
-        "OUTPUT REQUIREMENTS\nReturn only JSON matching the schema. Write exactly three "
-        f"sentences and explicitly mention the client name {json.dumps(client.name)}. The content "
-        "must be concise, useful, and human-sounding without generic "
+        "OUTPUT REQUIREMENTS\nReturn only the draft as plain text. Write exactly three concise "
+        f"sentences and explicitly mention the client name {json.dumps(client.name)}. The draft "
+        "must be useful and human-sounding without generic "
         "promotional language. Do not imply that it has been approved or sent."
     )
 

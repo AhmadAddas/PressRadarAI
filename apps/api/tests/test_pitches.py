@@ -184,9 +184,9 @@ def test_ollama_pitch_generator_uses_separated_context(
             request=httpx.Request("POST", url),
             json={
                 "response": (
-                    '{"content":"Nadia Rahman can address the AI governance request. '
+                    "Nadia Rahman can address the AI governance request. "
                     "Her perspective reflects the supplied client expertise. "
-                    'She can provide concise context for the journalist."}'
+                    "She can provide concise context for the journalist."
                 )
             },
         )
@@ -202,12 +202,9 @@ def test_ollama_pitch_generator_uses_separated_context(
     payload = request["json"]
     assert isinstance(payload, dict)
     assert payload["model"] == "test-model"
+    assert "concise PR drafting assistant" in str(payload["system"])
     assert payload["options"] == {"temperature": 0, "num_predict": 192}
-    response_schema = payload["format"]
-    assert isinstance(response_schema, dict)
-    properties = response_schema["properties"]
-    assert isinstance(properties, dict)
-    assert "maxLength" not in properties["content"]
+    assert "format" not in payload
     assert "KNOWN CLIENT FACTS" in str(payload["prompt"])
     assert "MEDIA OPPORTUNITY" in str(payload["prompt"])
     assert "Never invent" in str(payload["prompt"])
@@ -226,9 +223,9 @@ def test_ollama_pitch_generator_summarizes_only_long_headlines(
             '{"headline":"Emirates Engineering launches studio for future aviation innovators"}'
             if "Faithfully summarize" in prompt
             else (
-                '{"content":"Nadia Rahman can address this request. '
+                "Nadia Rahman can address this request. "
                 "Her expertise matches the supplied topic. "
-                'She can provide useful context."}'
+                "She can provide useful context."
             )
         )
         return httpx.Response(
@@ -270,9 +267,9 @@ def test_ollama_pitch_survives_headline_summary_failure(
             "not valid JSON"
             if "Faithfully summarize" in str(payload["prompt"])
             else (
-                '{"content":"Nadia Rahman can address this request. '
+                "Nadia Rahman can address this request. "
                 "Her expertise matches the supplied topic. "
-                'She can provide useful context."}'
+                "She can provide useful context."
             )
         )
         return httpx.Response(
@@ -302,10 +299,10 @@ def test_ollama_pitch_generator_normalizes_verbose_unattributed_output(
             request=httpx.Request("POST", url),
             json={
                 "response": (
-                    '{"content":"The request concerns aviation materials. '
+                    "The request concerns aviation materials. "
                     "It gives students practical industry experience. "
                     "The initiative connects education and engineering. "
-                    'This fourth sentence must be removed."}'
+                    "This fourth sentence must be removed."
                 )
             },
         )
