@@ -750,7 +750,7 @@ nav {
 }
 
 .opportunity-list .item-checkbox {
-  margin-top: 2.1rem;
+  margin-top: 1.85rem;
 }
 
 .visually-hidden {
@@ -872,6 +872,10 @@ nav {
   font-size: 1rem;
   line-height: 1.35;
   overflow-wrap: anywhere;
+}
+
+.opportunity-heading .eyebrow {
+  margin: 0.75rem 0;
 }
 
 .status {
@@ -1733,6 +1737,10 @@ nav {
     position: absolute;
     right: 1rem;
     bottom: 1rem;
+  }
+
+  .opportunity-list .item-checkbox {
+    margin-top: 2rem;
   }
 
   .page-header {
