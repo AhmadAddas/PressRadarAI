@@ -257,3 +257,39 @@ def test_ingestion_does_not_summarize_thirteen_word_headline(tmp_path: Path) -> 
     stored = repository.list(workspace_id="workspace", limit=10)[0]
     assert stored.headline == headline
     assert stored.display_headline is None
+
+
+def test_reingestion_backfills_summary_without_duplicating_existing_media(
+    tmp_path: Path,
+) -> None:
+    headline = "one two three four five six seven eight nine ten eleven twelve thirteen fourteen"
+
+    class ExistingProvider:
+        def fetch_items(self) -> tuple[IncomingMediaItem, ...]:
+            return (
+                IncomingMediaItem(
+                    source="Existing source",
+                    source_type=MediaSourceType.NEWS,
+                    headline=headline,
+                    body="Existing body",
+                    published_at=datetime(2026, 8, 26, tzinfo=UTC),
+                    external_id="existing-1",
+                ),
+            )
+
+    class BackfillSummarizer:
+        def summarize_headline(self, headline: str, *, max_words: int) -> str:
+            return "one two three four five six seven eight nine"
+
+    repository = SQLiteMediaRepository(str(tmp_path / "headline-backfill.db"))
+    repository.initialize()
+    first = MediaIngestionService(ExistingProvider(), repository).ingest(workspace_id="workspace")
+    second = MediaIngestionService(ExistingProvider(), repository, BackfillSummarizer()).ingest(
+        workspace_id="workspace"
+    )
+
+    stored = repository.list(workspace_id="workspace", limit=10)
+    assert first.created == 1
+    assert second.duplicates == 1
+    assert len(stored) == 1
+    assert stored[0].display_headline == "one two three four five six seven eight nine"

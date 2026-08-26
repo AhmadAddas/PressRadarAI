@@ -320,6 +320,8 @@ class FirestoreRepository:
                         }
                     )
                     restored += 1
+                elif document.get("display_headline") is None and item.display_headline is not None:
+                    reference.update({"display_headline": item.display_headline})
         return IngestionResult(
             created=created,
             restored=restored,

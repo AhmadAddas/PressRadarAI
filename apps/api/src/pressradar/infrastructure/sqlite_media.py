@@ -119,6 +119,12 @@ class SQLiteMediaRepository:
                 if restore.rowcount:
                     restored += 1
                     continue
+                connection.execute(
+                    """UPDATE media_items SET display_headline = ?
+                    WHERE workspace_id = ? AND dedupe_key = ? AND deleted_at IS NULL
+                        AND display_headline IS NULL""",
+                    (item.display_headline, workspace_id, dedupe_key),
+                )
                 cursor = connection.execute(
                     """INSERT OR IGNORE INTO media_items (
                         id, workspace_id, source, source_type, author, journalist,
