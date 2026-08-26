@@ -1,4 +1,5 @@
 import json
+import sqlite3
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -135,6 +136,21 @@ async def test_failed_generation_is_safe_and_user_can_supply_draft(tmp_path: Pat
     assert updated.json()["pitch"]["content"].startswith("A manually verified")
 
 
+async def test_failed_generation_keeps_media_display_headline(tmp_path: Path) -> None:
+    database = tmp_path / "headline-fallback.db"
+    async with create_test_client(database, pitch_generator=FailingPitchGenerator()) as client:
+        opportunity = await prepare_opportunity(client)
+        with sqlite3.connect(database) as connection:
+            connection.execute(
+                "UPDATE media_items SET display_headline = ? WHERE id = ?",
+                ("Concise nine word media headline", opportunity["media_item_id"]),
+            )
+        refreshed = (await client.get("/opportunities")).json()[0]
+
+    assert refreshed["pitch_error"] == "Pitch generation is temporarily unavailable."
+    assert refreshed["display_headline"] == "Concise nine word media headline"
+
+
 async def test_generic_generated_pitch_is_rejected(tmp_path: Path) -> None:
     async with create_test_client(
         tmp_path / "generic.db", pitch_generator=GenericPitchGenerator()
@@ -208,7 +224,7 @@ def test_ollama_pitch_generator_uses_separated_context(
     assert isinstance(payload, dict)
     assert payload["model"] == "test-model"
     assert "concise PR drafting assistant" in str(payload["system"])
-    assert payload["options"] == {"temperature": 0, "num_predict": 192}
+    assert payload["options"] == {"temperature": 0, "num_predict": 384}
     assert "format" in payload
     assert "KNOWN CLIENT FACTS" in str(payload["prompt"])
     assert "MEDIA OPPORTUNITY" in str(payload["prompt"])
@@ -259,9 +275,9 @@ def test_ollama_pitch_generator_summarizes_only_long_headlines(
     assert pitch.display_headline == (
         "Emirates Engineering launches studio for future aviation innovators"
     )
-    assert len(pitch.display_headline.split()) <= 13
+    assert len(pitch.display_headline.split()) <= 9
     assert len(requests) == 2
-    assert requests[0]["options"] == {"temperature": 0, "num_predict": 192}
+    assert requests[0]["options"] == {"temperature": 0, "num_predict": 384}
     assert requests[1]["options"] == {"temperature": 0, "num_predict": 64}
     validated = validate_generated_pitch(pitch, client=_client(), media_item=media)
     assert validated.display_headline == pitch.display_headline

@@ -34,12 +34,12 @@ class OllamaPitchGenerator:
                 self._request(
                     prompt=_prompt(client, media_item),
                     schema=_OllamaPitchResult.model_json_schema(),
-                    num_predict=192,
+                    num_predict=384,
                 )
             )
             return GeneratedPitch(
                 content=_normalize_content(result.sentences, client.name),
-                display_headline=self.summarize_headline(media_item.headline, max_words=13),
+                display_headline=self.summarize_headline(media_item.headline, max_words=9),
             )
         except (httpx.HTTPError, KeyError, TypeError, ValueError, ValidationError) as error:
             raise PitchGenerationError("Ollama pitch generation failed") from error

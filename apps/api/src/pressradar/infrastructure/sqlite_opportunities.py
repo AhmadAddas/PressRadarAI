@@ -468,7 +468,9 @@ class SQLiteOpportunityRepository:
             source=str(row["source"]),
             headline=str(row["headline"]),
             display_headline=(
-                None if row["display_headline"] is None else str(row["display_headline"])
+                None
+                if row["effective_display_headline"] is None
+                else str(row["effective_display_headline"])
             ),
             media_deleted=bool(row["media_deleted"]),
             journalist=None if row["journalist"] is None else str(row["journalist"]),
@@ -562,6 +564,7 @@ class SQLiteOpportunityRepository:
 _SELECT = """SELECT o.*, c.name AS client_name, c.company AS client_company,
     (c.deleted_at IS NOT NULL) AS client_deleted,
     m.source, m.headline, m.journalist, m.published_at, m.deadline,
+    COALESCE(o.display_headline, m.display_headline) AS effective_display_headline,
     (m.deleted_at IS NOT NULL) AS media_deleted,
     p.id AS pitch_id, p.content AS pitch_content,
     p.generated_at AS pitch_generated_at, p.updated_at AS pitch_updated_at,

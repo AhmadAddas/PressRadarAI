@@ -408,7 +408,7 @@ class FirestoreRepository:
                         "media_item_id": media.id,
                         "source": media.source,
                         "headline": media.headline,
-                        "display_headline": None,
+                        "display_headline": media.display_headline,
                         "journalist": media.journalist,
                         "published_at": media.published_at,
                         "deadline": media.deadline,
