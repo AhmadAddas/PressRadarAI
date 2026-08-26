@@ -401,7 +401,11 @@ export function LocalAIMenu() {
             <div className="license-confirmation">
               <LicenseSummary
                 license={license}
-                title="License found before cloning"
+                title={
+                  license.known
+                    ? "License found before cloning"
+                    : "License not identified"
+                }
               />
               <small>
                 Model downloads can consume significant disk, memory, CPU, and

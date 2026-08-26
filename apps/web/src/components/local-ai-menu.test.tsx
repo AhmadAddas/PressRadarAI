@@ -322,5 +322,9 @@ describe("LocalAIMenu", () => {
         /Search the internet for the publisher's full model license/,
       ),
     ).toBeVisible();
+    expect(screen.getByText("License not identified")).toBeVisible();
+    expect(
+      screen.queryByText("License found before cloning"),
+    ).not.toBeInTheDocument();
   });
 });

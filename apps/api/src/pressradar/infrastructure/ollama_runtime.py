@@ -457,14 +457,18 @@ def _model_family(model: str) -> str:
 def _select_hugging_face_model(model: str, payload: Any) -> dict[str, Any] | None:
     if not isinstance(payload, list):
         return None
-    family = _model_family(model).casefold().replace(".", "")
-    size = model.partition(":")[2].split("-", 1)[0].casefold().replace(".", "")
+    requested_name = model.rsplit("/", 1)[-1]
+    requested = _normalized_model_identifier(requested_name.replace(":", "-"))
     candidates = [item for item in payload if isinstance(item, dict)]
     for item in candidates:
-        identifier = str(item.get("id", "")).casefold().replace(".", "")
-        if family in identifier and (not size or size in identifier):
+        identifier = str(item.get("id", "")).rsplit("/", 1)[-1]
+        if _normalized_model_identifier(identifier) == requested:
             return item
     return None
+
+
+def _normalized_model_identifier(value: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", value.casefold())
 
 
 def _license_from_hugging_face(model: dict[str, Any]) -> str | None:

@@ -189,6 +189,15 @@ def test_failed_model_pull_does_not_activate_local_ai() -> None:
     assert runtime.status().enabled is False
 
 
+def test_license_lookup_does_not_match_a_different_model_variant() -> None:
+    runtime, _ = runtime_with_mock_provider()
+
+    license_info = runtime.inspect_license("qwen2.5:0.5b-chat")
+
+    assert license_info.name == "Unknown"
+    assert license_info.known is False
+
+
 async def test_installed_model_can_be_activated_and_deleted(tmp_path: Path) -> None:
     runtime, requests = runtime_with_mock_provider()
     async with authenticated_client(tmp_path / "manage-model.db", runtime) as client:
