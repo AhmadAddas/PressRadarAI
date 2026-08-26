@@ -1,3 +1,4 @@
+import json
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -183,10 +184,14 @@ def test_ollama_pitch_generator_uses_separated_context(
             200,
             request=httpx.Request("POST", url),
             json={
-                "response": (
-                    "Nadia Rahman can address the AI governance request. "
-                    "Her perspective reflects the supplied client expertise. "
-                    "She can provide concise context for the journalist."
+                "response": json.dumps(
+                    {
+                        "sentences": [
+                            "Nadia Rahman can address the AI governance request",
+                            "Her perspective reflects the supplied client expertise",
+                            "She can provide concise context for the journalist",
+                        ]
+                    }
                 )
             },
         )
@@ -204,7 +209,7 @@ def test_ollama_pitch_generator_uses_separated_context(
     assert payload["model"] == "test-model"
     assert "concise PR drafting assistant" in str(payload["system"])
     assert payload["options"] == {"temperature": 0, "num_predict": 192}
-    assert "format" not in payload
+    assert "format" in payload
     assert "KNOWN CLIENT FACTS" in str(payload["prompt"])
     assert "MEDIA OPPORTUNITY" in str(payload["prompt"])
     assert "Never invent" in str(payload["prompt"])
@@ -222,10 +227,14 @@ def test_ollama_pitch_generator_summarizes_only_long_headlines(
         generated = (
             '{"headline":"Emirates Engineering launches studio for future aviation innovators"}'
             if "Faithfully summarize" in prompt
-            else (
-                "Nadia Rahman can address this request. "
-                "Her expertise matches the supplied topic. "
-                "She can provide useful context."
+            else json.dumps(
+                {
+                    "sentences": [
+                        "Nadia Rahman can address this request",
+                        "Her expertise matches the supplied topic",
+                        "She can provide useful context",
+                    ]
+                }
             )
         )
         return httpx.Response(
@@ -266,10 +275,14 @@ def test_ollama_pitch_survives_headline_summary_failure(
         response = (
             "not valid JSON"
             if "Faithfully summarize" in str(payload["prompt"])
-            else (
-                "Nadia Rahman can address this request. "
-                "Her expertise matches the supplied topic. "
-                "She can provide useful context."
+            else json.dumps(
+                {
+                    "sentences": [
+                        "Nadia Rahman can address this request",
+                        "Her expertise matches the supplied topic",
+                        "She can provide useful context",
+                    ]
+                }
             )
         )
         return httpx.Response(200, request=httpx.Request("POST", url), json={"response": response})
@@ -296,11 +309,15 @@ def test_ollama_pitch_generator_normalizes_verbose_unattributed_output(
             200,
             request=httpx.Request("POST", url),
             json={
-                "response": (
-                    "The request concerns aviation materials. "
-                    "It gives students practical industry experience. "
-                    "The initiative connects education and engineering. "
-                    "This fourth sentence must be removed."
+                "response": json.dumps(
+                    {
+                        "sentences": [
+                            "1. The request concerns aviation materials. This extra sentence "
+                            "must be removed.",
+                            "It gives students practical industry experience",
+                            "The initiative connects education and engineering",
+                        ]
+                    }
                 )
             },
         )
@@ -312,7 +329,7 @@ def test_ollama_pitch_generator_normalizes_verbose_unattributed_output(
 
     assert pitch.content.startswith("Nadia Rahman:")
     assert pitch.content.count(".") == 3
-    assert "fourth sentence" not in pitch.content
+    assert "extra sentence" not in pitch.content
 
 
 def _client() -> Client:

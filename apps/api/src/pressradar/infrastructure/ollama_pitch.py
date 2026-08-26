@@ -16,6 +16,12 @@ class _OllamaHeadlineResult(BaseModel):
     headline: str = Field(min_length=1, max_length=300)
 
 
+class _OllamaPitchResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    sentences: list[str] = Field(min_length=3, max_length=3)
+
+
 class OllamaPitchGenerator:
     def __init__(self, *, base_url: str, model: str, timeout_seconds: float) -> None:
         self._url = f"{base_url.rstrip('/')}/api/generate"
@@ -24,13 +30,15 @@ class OllamaPitchGenerator:
 
     def generate(self, *, client: Client, media_item: MediaItem) -> GeneratedPitch:
         try:
-            content = self._request(
-                prompt=_prompt(client, media_item),
-                schema=None,
-                num_predict=192,
+            result = _OllamaPitchResult.model_validate_json(
+                self._request(
+                    prompt=_prompt(client, media_item),
+                    schema=_OllamaPitchResult.model_json_schema(),
+                    num_predict=192,
+                )
             )
             return GeneratedPitch(
-                content=_normalize_content(content, client.name),
+                content=_normalize_content(result.sentences, client.name),
                 display_headline=self.summarize_headline(media_item.headline, max_words=13),
             )
         except (httpx.HTTPError, KeyError, TypeError, ValueError, ValidationError) as error:
@@ -111,20 +119,28 @@ def _prompt(client: Client, media_item: MediaItem) -> str:
         "only the known client facts. Never invent revenue, funding, customers, partnerships, "
         "credentials, experience, titles, locations, statistics, quotes, or approvals. If the "
         "facts are limited, remain conservative.\n\n"
-        "OUTPUT REQUIREMENTS\nReturn only the draft as plain text. Write exactly three concise "
-        f"sentences and explicitly mention the client name {json.dumps(client.name)}. The draft "
+        "OUTPUT REQUIREMENTS\nReturn only JSON matching the provided schema, with exactly three "
+        f"concise sentence strings. Explicitly mention the client name {json.dumps(client.name)}. "
+        "The draft "
         "must be useful and human-sounding without generic "
         "promotional language. Do not imply that it has been approved or sent."
     )
 
 
-def _normalize_content(content: str, client_name: str) -> str:
-    normalized = content.strip()
-    sentences = re.findall(r".*?[.!?](?=\s|$)|.+$", normalized, flags=re.DOTALL)
-    concise = " ".join(sentence.strip() for sentence in sentences[:3])
+def _normalize_content(sentences: list[str], client_name: str) -> str:
+    concise = " ".join(_normalize_sentence(sentence) for sentence in sentences)
     if client_name.casefold() not in concise.casefold():
         concise = f"{client_name}: {concise}"
     return concise
+
+
+def _normalize_sentence(value: str) -> str:
+    normalized = re.sub(r"^(?:[-*]|\d+[.)])\s*", "", " ".join(value.split()))
+    first_sentence = re.match(r".*?[.!?](?=\s|$)|.+$", normalized)
+    concise = "" if first_sentence is None else first_sentence.group(0).strip()
+    if not concise:
+        raise ValueError("Pitch sentence cannot be blank")
+    return concise if concise.endswith((".", "!", "?")) else f"{concise}."
 
 
 def _display_headline(candidate: str | None, original: str, *, max_words: int) -> str | None:
