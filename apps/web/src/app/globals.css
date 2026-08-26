@@ -742,11 +742,44 @@ nav {
 }
 
 .client-list .item-checkbox {
-  margin-top: 1rem;
+  align-self: center;
 }
 
 .client-list .item-delete {
   align-self: center;
+}
+
+.client-list .selectable-item {
+  position: relative;
+}
+
+.client-list .selectable-item::before {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 1.7rem;
+  border: 1px solid #dce1e7;
+  border-radius: 0.5rem;
+  content: "";
+  pointer-events: none;
+}
+
+.client-list .selectable-item.is-selected {
+  outline: none;
+}
+
+.client-list .selectable-item.is-selected::before {
+  outline: 2px solid #22d3ee;
+  outline-offset: 2px;
+}
+
+.client-list .item-checkbox,
+.client-list .item-content,
+.client-list .item-delete {
+  position: relative;
+  z-index: 1;
 }
 
 .opportunity-list .item-checkbox {
@@ -831,6 +864,7 @@ nav {
 
 @media (forced-colors: active) {
   .selectable-item.is-selected,
+  .client-list .selectable-item.is-selected::before,
   .language-list button.is-selected {
     outline: 0.2rem solid Highlight;
   }
@@ -1363,8 +1397,6 @@ nav {
   align-items: center;
   gap: 1rem;
   padding: 1rem;
-  border: 1px solid #dce1e7;
-  border-radius: 0.5rem;
 }
 
 .client-edit-link {
@@ -1725,8 +1757,9 @@ nav {
     justify-self: end;
   }
 
-  .client-list .selectable-item {
-    position: relative;
+  .client-list .item-checkbox {
+    align-self: start;
+    margin-top: 1rem;
   }
 
   .client-list .client-card-content {
