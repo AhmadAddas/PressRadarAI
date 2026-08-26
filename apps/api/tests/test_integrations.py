@@ -70,6 +70,7 @@ async def prepare_urgent_opportunity(client: httpx.AsyncClient) -> str:
             json={
                 "name": "Nadia Rahman",
                 "company": "VertexAI Labs",
+                "phone": "+971501234567",
                 "location": "Dubai",
                 "expertise": ["AI governance"],
             },
@@ -104,6 +105,7 @@ async def test_integrations_run_at_urgent_and_sent_lifecycle_points(tmp_path: Pa
     assert replay.status_code == 200
     assert len(notifications.alerts) == 1
     assert notifications.alerts[0].relevance_score == 91
+    assert notifications.alerts[0].recipient_phone == "+971501234567"
     assert len(crm.activities) == 1
     assert crm.activities[0].client_company == "VertexAI Labs"
 

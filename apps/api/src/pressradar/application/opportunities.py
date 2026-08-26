@@ -213,7 +213,7 @@ class OpportunityService:
             )
             if ready is not None:
                 self._track(ProductEventName.ANALYSIS_COMPLETED, ready)
-                self._notify_if_urgent(ready)
+                self._notify_if_urgent(ready, recipient_phone=client.phone)
                 self._generate_pitch(client=client, media_item=media_item, opportunity=ready)
 
     def list(self, *, workspace_id: str) -> list[Opportunity]:
@@ -324,9 +324,11 @@ class OpportunityService:
             pitch=pitch,
         )
 
-    def _notify_if_urgent(self, opportunity: Opportunity) -> None:
+    def _notify_if_urgent(self, opportunity: Opportunity, *, recipient_phone: str | None) -> None:
         if (
-            opportunity.deadline is None
+            recipient_phone is None
+            or not recipient_phone.strip()
+            or opportunity.deadline is None
             or opportunity.relevance_score is None
             or opportunity.relevance_score < HIGH_PRIORITY_RELEVANCE_SCORE
         ):
@@ -336,6 +338,7 @@ class OpportunityService:
                 OpportunityAlert(
                     opportunity_id=opportunity.id,
                     client_company=opportunity.client_company,
+                    recipient_phone=recipient_phone,
                     relevance_score=opportunity.relevance_score,
                     deadline=opportunity.deadline,
                 )

@@ -34,7 +34,6 @@ class Settings(BaseSettings):
     twilio_account_sid: str | None = None
     twilio_auth_token: SecretStr | None = None
     twilio_from_number: str | None = None
-    twilio_to_number: str | None = None
     hubspot_access_token: SecretStr | None = None
     newsapi_api_key: SecretStr | None = None
     external_provider_timeout_seconds: float = Field(default=10, gt=0, le=60)
@@ -68,12 +67,11 @@ class Settings(BaseSettings):
             self.twilio_account_sid or "",
             "" if self.twilio_auth_token is None else self.twilio_auth_token.get_secret_value(),
             self.twilio_from_number or "",
-            self.twilio_to_number or "",
         )
         if self.notification_provider == "twilio" and not all(
             value.strip() for value in twilio_values
         ):
-            raise ValueError("Twilio credentials and phone numbers are required")
+            raise ValueError("Twilio credentials and sender phone number are required")
         hubspot_token = (
             ""
             if self.hubspot_access_token is None

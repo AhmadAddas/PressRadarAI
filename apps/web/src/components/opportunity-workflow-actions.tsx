@@ -103,8 +103,8 @@ export function OpportunityWorkflowActions({
               SMS
             </button>
             <small>
-              Unavailable: configure Twilio API keys and phone numbers to enable
-              SMS.
+              SMS pitch delivery is not enabled yet. Client phone numbers are
+              managed per client, not in environment settings.
             </small>
           </div>
         ) : null}

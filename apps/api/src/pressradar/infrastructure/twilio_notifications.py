@@ -12,14 +12,12 @@ class TwilioNotificationSender:
         account_sid: str,
         auth_token: str,
         from_number: str,
-        to_number: str,
         timeout_seconds: float,
         client: httpx.Client | None = None,
     ) -> None:
         self._url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
         self._auth = (account_sid, auth_token)
         self._from_number = from_number
-        self._to_number = to_number
         self._client = client or httpx.Client(timeout=timeout_seconds)
 
     def send(self, alert: OpportunityAlert) -> None:
@@ -33,7 +31,7 @@ class TwilioNotificationSender:
                 auth=self._auth,
                 data={
                     "From": self._from_number,
-                    "To": self._to_number,
+                    "To": alert.recipient_phone,
                     "Body": (
                         "High-priority opportunity detected. "
                         f"Client: {alert.client_company}. "

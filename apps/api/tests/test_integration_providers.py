@@ -25,7 +25,6 @@ def test_twilio_adapter_uses_authenticated_form_request() -> None:
         account_sid="AC123",
         auth_token="secret-token",
         from_number="+15550000001",
-        to_number="+15550000002",
         timeout_seconds=1,
         client=httpx.Client(transport=httpx.MockTransport(respond)),
     )
@@ -33,6 +32,7 @@ def test_twilio_adapter_uses_authenticated_form_request() -> None:
         OpportunityAlert(
             opportunity_id="opportunity-1",
             client_company="VertexAI Labs",
+            recipient_phone="+15550000002",
             relevance_score=96,
             deadline=_deadline(),
         )
@@ -91,12 +91,13 @@ def test_provider_http_failures_are_translated(adapter: str, error_type: type[Ex
             account_sid="AC123",
             auth_token="secret",
             from_number="+15550000001",
-            to_number="+15550000002",
             timeout_seconds=1,
             client=client,
         )
         with pytest.raises(error_type):
-            sender.send(OpportunityAlert("opportunity-1", "VertexAI Labs", 96, _deadline()))
+            sender.send(
+                OpportunityAlert("opportunity-1", "VertexAI Labs", "+15550000002", 96, _deadline())
+            )
     else:
         crm = HubSpotCRMIntegration(access_token="secret", timeout_seconds=1, client=client)
         with pytest.raises(error_type):

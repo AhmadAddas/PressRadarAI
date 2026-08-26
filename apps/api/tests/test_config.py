@@ -43,7 +43,6 @@ def test_settings_accept_explicit_real_provider_credentials() -> None:
         twilio_account_sid="AC123",
         twilio_auth_token=SecretStr("twilio-secret"),
         twilio_from_number="+15550000001",
-        twilio_to_number="+15550000002",
         crm_provider="hubspot",
         hubspot_access_token=SecretStr("hubspot-secret"),
         email_provider="nodemailer",

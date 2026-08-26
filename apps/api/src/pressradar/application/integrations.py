@@ -15,6 +15,7 @@ class CRMSyncError(Exception):
 class OpportunityAlert:
     opportunity_id: str
     client_company: str
+    recipient_phone: str
     relevance_score: int
     deadline: datetime
 

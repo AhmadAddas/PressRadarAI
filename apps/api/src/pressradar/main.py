@@ -189,7 +189,6 @@ def create_app(
                     else settings.twilio_auth_token.get_secret_value()
                 ),
                 from_number=settings.twilio_from_number or "",
-                to_number=settings.twilio_to_number or "",
                 timeout_seconds=settings.external_provider_timeout_seconds,
             )
         )

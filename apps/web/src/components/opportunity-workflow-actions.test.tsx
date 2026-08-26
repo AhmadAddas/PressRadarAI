@@ -59,6 +59,8 @@ describe("OpportunityWorkflowActions", () => {
     expect(
       screen.getByText(/Simulated delivery to press@example.com/),
     ).toBeVisible();
-    expect(screen.getByText(/configure Twilio API keys/)).toBeVisible();
+    expect(
+      screen.getByText(/Client phone numbers are managed per client/),
+    ).toBeVisible();
   });
 });
