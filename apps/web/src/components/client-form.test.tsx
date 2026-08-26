@@ -34,7 +34,13 @@ describe("ClientForm", () => {
     );
     render(<ClientForm />);
 
-    fireEvent.change(screen.getByLabelText("Client name"), {
+    expect(
+      screen.getByText(
+        "Tone guides how Local AI analyzes ingested media and writes relevance explanations and pitch drafts.",
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Client/Account Name"), {
       target: { value: "dr. Amina Noor" },
     });
     fireEvent.change(screen.getByLabelText("Company"), {
@@ -90,7 +96,7 @@ describe("ClientForm", () => {
       }),
     );
     render(<ClientForm />);
-    fireEvent.change(screen.getByLabelText("Client name"), {
+    fireEvent.change(screen.getByLabelText("Client/Account Name"), {
       target: { value: "Amina Noor" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Create client" }));

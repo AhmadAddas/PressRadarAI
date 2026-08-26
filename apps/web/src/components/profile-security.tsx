@@ -17,23 +17,34 @@ export function ProfileSecurity({
   const [setup, setSetup] = useState<{ secret: string; qr: string } | null>(
     null,
   );
+  const [passwordError, setPasswordError] = useState("");
 
   async function changePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const body = Object.fromEntries(
-      new FormData(event.currentTarget).entries(),
-    );
+    const passwordForm = event.currentTarget;
+    setPasswordError("");
+    const form = new FormData(passwordForm);
+    const currentPassword = String(form.get("current_password") ?? "");
+    const newPassword = String(form.get("new_password") ?? "");
+    const confirmation = String(form.get("confirm_new_password") ?? "");
+    if (newPassword !== confirmation) {
+      setPasswordError("The new passwords do not match.");
+      return;
+    }
     const response = await fetch(`${publicApiUrl}/auth/password`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+      }),
     });
     if (!response.ok)
       return toast.error(
         (await response.json()).detail ?? "Unable to change password.",
       );
-    event.currentTarget.reset();
+    passwordForm.reset();
     toast.success("Password changed.");
   }
 
@@ -119,6 +130,18 @@ export function ProfileSecurity({
               required
             />
           </label>
+          <label>
+            Confirm new password
+            <input
+              name="confirm_new_password"
+              type="password"
+              autoComplete="new-password"
+              minLength={12}
+              maxLength={128}
+              required
+            />
+          </label>
+          {passwordError ? <p role="alert">{passwordError}</p> : null}
           <button type="submit">Change password</button>
         </form>
       </section>

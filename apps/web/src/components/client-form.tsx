@@ -94,7 +94,7 @@ export function ClientForm({ client }: Readonly<{ client?: Client }>) {
     <form className="client-form" onSubmit={submit}>
       <div className="form-grid">
         <TextField
-          label="Client name"
+          label="Client/Account Name"
           name="name"
           value={client?.name}
           required
@@ -138,7 +138,12 @@ export function ClientForm({ client }: Readonly<{ client?: Client }>) {
           name="spokesperson_title"
           value={client?.spokesperson_title}
         />
-        <TextField label="Tone" name="tone" value={client?.tone} />
+        <TextField
+          label="Tone"
+          name="tone"
+          value={client?.tone}
+          hint="Tone guides how Local AI analyzes ingested media and writes relevance explanations and pitch drafts."
+        />
       </div>
       <TextArea
         label="Description"
@@ -227,6 +232,7 @@ type FieldProps = {
   pattern?: string;
   placeholder?: string;
   validationMessage?: string;
+  hint?: string;
 };
 
 function TextField({
@@ -239,6 +245,7 @@ function TextField({
   pattern,
   placeholder,
   validationMessage,
+  hint,
 }: FieldProps) {
   const [invalid, setInvalid] = useState(false);
 
@@ -283,6 +290,7 @@ function TextField({
               : undefined
         }
       />
+      {hint ? <small className="field-hint">{hint}</small> : null}
     </label>
   );
 }

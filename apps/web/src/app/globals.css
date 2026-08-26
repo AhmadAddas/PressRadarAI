@@ -558,14 +558,12 @@ nav {
 }
 
 .public-ai-controls {
-  position: absolute;
-  top: 1rem;
-  left: 50%;
   display: flex;
   align-items: center;
+  justify-content: center;
+  justify-self: center;
   gap: 0.75rem;
-  transform: translateX(-50%);
-  z-index: 10;
+  margin-bottom: 1rem;
 }
 
 .public-ai-status {
@@ -588,12 +586,13 @@ nav {
 
 @media (max-width: 640px) {
   .public-ai-controls {
-    position: static;
     width: 100%;
-    justify-content: center;
     flex-wrap: wrap;
-    margin-bottom: 1rem;
-    transform: none;
+  }
+
+  .public-ai-controls .language-picker,
+  .public-ai-controls .language-trigger {
+    width: auto;
   }
 }
 
@@ -1603,9 +1602,7 @@ nav {
   }
 
   .local-ai,
-  .local-ai-trigger,
-  .language-picker,
-  .language-trigger {
+  .local-ai-trigger {
     width: 100%;
   }
 }
