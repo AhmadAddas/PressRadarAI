@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { IngestMediaButton } from "@/components/ingest-media-button";
 import { ExpandableText } from "@/components/expandable-text";
+import { DeadlineEditor } from "@/components/deadline-editor";
 import { MediaSourceManager } from "@/components/media-source-manager";
 import { PaginatedSelectableList } from "@/components/paginated-selectable-list";
 import { internalApiUrl } from "@/lib/api";
@@ -98,9 +99,10 @@ export default async function MediaPage({
                   <div className="media-meta">
                     <span>{formatSourceType(item.source_type)}</span>
                     <span>{item.source}</span>
-                    {item.deadline ? (
-                      <strong>Deadline {formatTime(item.deadline)}</strong>
-                    ) : null}
+                    <DeadlineEditor
+                      mediaItemId={item.id}
+                      deadline={item.deadline}
+                    />
                   </div>
                   <h2>{item.headline}</h2>
                   <ExpandableText text={item.body} />
@@ -125,12 +127,4 @@ export default async function MediaPage({
       </section>
     </main>
   );
-}
-
-function formatTime(value: string): string {
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "UTC",
-  }).format(new Date(value));
 }

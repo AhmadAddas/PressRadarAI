@@ -89,6 +89,40 @@ describe("MediaSourceManager", () => {
     expect(toggle).toHaveAttribute("aria-expanded", "false");
   });
 
+  it("creates a journalist-request RSS provider", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(
+        new Response(JSON.stringify({ id: "request-feed" }), { status: 201 }),
+      );
+    render(<MediaSourceManager sources={sources} suggestions={[]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Media options" }));
+    fireEvent.change(screen.getByLabelText("Source name"), {
+      target: { value: "Journalist requests" },
+    });
+    fireEvent.change(screen.getByLabelText("HTTPS feed URL"), {
+      target: { value: "https://example.com/requests.xml" },
+    });
+    fireEvent.click(
+      screen.getByLabelText("This feed contains journalist requests"),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Add RSS source" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/media/sources"),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          name: "Journalist requests",
+          kind: "rss",
+          url: "https://example.com/requests.xml",
+          provider: "journalist_requests",
+        }),
+      }),
+    );
+  });
+
   it("ingests Prod media and deletes configured sources", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
