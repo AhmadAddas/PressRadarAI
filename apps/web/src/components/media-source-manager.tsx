@@ -121,7 +121,7 @@ export function MediaSourceManager({
       name: String(data.get("name")),
       kind: "rss",
       url: String(data.get("url")),
-      provider: data.get("journalistRequests") ? "journalist_requests" : null,
+      provider: null,
     });
   }
 
@@ -279,14 +279,6 @@ export function MediaSourceManager({
                 HTTPS feed URL
                 <input name="url" type="url" pattern="https://.*" required />
               </label>
-              <label className="checkbox-label">
-                <input name="journalistRequests" type="checkbox" />
-                This feed contains journalist requests
-              </label>
-              <p className="field-hint">
-                Request feeds use explicit deadline, expiry, expiration, or due
-                date fields. Publication dates are never treated as deadlines.
-              </p>
               <button
                 className="button-secondary"
                 type="submit"

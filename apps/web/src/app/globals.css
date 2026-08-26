@@ -699,8 +699,7 @@ nav {
 }
 
 .selection-toolbar label,
-.item-checkbox,
-.checkbox-label {
+.item-checkbox {
   min-height: 2.75rem;
 }
 
@@ -1234,21 +1233,6 @@ nav {
 .source-form {
   display: grid;
   gap: 0.4rem;
-}
-
-.checkbox-label {
-  display: grid;
-  justify-items: start;
-  gap: 0.4rem;
-}
-
-.checkbox-label input[type="checkbox"] {
-  flex: 0 0 auto;
-  width: 1.2rem;
-  height: 1.2rem;
-  min-height: 1.2rem;
-  margin: 0;
-  accent-color: #0891b2;
 }
 
 .source-ingest {

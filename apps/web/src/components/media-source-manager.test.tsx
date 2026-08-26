@@ -89,7 +89,7 @@ describe("MediaSourceManager", () => {
     expect(toggle).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("creates a journalist-request RSS provider", async () => {
+  it("creates a standard RSS source without a journalist-request control", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(
@@ -103,9 +103,9 @@ describe("MediaSourceManager", () => {
     fireEvent.change(screen.getByLabelText("HTTPS feed URL"), {
       target: { value: "https://example.com/requests.xml" },
     });
-    fireEvent.click(
-      screen.getByLabelText("This feed contains journalist requests"),
-    );
+    expect(
+      screen.queryByLabelText("This feed contains journalist requests"),
+    ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Add RSS source" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
@@ -117,7 +117,7 @@ describe("MediaSourceManager", () => {
           name: "Journalist requests",
           kind: "rss",
           url: "https://example.com/requests.xml",
-          provider: "journalist_requests",
+          provider: null,
         }),
       }),
     );
