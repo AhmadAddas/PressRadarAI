@@ -258,25 +258,27 @@ function TextField({
   return (
     <div className="form-field">
       <span className="field-label-row">
-        <label htmlFor={inputId}>{label}</label>
+        <span className="field-label-group">
+          <label htmlFor={inputId}>{label}</label>
+          {hint ? (
+            <span className="field-help">
+              <button
+                className="field-help-trigger"
+                type="button"
+                aria-label={`About ${label}`}
+                aria-describedby={hintId}
+              >
+                i
+              </button>
+              <span className="field-help-text" id={hintId} role="tooltip">
+                {hint}
+              </span>
+            </span>
+          ) : null}
+        </span>
         {invalid && validationMessage ? (
           <span className="field-validation-error" role="alert">
             {validationMessage}
-          </span>
-        ) : null}
-        {hint ? (
-          <span className="field-help">
-            <button
-              className="field-help-trigger"
-              type="button"
-              aria-label={`About ${label}`}
-              aria-describedby={hintId}
-            >
-              i
-            </button>
-            <span className="field-help-text" id={hintId} role="tooltip">
-              {hint}
-            </span>
           </span>
         ) : null}
       </span>

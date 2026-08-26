@@ -1567,18 +1567,24 @@ nav {
   font-weight: 600;
 }
 
+.field-label-group {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .field-help {
-  position: absolute;
-  top: -0.65rem;
-  right: -0.65rem;
+  display: inline-flex;
   z-index: 10;
 }
 
 .field-help-trigger {
   display: grid;
-  width: 2.75rem;
-  min-width: 2.75rem;
-  height: 2.75rem;
+  width: 1.5rem;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
+  height: 1.5rem;
   padding: 0;
   place-items: center;
   border-radius: 999px;
@@ -1595,8 +1601,8 @@ nav {
 
 .field-help-text {
   position: absolute;
-  top: calc(100% - 0.25rem);
-  right: 0.65rem;
+  top: calc(100% + 0.35rem);
+  left: 0;
   width: min(18rem, calc(100vw - 3rem));
   padding: 0.65rem 0.75rem;
   border-radius: 0.5rem;
