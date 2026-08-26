@@ -4,6 +4,11 @@ import { describe, expect, it, vi } from "vitest";
 
 import { AccessibleDialog } from "@/components/accessible-dialog";
 import { AccountMenu } from "@/components/account-menu";
+import { ClientForm } from "@/components/client-form";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+}));
 
 vi.mock("next/link", () => ({
   default: ({
@@ -66,6 +71,20 @@ describe("shared accessibility foundations", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(onClose).toHaveBeenCalledOnce();
     expect(dialog).toHaveAttribute("aria-describedby");
+    expect((await axe.run(container, axeOptions)).violations).toEqual([]);
+  });
+
+  it("keeps the client form and Tone help free of detectable accessibility violations", async () => {
+    const { container } = render(
+      <main>
+        <h1>Add client</h1>
+        <ClientForm />
+      </main>,
+    );
+
+    expect(screen.getByRole("button", { name: "About Tone" })).toHaveAttribute(
+      "aria-describedby",
+    );
     expect((await axe.run(container, axeOptions)).violations).toEqual([]);
   });
 });

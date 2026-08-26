@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, startTransition, useEffect, useState } from "react";
+import { FormEvent, startTransition, useEffect, useId, useState } from "react";
 
 import { publicApiUrl } from "@/lib/api";
 import { AccessibleDialog } from "@/components/accessible-dialog";
@@ -248,22 +248,40 @@ function TextField({
   hint,
 }: FieldProps) {
   const [invalid, setInvalid] = useState(false);
+  const inputId = useId();
+  const hintId = useId();
 
   function updateValidity(input: HTMLInputElement) {
     setInvalid(Boolean(input.value) && !input.validity.valid);
   }
 
   return (
-    <label>
+    <div className="form-field">
       <span className="field-label-row">
-        <span>{label}</span>
+        <label htmlFor={inputId}>{label}</label>
         {invalid && validationMessage ? (
           <span className="field-validation-error" role="alert">
             {validationMessage}
           </span>
         ) : null}
+        {hint ? (
+          <span className="field-help">
+            <button
+              className="field-help-trigger"
+              type="button"
+              aria-label={`About ${label}`}
+              aria-describedby={hintId}
+            >
+              i
+            </button>
+            <span className="field-help-text" id={hintId} role="tooltip">
+              {hint}
+            </span>
+          </span>
+        ) : null}
       </span>
       <input
+        id={inputId}
         name={name}
         type={type}
         defaultValue={Array.isArray(value) ? value.join(", ") : (value ?? "")}
@@ -271,6 +289,7 @@ function TextField({
         pattern={pattern}
         placeholder={placeholder}
         aria-invalid={invalid || undefined}
+        aria-describedby={hint ? hintId : undefined}
         onInvalid={(event) => {
           event.preventDefault();
           updateValidity(event.currentTarget);
@@ -290,8 +309,7 @@ function TextField({
               : undefined
         }
       />
-      {hint ? <small className="field-hint">{hint}</small> : null}
-    </label>
+    </div>
   );
 }
 

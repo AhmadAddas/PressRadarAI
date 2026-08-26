@@ -170,7 +170,7 @@ input[type="checkbox"] {
 }
 
 button:disabled {
-  cursor: wait;
+  cursor: not-allowed;
   opacity: 0.65;
 }
 
@@ -1553,10 +1553,74 @@ nav {
 }
 
 .field-label-row {
+  position: relative;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 0.5rem;
+}
+
+.form-field {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.field-help {
+  position: absolute;
+  top: -0.65rem;
+  right: -0.65rem;
+  z-index: 10;
+}
+
+.field-help-trigger {
+  display: grid;
+  width: 2.75rem;
+  min-width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  place-items: center;
+  border-radius: 999px;
+  background: transparent;
+  color: #244ca7;
+  font-family: Georgia, serif;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.field-help-trigger:hover {
+  background: #eef3ff;
+}
+
+.field-help-text {
+  position: absolute;
+  top: calc(100% - 0.25rem);
+  right: 0.65rem;
+  width: min(18rem, calc(100vw - 3rem));
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.5rem;
+  background: #17202a;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 1.4;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-0.25rem);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+  visibility: hidden;
+}
+
+.field-help:focus-within .field-help-text,
+.field-help:hover .field-help-text {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
 }
 
 .field-validation-error {

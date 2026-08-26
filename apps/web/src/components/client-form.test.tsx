@@ -34,11 +34,16 @@ describe("ClientForm", () => {
     );
     render(<ClientForm />);
 
-    expect(
-      screen.getByText(
-        "Tone guides how Local AI analyzes ingested media and writes relevance explanations and pitch drafts.",
-      ),
-    ).toBeInTheDocument();
+    const toneHelp = screen.getByRole("button", { name: "About Tone" });
+    const toneHelpText = screen.getByRole("tooltip");
+    expect(toneHelp).toHaveAttribute("aria-describedby", toneHelpText.id);
+    expect(screen.getByLabelText("Tone")).toHaveAttribute(
+      "aria-describedby",
+      toneHelpText.id,
+    );
+    expect(toneHelpText).toHaveTextContent(
+      "Tone guides how Local AI analyzes ingested media and writes relevance explanations and pitch drafts.",
+    );
 
     fireEvent.change(screen.getByLabelText("Client/Account Name"), {
       target: { value: "dr. Amina Noor" },

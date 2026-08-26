@@ -23,7 +23,12 @@ export function SignOutButton() {
   }
 
   return (
-    <button type="button" onClick={signOut} disabled={disabled}>
+    <button
+      type="button"
+      onClick={signOut}
+      disabled={disabled}
+      aria-busy={disabled}
+    >
       Sign out
     </button>
   );
