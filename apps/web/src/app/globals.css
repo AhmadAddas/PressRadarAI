@@ -747,6 +747,7 @@ nav {
 
 .client-list .item-delete {
   align-self: center;
+  margin-right: 1rem;
 }
 
 .client-list .selectable-item {
@@ -1770,6 +1771,7 @@ nav {
     position: absolute;
     right: 1rem;
     bottom: 1rem;
+    margin-right: 0;
   }
 
   .opportunity-list .item-checkbox {
