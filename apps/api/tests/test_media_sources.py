@@ -195,7 +195,8 @@ async def test_rss_adapter_ingests_public_feed(
             content=b"""<rss><channel><item><title>Dubai startup funding</title>
             <description><![CDATA[<p>A UAE startup raised new funding.</p>]]></description>
             <link>https://example.com/story</link><guid>story-1</guid>
-            <pubDate>Sat, 22 Aug 2026 10:00:00 GMT</pubDate></item></channel></rss>""",
+            <pubDate>Sat, 22 Aug 2026 10:00:00 GMT</pubDate>
+            <deadline>Sat, 22 Aug 2026 14:00:00 GMT</deadline></item></channel></rss>""",
         ),
     )
     async with create_test_client(tmp_path / "rss.db") as client:
@@ -213,6 +214,50 @@ async def test_rss_adapter_ingests_public_feed(
 
     assert ingestion.json() == {"created": 1, "restored": 0, "duplicates": 0}
     assert media.json()[0]["body"] == "A UAE startup raised new funding."
+    assert media.json()[0]["deadline"] == "2026-08-22T14:00:00Z"
+    assert media.json()[0]["published_at"] == "2026-08-22T10:00:00Z"
+
+
+async def test_journalist_request_feed_uses_explicit_namespaced_deadline(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        socket,
+        "getaddrinfo",
+        lambda *args: [(2, 1, 6, "", ("93.184.216.34", 443))],
+    )
+    monkeypatch.setattr(
+        httpx,
+        "get",
+        lambda *args, **kwargs: httpx.Response(
+            200,
+            request=httpx.Request("GET", "https://example.com/requests.xml"),
+            content=b"""<rss xmlns:req="https://example.com/request"><channel><item>
+            <title>Founder needed for UAE AI interview</title>
+            <description>Seeking a Dubai founder for expert commentary.</description>
+            <guid>request-1</guid><pubDate>Wed, 26 Aug 2026 08:00:00 GMT</pubDate>
+            <req:expires>2026-08-26T16:00:00+04:00</req:expires>
+            </item></channel></rss>""",
+        ),
+    )
+    async with create_test_client(tmp_path / "journalist-feed.db") as client:
+        await sign_up(client)
+        source = await client.post(
+            "/media/sources",
+            json={
+                "name": "Licensed journalist requests",
+                "kind": "rss",
+                "url": "https://example.com/requests.xml",
+                "provider": "journalist_requests",
+            },
+        )
+        ingestion = await client.post("/media/ingest")
+        media = await client.get("/media")
+
+    assert source.status_code == 201
+    assert ingestion.json() == {"created": 1, "restored": 0, "duplicates": 0}
+    assert media.json()[0]["source_type"] == "journalist_request"
+    assert media.json()[0]["deadline"] == "2026-08-26T12:00:00Z"
 
 
 async def test_production_ingestion_caps_each_source_and_the_total_run(

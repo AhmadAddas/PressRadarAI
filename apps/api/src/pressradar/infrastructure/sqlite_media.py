@@ -173,6 +173,23 @@ class SQLiteMediaRepository:
             )
         return cursor.rowcount > 0
 
+    def update_deadline(
+        self, *, workspace_id: str, media_item_id: str, deadline: datetime | None
+    ) -> MediaItem | None:
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """UPDATE media_items SET deadline = ?
+                WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL""",
+                (
+                    None if deadline is None else deadline.isoformat(),
+                    media_item_id,
+                    workspace_id,
+                ),
+            )
+        if not cursor.rowcount:
+            return None
+        return self.get(workspace_id=workspace_id, media_item_id=media_item_id)
+
     def clear(self, *, workspace_id: str) -> None:
         with self._connect() as connection:
             connection.execute("DELETE FROM media_items WHERE workspace_id = ?", (workspace_id,))

@@ -66,7 +66,15 @@ class ConfiguredMediaIngestionService:
             root = ElementTree.fromstring(response.content)
         except (httpx.HTTPError, ElementTree.ParseError) as error:
             raise MediaSourceConfigurationError(f"Unable to fetch {source.name}") from error
-        return tuple(_rss_item(source.name, item) for item in root.findall(".//item")[:limit])
+        source_type = (
+            MediaSourceType.JOURNALIST_REQUEST
+            if source.provider == "journalist_requests"
+            else MediaSourceType.RSS
+        )
+        return tuple(
+            _rss_item(source.name, item, source_type=source_type)
+            for item in root.findall(".//item")[:limit]
+        )
 
     def _fetch_newsapi(self, source: MediaSource, *, limit: int) -> tuple[IncomingMediaItem, ...]:
         if not self._newsapi_api_key:
@@ -108,19 +116,44 @@ class ConfiguredMediaIngestionService:
         return cast(list[object], payload["articles"])
 
 
-def _rss_item(source: str, item: ElementTree.Element) -> IncomingMediaItem:
+def _rss_item(
+    source: str,
+    item: ElementTree.Element,
+    *,
+    source_type: MediaSourceType = MediaSourceType.RSS,
+) -> IncomingMediaItem:
     headline = _xml_text(item, "title")
     link = _xml_text(item, "link") or None
     published = _parse_time(_xml_text(item, "pubDate"))
     return IncomingMediaItem(
         source=source,
-        source_type=MediaSourceType.RSS,
+        source_type=source_type,
         headline=headline,
         body=_plain_text(_xml_text(item, "description")) or headline,
         url=link,
         published_at=published,
+        deadline=_rss_deadline(item),
         external_id=_xml_text(item, "guid") or link,
     )
+
+
+def _rss_deadline(item: ElementTree.Element) -> datetime | None:
+    deadline_names = {
+        "deadline",
+        "responsedeadline",
+        "expires",
+        "expiration",
+        "expirationdate",
+        "expiry",
+        "expirydate",
+        "duedate",
+        "enddate",
+    }
+    for element in item.iter():
+        local_name = element.tag.rsplit("}", 1)[-1].casefold()
+        if local_name in deadline_names and element.text and element.text.strip():
+            return _parse_time(element.text.strip())
+    return None
 
 
 def _newsapi_item(source: str, article: object) -> IncomingMediaItem:

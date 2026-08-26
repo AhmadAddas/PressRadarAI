@@ -43,6 +43,10 @@ class IngestionResponse(BaseModel):
     duplicates: int
 
 
+class MediaDeadlineRequest(BaseModel):
+    deadline: datetime | None
+
+
 def create_media_router(
     media_service: MediaIngestionService,
     configured_media_service: ConfiguredMediaIngestionService,
@@ -90,6 +94,25 @@ def create_media_router(
     ) -> None:
         try:
             media_service.delete(workspace_id=identity.workspace_id, media_item_id=media_item_id)
+        except MediaItemNotFoundError as error:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Media item not found"
+            ) from error
+
+    @router.patch("/{media_item_id}/deadline", response_model=MediaItemResponse)
+    def update_media_deadline(
+        media_item_id: str,
+        request: MediaDeadlineRequest,
+        identity: Annotated[Identity, Depends(current_identity)],
+    ) -> MediaItem:
+        try:
+            return media_service.update_deadline(
+                workspace_id=identity.workspace_id,
+                media_item_id=media_item_id,
+                deadline=request.deadline,
+            )
+        except InvalidMediaItemError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
         except MediaItemNotFoundError as error:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Media item not found"

@@ -20,15 +20,15 @@ class MediaSourceRequest(BaseModel):
     name: SourceName
     kind: MediaSourceKind
     url: AnyHttpUrl | None = None
-    provider: Literal["newsapi"] | None = None
+    provider: Literal["newsapi", "journalist_requests"] | None = None
 
     @model_validator(mode="after")
     def validate_configuration(self) -> "MediaSourceRequest":
         if self.kind is MediaSourceKind.RSS:
             if self.url is None or self.url.scheme != "https":
                 raise ValueError("RSS sources require an HTTPS URL")
-            if self.provider is not None:
-                raise ValueError("RSS sources do not use an API provider")
+            if self.provider not in {None, "journalist_requests"}:
+                raise ValueError("RSS sources only support journalist-request feed mode")
         elif self.provider != "newsapi" or self.url is not None:
             raise ValueError("API sources require the NewsAPI provider and no custom URL")
         return self

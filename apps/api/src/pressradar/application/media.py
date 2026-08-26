@@ -22,6 +22,10 @@ class MediaRepository(Protocol):
 
     def delete(self, *, workspace_id: str, media_item_id: str) -> bool: ...
 
+    def update_deadline(
+        self, *, workspace_id: str, media_item_id: str, deadline: datetime | None
+    ) -> MediaItem | None: ...
+
     def clear(self, *, workspace_id: str) -> None: ...
 
 
@@ -50,6 +54,19 @@ class MediaIngestionService:
     def delete(self, *, workspace_id: str, media_item_id: str) -> None:
         if not self._repository.delete(workspace_id=workspace_id, media_item_id=media_item_id):
             raise MediaItemNotFoundError
+
+    def update_deadline(
+        self, *, workspace_id: str, media_item_id: str, deadline: datetime | None
+    ) -> MediaItem:
+        normalized = None if deadline is None else _utc(deadline)
+        item = self._repository.update_deadline(
+            workspace_id=workspace_id,
+            media_item_id=media_item_id,
+            deadline=normalized,
+        )
+        if item is None:
+            raise MediaItemNotFoundError
+        return item
 
     def clear(self, *, workspace_id: str) -> None:
         self._repository.clear(workspace_id=workspace_id)

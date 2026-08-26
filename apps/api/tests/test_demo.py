@@ -42,6 +42,14 @@ async def test_demo_setup_builds_ranked_workspace_and_is_idempotent(tmp_path: Pa
                 ("2026-08-22T11:00:00+00:00", opportunity_by_client["Mariam Al Noor"]),
             )
         recency_ranked = await client.get("/opportunities")
+        samir_opportunity = next(
+            item for item in opportunities.json() if item["client_name"] == "Samir Qureshi"
+        )
+        await client.patch(
+            f"/media/{samir_opportunity['media_item_id']}/deadline",
+            json={"deadline": "2026-08-27T12:00:00Z"},
+        )
+        deadline_updated = await client.get("/opportunities")
 
     assert signup.status_code == 201
     assert switched.status_code == 200
@@ -72,6 +80,10 @@ async def test_demo_setup_builds_ranked_workspace_and_is_idempotent(tmp_path: Pa
         "Mariam Al Noor",
         "Samir Qureshi",
     ]
+    updated_samir = next(
+        item for item in deadline_updated.json() if item["client_name"] == "Samir Qureshi"
+    )
+    assert updated_samir["deadline"] == "2026-08-27T12:00:00Z"
 
 
 async def test_demo_setup_requires_authentication(tmp_path: Path) -> None:

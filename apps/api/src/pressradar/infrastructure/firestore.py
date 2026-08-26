@@ -356,6 +356,27 @@ class FirestoreRepository:
         reference.update({"deleted_at": datetime.now(UTC)})
         return True
 
+    def update_media_deadline(
+        self, *, workspace_id: str, media_item_id: str, deadline: datetime | None
+    ) -> MediaItem | None:
+        reference = self._db.collection("media_items").document(media_item_id)
+        document = reference.get()
+        if (
+            not document.exists
+            or document.get("workspace_id") != workspace_id
+            or document.get("deleted_at") is not None
+        ):
+            return None
+        reference.update({"deadline": deadline})
+        for opportunity in (
+            self._db.collection("opportunities")
+            .where("media_item_id", "==", media_item_id)
+            .stream()
+        ):
+            if opportunity.get("workspace_id") == workspace_id:
+                opportunity.reference.update({"deadline": deadline})
+        return self.get_media(workspace_id=workspace_id, media_item_id=media_item_id)
+
     def clear_media(self, *, workspace_id: str) -> None:
         for document in (
             self._db.collection("media_items").where("workspace_id", "==", workspace_id).stream()
@@ -756,6 +777,15 @@ class FirestoreMediaRepository:
 
     def delete(self, *, workspace_id: str, media_item_id: str) -> bool:
         return self._repository.delete_media(workspace_id=workspace_id, media_item_id=media_item_id)
+
+    def update_deadline(
+        self, *, workspace_id: str, media_item_id: str, deadline: datetime | None
+    ) -> MediaItem | None:
+        return self._repository.update_media_deadline(
+            workspace_id=workspace_id,
+            media_item_id=media_item_id,
+            deadline=deadline,
+        )
 
     def clear(self, *, workspace_id: str) -> None:
         self._repository.clear_media(workspace_id=workspace_id)

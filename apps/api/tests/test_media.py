@@ -99,6 +99,57 @@ async def test_media_list_limit_is_validated(tmp_path: Path) -> None:
     assert response.status_code == 422
 
 
+async def test_media_deadline_can_be_set_adjusted_and_cleared(tmp_path: Path) -> None:
+    async with create_test_client(tmp_path / "media-deadline.db") as client:
+        await sign_up(client)
+        await client.post("/media/ingest")
+        media = (await client.get("/media")).json()
+        item = next(record for record in media if record["deadline"] is None)
+
+        added = await client.patch(
+            f"/media/{item['id']}/deadline",
+            json={"deadline": "2026-08-27T14:30:00+04:00"},
+        )
+        adjusted = await client.patch(
+            f"/media/{item['id']}/deadline",
+            json={"deadline": "2026-08-27T16:00:00+04:00"},
+        )
+        cleared = await client.patch(f"/media/{item['id']}/deadline", json={"deadline": None})
+
+    assert added.status_code == 200
+    assert added.json()["deadline"] == "2026-08-27T10:30:00Z"
+    assert adjusted.json()["deadline"] == "2026-08-27T12:00:00Z"
+    assert cleared.json()["deadline"] is None
+
+
+async def test_media_deadline_update_is_validated_and_workspace_scoped(tmp_path: Path) -> None:
+    database = tmp_path / "media-deadline-scope.db"
+    async with create_test_client(database) as owner:
+        await sign_up(owner)
+        await owner.post("/media/ingest")
+        item_id = (await owner.get("/media")).json()[0]["id"]
+        naive = await owner.patch(
+            f"/media/{item_id}/deadline",
+            json={"deadline": "2026-08-27T14:30:00"},
+        )
+
+    async with create_test_client(database) as other:
+        response = await other.post(
+            "/auth/signup",
+            json={
+                "email": "deadline-other@example.com",
+                "name": "Other User",
+                "password": "secure-passphrase",
+            },
+        )
+        assert response.status_code == 201
+        cross_workspace = await other.patch(f"/media/{item_id}/deadline", json={"deadline": None})
+
+    assert naive.status_code == 422
+    assert naive.json() == {"detail": "Media timestamps must include a timezone"}
+    assert cross_workspace.status_code == 404
+
+
 def test_provider_items_have_stable_external_ids_with_relative_demo_times() -> None:
     now = datetime(2026, 8, 22, 12, tzinfo=UTC)
     items = SimulatedMediaProvider(lambda: now).fetch_items()
