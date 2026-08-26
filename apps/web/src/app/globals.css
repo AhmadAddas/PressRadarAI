@@ -832,6 +832,8 @@ nav {
 
 .opportunity-heading h3 {
   margin-top: 0;
+  font-size: 1rem;
+  line-height: 1.35;
   overflow-wrap: anywhere;
 }
 
@@ -1063,8 +1065,16 @@ nav {
 
 .media-list h2 {
   margin-bottom: 0.5rem;
-  font-size: 1.15rem;
+  font-size: 1rem;
+  line-height: 1.35;
   overflow-wrap: anywhere;
+}
+
+@media (max-width: 700px) {
+  .media-list h2,
+  .opportunity-heading h3 {
+    font-size: 0.95rem;
+  }
 }
 
 @media (min-width: 701px) {
