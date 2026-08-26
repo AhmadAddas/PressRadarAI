@@ -11,6 +11,7 @@ from xml.etree import ElementTree
 import httpx
 
 from pressradar.application.media import (
+    HeadlineSummarizer,
     InvalidMediaItemError,
     MediaIngestionService,
     MediaRepository,
@@ -36,11 +37,13 @@ class ConfiguredMediaIngestionService:
         *,
         newsapi_api_key: str,
         timeout_seconds: float,
+        headline_summarizer: HeadlineSummarizer | None = None,
     ) -> None:
         self._sources = sources
         self._media = media
         self._newsapi_api_key = newsapi_api_key
         self._timeout_seconds = timeout_seconds
+        self._headline_summarizer = headline_summarizer
 
     def ingest(self, *, workspace_id: str) -> IngestionResult:
         items: list[IncomingMediaItem] = []
@@ -53,7 +56,7 @@ class ConfiguredMediaIngestionService:
                 items.extend(self._fetch_rss(source, limit=source_limit))
             elif source.provider == "newsapi":
                 items.extend(self._fetch_newsapi(source, limit=source_limit))
-        normalized = tuple(MediaIngestionService.normalize(item) for item in items)
+        normalized = MediaIngestionService.prepare(tuple(items), self._headline_summarizer)
         return self._media.ingest(workspace_id=workspace_id, items=normalized)
 
     def _fetch_rss(self, source: MediaSource, *, limit: int) -> tuple[IncomingMediaItem, ...]:

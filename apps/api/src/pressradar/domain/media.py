@@ -23,6 +23,7 @@ class IncomingMediaItem:
     deadline: datetime | None = None
     topics: tuple[str, ...] = ()
     external_id: str | None = None
+    display_headline: str | None = None
 
 
 @dataclass(frozen=True)
@@ -40,6 +41,7 @@ class MediaItem:
     deadline: datetime | None
     topics: tuple[str, ...]
     external_id: str | None
+    display_headline: str | None = None
 
 
 @dataclass(frozen=True)

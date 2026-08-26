@@ -31,12 +31,12 @@ class OllamaPitchGenerator:
             )
             return GeneratedPitch(
                 content=_normalize_content(content, client.name),
-                display_headline=self._summarize_headline(media_item.headline),
+                display_headline=self.summarize_headline(media_item.headline, max_words=13),
             )
         except (httpx.HTTPError, KeyError, TypeError, ValueError, ValidationError) as error:
             raise PitchGenerationError("Ollama pitch generation failed") from error
 
-    def _summarize_headline(self, headline: str) -> str | None:
+    def summarize_headline(self, headline: str, *, max_words: int) -> str | None:
         if len(headline.split()) <= 13:
             return None
         try:
@@ -44,7 +44,8 @@ class OllamaPitchGenerator:
                 self._request(
                     prompt=(
                         "Return only JSON matching the schema. Faithfully summarize this headline "
-                        "in at most 13 words. Preserve important names and do not add facts:\n"
+                        f"in at most {max_words} words. Preserve important names and do not add "
+                        "facts:\n"
                         f"{json.dumps(headline)}"
                     ),
                     schema=_OllamaHeadlineResult.model_json_schema(),
@@ -53,7 +54,7 @@ class OllamaPitchGenerator:
             )
         except (httpx.HTTPError, KeyError, TypeError, ValueError, ValidationError):
             return None
-        return _display_headline(result.headline, headline)
+        return _display_headline(result.headline, headline, max_words=max_words)
 
     def _request(self, *, prompt: str, schema: dict[str, object] | None, num_predict: int) -> str:
         payload: dict[str, object] = {
@@ -126,8 +127,8 @@ def _normalize_content(content: str, client_name: str) -> str:
     return concise
 
 
-def _display_headline(candidate: str | None, original: str) -> str | None:
+def _display_headline(candidate: str | None, original: str, *, max_words: int) -> str | None:
     if len(original.split()) <= 13 or candidate is None:
         return None
     words = candidate.strip().split()
-    return " ".join(words[:13]) or None
+    return " ".join(words[:max_words]) or None

@@ -28,6 +28,7 @@ class MediaItemResponse(BaseModel):
     author: str | None
     journalist: str | None
     headline: str
+    display_headline: str | None
     body: str
     url: str | None
     published_at: datetime

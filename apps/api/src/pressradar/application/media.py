@@ -11,6 +11,10 @@ class MediaProvider(Protocol):
     def fetch_items(self) -> tuple[IncomingMediaItem, ...]: ...
 
 
+class HeadlineSummarizer(Protocol):
+    def summarize_headline(self, headline: str, *, max_words: int) -> str | None: ...
+
+
 class MediaRepository(Protocol):
     def ingest(
         self, *, workspace_id: str, items: tuple[IncomingMediaItem, ...]
@@ -38,14 +42,20 @@ class MediaItemNotFoundError(Exception):
 
 
 class MediaIngestionService:
-    def __init__(self, provider: MediaProvider, repository: MediaRepository) -> None:
+    def __init__(
+        self,
+        provider: MediaProvider,
+        repository: MediaRepository,
+        headline_summarizer: HeadlineSummarizer | None = None,
+    ) -> None:
         self._provider = provider
         self._repository = repository
+        self._headline_summarizer = headline_summarizer
 
     def ingest(self, *, workspace_id: str) -> IngestionResult:
         return self._repository.ingest(
             workspace_id=workspace_id,
-            items=tuple(self.normalize(item) for item in self._provider.fetch_items()),
+            items=self.prepare(self._provider.fetch_items(), self._headline_summarizer),
         )
 
     def list(self, *, workspace_id: str, limit: int = 100) -> list[MediaItem]:
@@ -124,6 +134,23 @@ class MediaIngestionService:
             deadline=deadline,
             topics=topics,
         )
+
+    @classmethod
+    def prepare(
+        cls,
+        items: tuple[IncomingMediaItem, ...],
+        headline_summarizer: HeadlineSummarizer | None,
+    ) -> tuple[IncomingMediaItem, ...]:
+        prepared: list[IncomingMediaItem] = []
+        for item in items:
+            normalized = cls.normalize(item)
+            display_headline = None
+            if len(normalized.headline.split()) > 13 and headline_summarizer is not None:
+                candidate = headline_summarizer.summarize_headline(normalized.headline, max_words=9)
+                words = [] if candidate is None else candidate.strip().split()
+                display_headline = " ".join(words[:9]) or None
+            prepared.append(replace(normalized, display_headline=display_headline))
+        return tuple(prepared)
 
 
 def _utc(value: datetime) -> datetime:

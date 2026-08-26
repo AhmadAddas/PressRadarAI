@@ -134,9 +134,6 @@ def create_app(
     )
     client_service = ClientService(client_repository)
     media_providers = {"simulated": SimulatedMediaProvider()}
-    media_service = MediaIngestionService(
-        media_providers[settings.media_provider], media_repository
-    )
     if analytics_store is None:
         if settings.analytics_provider == "sqlite":
             sqlite_analytics = SQLiteAnalyticsStore(settings.analytics_database_path)
@@ -162,6 +159,12 @@ def create_app(
             timeout_seconds=settings.ollama_timeout_seconds,
             enabled=settings.ai_provider == "ollama",
         )
+    headline_summarizer = ollama_runtime if settings.ai_provider == "ollama" else None
+    media_service = MediaIngestionService(
+        media_providers[settings.media_provider],
+        media_repository,
+        headline_summarizer,
+    )
     if relevance_analyzer is None:
         relevance_analyzer = (
             FakeRelevanceAnalyzer() if settings.ai_provider == "fake" else ollama_runtime
@@ -260,6 +263,7 @@ def create_app(
                     else settings.newsapi_api_key.get_secret_value()
                 ),
                 timeout_seconds=settings.external_provider_timeout_seconds,
+                headline_summarizer=headline_summarizer,
             ),
             opportunity_service,
             demo_opportunity_service,

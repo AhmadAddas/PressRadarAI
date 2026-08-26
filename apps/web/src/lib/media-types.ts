@@ -5,6 +5,7 @@ export type MediaItem = {
   author: string | null;
   journalist: string | null;
   headline: string;
+  display_headline: string | null;
   body: string;
   url: string | null;
   published_at: string;

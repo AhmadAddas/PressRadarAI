@@ -93,7 +93,7 @@ export default async function MediaPage({
             className="media-list"
             items={media.map((item) => ({
               id: item.id,
-              label: item.headline,
+              label: item.display_headline ?? item.headline,
               content: (
                 <article>
                   <div className="media-meta">
@@ -104,7 +104,9 @@ export default async function MediaPage({
                       deadline={item.deadline}
                     />
                   </div>
-                  <h2>{item.headline}</h2>
+                  <h2 title={item.display_headline ? item.headline : undefined}>
+                    {item.display_headline ?? item.headline}
+                  </h2>
                   <ExpandableText text={item.body} />
                   <div className="topics">
                     {item.topics.map((topic) => (

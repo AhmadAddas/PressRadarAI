@@ -287,6 +287,7 @@ class FirestoreRepository:
                         "author": item.author,
                         "journalist": item.journalist,
                         "headline": item.headline,
+                        "display_headline": item.display_headline,
                         "body": item.body,
                         "url": item.url,
                         "published_at": item.published_at,
@@ -307,6 +308,7 @@ class FirestoreRepository:
                             "author": item.author,
                             "journalist": item.journalist,
                             "headline": item.headline,
+                            "display_headline": item.display_headline,
                             "body": item.body,
                             "url": item.url,
                             "published_at": item.published_at,
@@ -907,6 +909,7 @@ def _media(media_id: str, data: dict[str, Any]) -> MediaItem:
         deadline=None if data.get("deadline") is None else _datetime(data["deadline"]),
         topics=tuple(data.get("topics", [])),
         external_id=cast(str | None, data.get("external_id")),
+        display_headline=cast(str | None, data.get("display_headline")),
     )
 
 

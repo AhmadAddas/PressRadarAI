@@ -31,6 +31,7 @@ class SQLiteMediaRepository:
                     author TEXT,
                     journalist TEXT,
                     headline TEXT NOT NULL,
+                    display_headline TEXT,
                     body TEXT NOT NULL,
                     url TEXT,
                     published_at TEXT NOT NULL,
@@ -46,6 +47,7 @@ class SQLiteMediaRepository:
                 """
             )
             self._add_deleted_column(connection)
+            self._add_display_headline_column(connection)
 
     @staticmethod
     def _migrate_workspace_media(connection: sqlite3.Connection) -> None:
@@ -93,7 +95,8 @@ class SQLiteMediaRepository:
                 restore = connection.execute(
                     """UPDATE media_items SET deleted_at = NULL, source = ?, source_type = ?,
                         author = ?, journalist = ?, headline = ?, body = ?, url = ?,
-                        published_at = ?, deadline = ?, topics = ?, external_id = ?, ingested_at = ?
+                        display_headline = ?, published_at = ?, deadline = ?, topics = ?,
+                        external_id = ?, ingested_at = ?
                     WHERE workspace_id = ? AND dedupe_key = ? AND deleted_at IS NOT NULL""",
                     (
                         item.source,
@@ -103,6 +106,7 @@ class SQLiteMediaRepository:
                         item.headline,
                         item.body,
                         item.url,
+                        item.display_headline,
                         item.published_at.isoformat(),
                         None if item.deadline is None else item.deadline.isoformat(),
                         json.dumps(item.topics),
@@ -119,8 +123,9 @@ class SQLiteMediaRepository:
                     """INSERT OR IGNORE INTO media_items (
                         id, workspace_id, source, source_type, author, journalist,
                         headline, body, url,
-                        published_at, deadline, topics, external_id, dedupe_key, ingested_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        display_headline, published_at, deadline, topics, external_id,
+                        dedupe_key, ingested_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     (
                         str(uuid4()),
                         workspace_id,
@@ -131,6 +136,7 @@ class SQLiteMediaRepository:
                         item.headline,
                         item.body,
                         item.url,
+                        item.display_headline,
                         item.published_at.isoformat(),
                         None if item.deadline is None else item.deadline.isoformat(),
                         json.dumps(item.topics),
@@ -201,6 +207,12 @@ class SQLiteMediaRepository:
             connection.execute("ALTER TABLE media_items ADD COLUMN deleted_at TEXT")
 
     @staticmethod
+    def _add_display_headline_column(connection: sqlite3.Connection) -> None:
+        columns = {str(row["name"]) for row in connection.execute("PRAGMA table_info(media_items)")}
+        if "display_headline" not in columns:
+            connection.execute("ALTER TABLE media_items ADD COLUMN display_headline TEXT")
+
+    @staticmethod
     def _media_item(row: sqlite3.Row) -> MediaItem:
         return MediaItem(
             id=str(row["id"]),
@@ -218,6 +230,9 @@ class SQLiteMediaRepository:
             topics=tuple(json.loads(row["topics"])),
             external_id=None if row["external_id"] is None else str(row["external_id"]),
             ingested_at=datetime.fromisoformat(str(row["ingested_at"])),
+            display_headline=(
+                None if row["display_headline"] is None else str(row["display_headline"])
+            ),
         )
 
     def _connect(self) -> sqlite3.Connection:

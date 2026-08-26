@@ -121,6 +121,18 @@ class OllamaRuntime:
             timeout_seconds=self._timeout_seconds,
         ).generate(client=client, media_item=media_item)
 
+    def summarize_headline(self, headline: str, *, max_words: int) -> str | None:
+        with self._lock:
+            if not self._enabled:
+                return None
+            model = self._analysis_model
+            self._model = model
+        return OllamaPitchGenerator(
+            base_url=self._base_url,
+            model=model,
+            timeout_seconds=self._timeout_seconds,
+        ).summarize_headline(headline, max_words=max_words)
+
     def translate(
         self,
         *,

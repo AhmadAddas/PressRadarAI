@@ -182,3 +182,78 @@ def test_normalization_rejects_untrusted_provider_urls(tmp_path: Path) -> None:
 
     with pytest.raises(InvalidMediaItemError):
         MediaIngestionService(UnsafeProvider(), repository).ingest(workspace_id="workspace")
+
+
+def test_ingestion_preserves_long_headline_and_stores_nine_word_ai_summary(
+    tmp_path: Path,
+) -> None:
+    original = (
+        "Emirates Engineering launches new materials studio to inspire future aviation "
+        "leaders across the United Arab Emirates"
+    )
+
+    class LongHeadlineProvider:
+        def fetch_items(self) -> tuple[IncomingMediaItem, ...]:
+            return (
+                IncomingMediaItem(
+                    source="Emirates Media Centre",
+                    source_type=MediaSourceType.NEWS,
+                    headline=original,
+                    body="A new aviation materials studio has opened.",
+                    published_at=datetime.now(UTC),
+                ),
+            )
+
+    class RecordingSummarizer:
+        def __init__(self) -> None:
+            self.requests: list[tuple[str, int]] = []
+
+        def summarize_headline(self, headline: str, *, max_words: int) -> str:
+            self.requests.append((headline, max_words))
+            return "Emirates Engineering opens materials studio for future aviation leaders"
+
+    repository = SQLiteMediaRepository(str(tmp_path / "headlines.db"))
+    repository.initialize()
+    summarizer = RecordingSummarizer()
+
+    MediaIngestionService(LongHeadlineProvider(), repository, summarizer).ingest(
+        workspace_id="workspace"
+    )
+    stored = repository.list(workspace_id="workspace", limit=10)[0]
+
+    assert summarizer.requests == [(original, 9)]
+    assert stored.headline == original
+    assert stored.display_headline == (
+        "Emirates Engineering opens materials studio for future aviation leaders"
+    )
+    assert len(stored.display_headline.split()) <= 9
+
+
+def test_ingestion_does_not_summarize_thirteen_word_headline(tmp_path: Path) -> None:
+    headline = "one two three four five six seven eight nine ten eleven twelve thirteen"
+
+    class BoundaryProvider:
+        def fetch_items(self) -> tuple[IncomingMediaItem, ...]:
+            return (
+                IncomingMediaItem(
+                    source="Boundary",
+                    source_type=MediaSourceType.NEWS,
+                    headline=headline,
+                    body="Boundary body",
+                    published_at=datetime.now(UTC),
+                ),
+            )
+
+    class UnexpectedSummarizer:
+        def summarize_headline(self, headline: str, *, max_words: int) -> str:
+            raise AssertionError("Thirteen-word headlines must not be summarized")
+
+    repository = SQLiteMediaRepository(str(tmp_path / "headline-boundary.db"))
+    repository.initialize()
+    MediaIngestionService(BoundaryProvider(), repository, UnexpectedSummarizer()).ingest(
+        workspace_id="workspace"
+    )
+
+    stored = repository.list(workspace_id="workspace", limit=10)[0]
+    assert stored.headline == headline
+    assert stored.display_headline is None
