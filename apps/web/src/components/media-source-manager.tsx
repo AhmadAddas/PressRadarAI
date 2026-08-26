@@ -96,15 +96,17 @@ export function MediaSourceManager({
     const loadingToast = toast.loading(
       "Ingesting media and analyzing opportunities…",
     );
-    await request(
+    const succeeded = await request(
       `${publicApiUrl}/media/ingest`,
       { method: "POST" },
       (result) => {
-        toast.success(ingestionSummary(result as IngestionCounts));
+        toast.success(ingestionSummary(result as IngestionCounts), {
+          id: loadingToast,
+        });
       },
       false,
     );
-    toast.dismiss(loadingToast);
+    if (!succeeded) toast.dismiss(loadingToast);
     setIngesting(false);
   }
 

@@ -176,7 +176,7 @@ export function ClientForm({ client }: Readonly<{ client?: Client }>) {
         value={client?.monitoring_rules}
       />
       {error ? <p role="alert">{error}</p> : null}
-      <div className="actions">
+      <div className="actions client-form-actions">
         <button type="submit" disabled={submitting} aria-busy={submitting}>
           {client ? "Save changes" : "Create client"}
         </button>

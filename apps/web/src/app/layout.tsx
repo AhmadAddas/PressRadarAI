@@ -25,6 +25,8 @@ export default function RootLayout({
         <Toaster
           richColors
           closeButton
+          expand
+          gap={12}
           position="top-right"
           toastOptions={{
             closeButtonAriaLabel: "Dismiss notification",

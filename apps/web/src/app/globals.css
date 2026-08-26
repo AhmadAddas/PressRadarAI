@@ -154,9 +154,14 @@ textarea:focus-visible {
 
 button,
 .button,
-summary,
-input[type="checkbox"] {
+summary {
   min-height: 2.75rem;
+}
+
+input[type="checkbox"] {
+  width: 1.2rem;
+  height: 1.2rem;
+  min-height: 1.2rem;
 }
 
 .button-secondary {
@@ -181,6 +186,19 @@ button:disabled {
 button[aria-busy="true"] {
   cursor: progress;
   opacity: 1;
+}
+
+[data-sonner-toast] [data-close-button] {
+  width: 1.5rem;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  min-height: 1.5rem;
+  padding: 0;
+  border-radius: 50%;
+}
+
+[data-sonner-toaster][data-y-position="top"] {
+  top: max(1rem, env(safe-area-inset-top));
 }
 
 nav {
@@ -676,7 +694,14 @@ nav {
 .item-checkbox input {
   width: 1.2rem;
   height: 1.2rem;
+  min-height: 1.2rem;
   accent-color: #0891b2;
+}
+
+.selection-toolbar label,
+.item-checkbox,
+.checkbox-label {
+  min-height: 2.75rem;
 }
 
 .item-content {
@@ -715,7 +740,7 @@ nav {
 }
 
 .client-list .item-checkbox {
-  margin-top: 1rem;
+  align-self: center;
 }
 
 .client-list .item-delete {
@@ -779,6 +804,16 @@ nav {
 
 .confirmation-modal p {
   margin: 0.5rem 0 1rem;
+}
+
+.confirmation-modal form {
+  margin: 1rem 0 0;
+}
+
+.confirmation-modal .deadline-form {
+  width: 100%;
+  padding: 0;
+  background: transparent;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1063,6 +1098,12 @@ nav {
   border-radius: 0.75rem;
 }
 
+.client-list li {
+  padding: 1rem;
+  border: 1px solid #dce1e7;
+  border-radius: 0.75rem;
+}
+
 .media-list h2 {
   margin-bottom: 0.5rem;
   font-size: 1rem;
@@ -1193,6 +1234,21 @@ nav {
   gap: 0.4rem;
 }
 
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.checkbox-label input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 1.2rem;
+  height: 1.2rem;
+  min-height: 1.2rem;
+  margin: 0;
+  accent-color: #0891b2;
+}
+
 .source-ingest {
   width: 100%;
   margin-top: 0.5rem;
@@ -1313,9 +1369,6 @@ nav {
   grid-template-columns: 2fr 2fr 1fr auto;
   align-items: center;
   gap: 1rem;
-  padding: 1rem;
-  border: 1px solid #dce1e7;
-  border-radius: 0.5rem;
 }
 
 .client-edit-link {
@@ -1714,9 +1767,20 @@ nav {
   nav,
   nav > *,
   form > button,
-  .client-form .actions,
-  .client-form .actions > * {
+  .client-form .actions:not(.client-form-actions),
+  .client-form .actions:not(.client-form-actions) > * {
     width: 100%;
+  }
+
+  .client-form-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .client-form-actions > * {
+    width: 100%;
+    text-align: center;
   }
 
   nav {

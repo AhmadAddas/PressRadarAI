@@ -29,6 +29,9 @@ describe("DeadlineEditor", () => {
 
     expect(screen.getByText("No deadline supplied")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Set deadline" }));
+    expect(
+      screen.getByRole("alertdialog", { name: "Set media deadline" }),
+    ).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Deadline in your local time"), {
       target: { value: "2026-08-27T14:30" },
     });
@@ -58,5 +61,15 @@ describe("DeadlineEditor", () => {
       expect(screen.getByText("No deadline supplied")).toBeInTheDocument(),
     );
     expect(toast.success).toHaveBeenCalledWith("Deadline removed.");
+  });
+
+  it("cancels deadline editing without changing the card", () => {
+    render(<DeadlineEditor mediaItemId="media-1" deadline={null} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Set deadline" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(screen.getByText("No deadline supplied")).toBeInTheDocument();
   });
 });

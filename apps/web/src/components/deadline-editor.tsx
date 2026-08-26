@@ -4,6 +4,7 @@ import { FormEvent, startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { AccessibleDialog } from "@/components/accessible-dialog";
 import { publicApiUrl } from "@/lib/api";
 
 export function DeadlineEditor({
@@ -64,40 +65,46 @@ export function DeadlineEditor({
 
   if (editing) {
     return (
-      <form className="deadline-form" onSubmit={save}>
-        <label>
-          Deadline in your local time
-          <input
-            name="deadline"
-            type="datetime-local"
-            required
-            defaultValue={deadline ? localDateTime(deadline) : ""}
-          />
-        </label>
-        <div className="deadline-actions">
-          <button type="submit" disabled={saving} aria-busy={saving}>
-            Save deadline
-          </button>
-          <button
-            className="button-secondary"
-            type="button"
-            disabled={saving}
-            onClick={() => setEditing(false)}
-          >
-            Cancel
-          </button>
-          {deadline ? (
+      <AccessibleDialog
+        title={deadline ? "Adjust media deadline" : "Set media deadline"}
+        description="Choose the journalist deadline in your local time."
+        onClose={() => setEditing(false)}
+      >
+        <form className="deadline-form" onSubmit={save}>
+          <label>
+            Deadline in your local time
+            <input
+              name="deadline"
+              type="datetime-local"
+              required
+              defaultValue={deadline ? localDateTime(deadline) : ""}
+            />
+          </label>
+          <div className="deadline-actions">
+            <button type="submit" disabled={saving} aria-busy={saving}>
+              Save deadline
+            </button>
             <button
               className="button-secondary"
               type="button"
               disabled={saving}
-              onClick={() => update(null)}
+              onClick={() => setEditing(false)}
             >
-              Remove deadline
+              Cancel
             </button>
-          ) : null}
-        </div>
-      </form>
+            {deadline ? (
+              <button
+                className="button-secondary"
+                type="button"
+                disabled={saving}
+                onClick={() => update(null)}
+              >
+                Remove deadline
+              </button>
+            ) : null}
+          </div>
+        </form>
+      </AccessibleDialog>
     );
   }
 

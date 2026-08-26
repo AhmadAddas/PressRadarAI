@@ -150,7 +150,9 @@ describe("MediaSourceManager", () => {
 
     fireEvent.click(ingest);
     await waitFor(() =>
-      expect(toast.success).toHaveBeenCalledWith("Added 2 media items."),
+      expect(toast.success).toHaveBeenCalledWith("Added 2 media items.", {
+        id: 1,
+      }),
     );
     fireEvent.click(screen.getAllByRole("button", { name: "Delete" })[0]);
     const confirmation = screen.getByRole("alertdialog");
