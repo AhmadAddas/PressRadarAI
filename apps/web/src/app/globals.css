@@ -1763,10 +1763,6 @@ nav {
     margin-top: 1rem;
   }
 
-  .client-list .selectable-item::before {
-    top: 3rem;
-  }
-
   .client-list .client-card-content {
     padding-bottom: 4.5rem;
   }
