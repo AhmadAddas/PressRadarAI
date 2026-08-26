@@ -760,7 +760,7 @@ nav {
   top: 0;
   right: 0;
   bottom: 0;
-  left: 1.7rem;
+  left: 2rem;
   border: 1px solid #dce1e7;
   border-radius: 0.5rem;
   content: "";
@@ -1761,6 +1761,10 @@ nav {
   .client-list .item-checkbox {
     align-self: start;
     margin-top: 1rem;
+  }
+
+  .client-list .selectable-item::before {
+    top: 3rem;
   }
 
   .client-list .client-card-content {
