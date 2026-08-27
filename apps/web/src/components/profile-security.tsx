@@ -255,7 +255,7 @@ export function ProfileSecurity({
               <strong>Manual setup key</strong>
               <code>{setup.secret}</code>
             </div>
-            <form onSubmit={activate}>
+            <form className="totp-activation-form" onSubmit={activate}>
               <OTPInput label="Authenticator code" name="code" />
               <button
                 type="submit"

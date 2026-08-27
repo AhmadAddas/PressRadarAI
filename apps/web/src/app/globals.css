@@ -1529,9 +1529,28 @@ nav {
 
 .totp-profile-setup {
   display: grid;
-  justify-items: start;
+  width: 100%;
+  max-width: 30rem;
+  justify-items: center;
   gap: 1rem;
-  margin-top: 1rem;
+  margin: 1.5rem auto 0;
+  text-align: center;
+}
+
+.totp-profile-setup .manual-key {
+  width: min(100%, 24rem);
+}
+
+.totp-activation-form {
+  width: min(100%, 27rem);
+  justify-items: stretch;
+  margin: 0.5rem 0 0;
+  text-align: center;
+}
+
+.totp-activation-form > button {
+  width: min(100%, 16rem);
+  justify-self: center;
 }
 
 .profile-details {
