@@ -125,8 +125,10 @@ label {
 }
 
 .otp-fieldset legend {
+  width: 100%;
   margin-bottom: 0.4rem;
   font-weight: 600;
+  text-align: center;
 }
 
 .otp-inputs {
