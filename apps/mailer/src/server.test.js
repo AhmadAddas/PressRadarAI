@@ -10,6 +10,9 @@ const { createMailerServer, mailerConfigFrom } = await import("./server.js");
 let server;
 const config = {
   internalToken: "test-token",
+  smtpHost: "smtp.example.com",
+  smtpPort: 587,
+  smtpSecure: false,
   smtpUser: "sender@example.com",
   smtpPassword: "app-password",
   smtpFrom: "sender@example.com",

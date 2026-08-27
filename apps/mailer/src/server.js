@@ -7,6 +7,9 @@ export function mailerConfigFrom(environment = process.env) {
   const smtpUser = environment.SMTP_USER ?? "";
   return {
     internalToken: environment.MAILER_INTERNAL_TOKEN ?? "",
+    smtpHost: environment.SMTP_HOST?.trim() || "",
+    smtpPort: Number.parseInt(environment.SMTP_PORT ?? "587", 10),
+    smtpSecure: (environment.SMTP_SECURE ?? "false") === "true",
     smtpUser,
     smtpPassword: environment.SMTP_PASSWORD ?? "",
     smtpFrom: environment.SMTP_FROM?.trim() || smtpUser,
@@ -15,9 +18,9 @@ export function mailerConfigFrom(environment = process.env) {
 
 const mailerConfig = mailerConfigFrom();
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST ?? "smtp.office365.com",
-  port: Number.parseInt(process.env.SMTP_PORT ?? "587", 10),
-  secure: (process.env.SMTP_SECURE ?? "false") === "true",
+  host: mailerConfig.smtpHost,
+  port: mailerConfig.smtpPort,
+  secure: mailerConfig.smtpSecure,
   requireTLS: true,
   auth: { user: mailerConfig.smtpUser, pass: mailerConfig.smtpPassword },
 });
@@ -46,7 +49,9 @@ export function createMailerServer(
     if (request.method === "GET" && request.url === "/health") {
       respond(response, 200, {
         status: "ok",
-        configured: Boolean(config.smtpUser && config.smtpPassword),
+        configured: Boolean(
+          config.smtpHost && config.smtpUser && config.smtpPassword && config.smtpFrom,
+        ),
       });
       return;
     }
@@ -61,7 +66,12 @@ export function createMailerServer(
       respond(response, 401, { detail: "Unauthorized" });
       return;
     }
-    if (!config.smtpUser || !config.smtpPassword || !config.smtpFrom) {
+    if (
+      !config.smtpHost ||
+      !config.smtpUser ||
+      !config.smtpPassword ||
+      !config.smtpFrom
+    ) {
       respond(response, 503, { detail: "SMTP is not configured" });
       return;
     }
