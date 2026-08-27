@@ -115,10 +115,13 @@ label {
 }
 
 .otp-fieldset {
+  display: grid;
+  justify-items: center;
   min-width: 0;
   margin: 0;
   padding: 0;
   border: 0;
+  text-align: center;
 }
 
 .otp-fieldset legend {
@@ -130,6 +133,7 @@ label {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 3.25rem));
   gap: clamp(0.35rem, 1.5vw, 0.65rem);
+  justify-content: center;
 }
 
 .otp-inputs input {
@@ -144,11 +148,6 @@ label {
 .signup-email-verification {
   justify-items: center;
   text-align: center;
-}
-
-.profile-email-verification .otp-inputs,
-.signup-email-verification .otp-inputs {
-  justify-content: center;
 }
 
 .signup-email-verification button {

@@ -2,7 +2,7 @@
 
 import QRCode from "qrcode";
 import Image from "next/image";
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { publicApiUrl } from "@/lib/api";
@@ -19,6 +19,14 @@ export function ProfileSecurity({
     null,
   );
   const [passwordError, setPasswordError] = useState("");
+  const [securityAction, setSecurityAction] = useState<
+    "setup_2fa" | "disable_2fa" | null
+  >(null);
+  const [verifyingEmail, setVerifyingEmail] = useState(false);
+  const [activating, setActivating] = useState(false);
+  const securityRequestInFlight = useRef(false);
+  const emailVerificationInFlight = useRef(false);
+  const activationInFlight = useRef(false);
 
   async function changePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -50,66 +58,99 @@ export function ProfileSecurity({
   }
 
   async function requestCode(nextPurpose: "setup_2fa" | "disable_2fa") {
-    const response = await fetch(`${publicApiUrl}/auth/2fa/email-code`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ purpose: nextPurpose }),
-    });
-    if (!response.ok) return toast.error("Unable to send the email code.");
-    setChallenge(
-      ((await response.json()) as { challenge_id: string }).challenge_id,
-    );
-    setPurpose(nextPurpose);
-    toast.info("A verification code was sent to your email.");
+    if (securityRequestInFlight.current) return;
+    securityRequestInFlight.current = true;
+    setSecurityAction(nextPurpose);
+    setChallenge("");
+    setPurpose(null);
+    try {
+      const response = await fetch(`${publicApiUrl}/auth/2fa/email-code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ purpose: nextPurpose }),
+      });
+      if (!response.ok) return toast.error("Unable to send the email code.");
+      setChallenge(
+        ((await response.json()) as { challenge_id: string }).challenge_id,
+      );
+      setPurpose(nextPurpose);
+      toast.info("A verification code was sent to your email.");
+    } catch {
+      toast.error("Unable to send the email code.");
+    } finally {
+      securityRequestInFlight.current = false;
+      setSecurityAction(null);
+    }
   }
 
   async function confirmEmail(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!purpose) return;
+    if (!purpose || emailVerificationInFlight.current) return;
+    emailVerificationInFlight.current = true;
+    setVerifyingEmail(true);
     const code = String(new FormData(event.currentTarget).get("code") ?? "");
     const endpoint = purpose === "disable_2fa" ? "disable" : "setup";
-    const response = await fetch(`${publicApiUrl}/auth/2fa/${endpoint}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ challenge_id: challenge, code }),
-    });
-    if (!response.ok)
-      return toast.error(
-        (await response.json()).detail ?? "Invalid email code.",
-      );
-    if (purpose === "disable_2fa") {
-      toast.success("Two-factor authentication deactivated.");
-      window.location.reload();
-      return;
+    try {
+      const response = await fetch(`${publicApiUrl}/auth/2fa/${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ challenge_id: challenge, code }),
+      });
+      if (!response.ok)
+        return toast.error(
+          (await response.json()).detail ?? "Invalid email code.",
+        );
+      if (purpose === "disable_2fa") {
+        toast.success("Two-factor authentication deactivated.");
+        window.location.reload();
+        return;
+      }
+      const result = (await response.json()) as {
+        secret: string;
+        provisioning_uri: string;
+      };
+      setChallenge("");
+      setPurpose(null);
+      setSetup({
+        secret: result.secret,
+        qr: await QRCode.toDataURL(result.provisioning_uri, {
+          width: 220,
+          margin: 1,
+        }),
+      });
+    } catch {
+      toast.error("Unable to verify the email code.");
+    } finally {
+      emailVerificationInFlight.current = false;
+      setVerifyingEmail(false);
     }
-    const result = (await response.json()) as {
-      secret: string;
-      provisioning_uri: string;
-    };
-    setSetup({
-      secret: result.secret,
-      qr: await QRCode.toDataURL(result.provisioning_uri, {
-        width: 220,
-        margin: 1,
-      }),
-    });
   }
 
   async function activate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (activationInFlight.current) return;
+    activationInFlight.current = true;
+    setActivating(true);
     const code = String(new FormData(event.currentTarget).get("code") ?? "");
-    const response = await fetch(`${publicApiUrl}/auth/2fa/enable`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ code }),
-    });
-    if (!response.ok)
-      return toast.error("The authenticator code is incorrect.");
-    toast.success("Two-factor authentication is active.");
-    window.location.reload();
+    try {
+      const response = await fetch(`${publicApiUrl}/auth/2fa/enable`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ code }),
+      });
+      if (!response.ok)
+        return toast.error("The authenticator code is incorrect.");
+      toast.success("Two-factor authentication is active.");
+      window.location.reload();
+    } catch {
+      toast.error("Unable to activate two-factor authentication.");
+    } finally {
+      activationInFlight.current = false;
+      setActivating(false);
+    }
   }
 
   return (
@@ -157,17 +198,27 @@ export function ProfileSecurity({
           <button
             className="button-secondary"
             type="button"
+            disabled={securityAction !== null}
+            aria-busy={securityAction === "setup_2fa"}
             onClick={() => requestCode("setup_2fa")}
           >
-            {totpEnabled ? "Change 2FA" : "Set up 2FA"}
+            {securityAction === "setup_2fa"
+              ? "Sending email code…"
+              : totpEnabled
+                ? "Change 2FA"
+                : "Set up 2FA"}
           </button>
           {totpEnabled ? (
             <button
               className="button-danger"
               type="button"
+              disabled={securityAction !== null}
+              aria-busy={securityAction === "disable_2fa"}
               onClick={() => requestCode("disable_2fa")}
             >
-              Deactivate 2FA
+              {securityAction === "disable_2fa"
+                ? "Sending email code…"
+                : "Deactivate 2FA"}
             </button>
           ) : null}
         </div>
@@ -177,7 +228,13 @@ export function ProfileSecurity({
         {purpose && challenge ? (
           <form className="profile-email-verification" onSubmit={confirmEmail}>
             <OTPInput label="Email verification code" name="code" />
-            <button type="submit">Verify email</button>
+            <button
+              type="submit"
+              disabled={verifyingEmail}
+              aria-busy={verifyingEmail}
+            >
+              {verifyingEmail ? "Verifying…" : "Verify email"}
+            </button>
           </form>
         ) : null}
         {setup ? (
@@ -196,7 +253,13 @@ export function ProfileSecurity({
             </div>
             <form onSubmit={activate}>
               <OTPInput label="Authenticator code" name="code" />
-              <button type="submit">Activate 2FA</button>
+              <button
+                type="submit"
+                disabled={activating}
+                aria-busy={activating}
+              >
+                {activating ? "Activating…" : "Activate 2FA"}
+              </button>
             </form>
           </div>
         ) : null}

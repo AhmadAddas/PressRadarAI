@@ -82,4 +82,35 @@ describe("ProfileSecurity", () => {
       "profile-email-verification",
     );
   });
+
+  it("shows progress and prevents duplicate 2FA email requests", async () => {
+    let resolveRequest: ((response: Response) => void) | undefined;
+    const request = vi.spyOn(globalThis, "fetch").mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveRequest = resolve;
+        }),
+    );
+    render(<ProfileSecurity totpEnabled />);
+
+    const changeButton = screen.getByRole("button", { name: "Change 2FA" });
+    fireEvent.click(changeButton);
+    fireEvent.click(changeButton);
+
+    expect(request).toHaveBeenCalledOnce();
+    expect(
+      screen.getByRole("button", { name: "Sending email code…" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Deactivate 2FA" }),
+    ).toBeDisabled();
+
+    resolveRequest?.(
+      new Response(JSON.stringify({ challenge_id: "challenge-1" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    await screen.findByLabelText("Email verification code, digit 1");
+  });
 });
