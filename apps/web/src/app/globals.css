@@ -1771,6 +1771,10 @@ nav {
     transform: translateY(-0.4rem);
   }
 
+  .media-list .media-meta {
+    margin-top: 0.3rem;
+  }
+
   .client-list .item-checkbox {
     align-self: start;
     margin-top: 0.3rem;
