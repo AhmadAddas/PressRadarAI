@@ -156,6 +156,13 @@ label {
   width: 100%;
 }
 
+.email-reference {
+  display: block;
+  margin-top: 0.5rem;
+  color: #17202a;
+  font-size: 0.9rem;
+}
+
 input {
   width: 100%;
   min-width: 0;
