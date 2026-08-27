@@ -785,7 +785,7 @@ nav {
 }
 
 .opportunity-list .item-checkbox {
-  margin-top: 1.85rem;
+  margin-top: 1.86rem;
 }
 
 .visually-hidden {
@@ -1202,6 +1202,7 @@ nav {
 
 .media-list .media-meta {
   align-items: center;
+  margin-top: 0.2rem;
 }
 
 .media-list .deadline-editor {
