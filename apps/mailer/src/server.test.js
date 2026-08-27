@@ -6,7 +6,7 @@ process.env.MAILER_INTERNAL_TOKEN = "test-token";
 process.env.SMTP_USER = "sender@example.com";
 process.env.SMTP_PASSWORD = "app-password";
 
-const { createMailerServer } = await import("./server.js");
+const { createMailerServer, mailerConfigFrom } = await import("./server.js");
 let server;
 const config = {
   internalToken: "test-token",
@@ -16,6 +16,17 @@ const config = {
 };
 
 afterEach(() => server?.close());
+
+test("uses the SMTP user when Compose supplies a blank sender", () => {
+  const resolved = mailerConfigFrom({
+    MAILER_INTERNAL_TOKEN: "test-token",
+    SMTP_USER: "sender@example.com",
+    SMTP_PASSWORD: "app-password",
+    SMTP_FROM: "",
+  });
+
+  assert.equal(resolved.smtpFrom, "sender@example.com");
+});
 
 test("sends an authorized email without exposing SMTP credentials", async () => {
   let delivered;

@@ -3,16 +3,23 @@ import { createServer } from "node:http";
 import nodemailer from "nodemailer";
 
 const port = Number.parseInt(process.env.PORT ?? "3001", 10);
-const internalToken = process.env.MAILER_INTERNAL_TOKEN ?? "";
-const smtpUser = process.env.SMTP_USER ?? "";
-const smtpPassword = process.env.SMTP_PASSWORD ?? "";
-const smtpFrom = process.env.SMTP_FROM ?? smtpUser;
+export function mailerConfigFrom(environment = process.env) {
+  const smtpUser = environment.SMTP_USER ?? "";
+  return {
+    internalToken: environment.MAILER_INTERNAL_TOKEN ?? "",
+    smtpUser,
+    smtpPassword: environment.SMTP_PASSWORD ?? "",
+    smtpFrom: environment.SMTP_FROM?.trim() || smtpUser,
+  };
+}
+
+const mailerConfig = mailerConfigFrom();
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST ?? "smtp.office365.com",
   port: Number.parseInt(process.env.SMTP_PORT ?? "587", 10),
   secure: (process.env.SMTP_SECURE ?? "false") === "true",
   requireTLS: true,
-  auth: { user: smtpUser, pass: smtpPassword },
+  auth: { user: mailerConfig.smtpUser, pass: mailerConfig.smtpPassword },
 });
 
 function respond(response, status, body) {
@@ -33,7 +40,7 @@ async function bodyOf(request) {
 
 export function createMailerServer(
   sendMail = (message) => transporter.sendMail(message),
-  config = { internalToken, smtpUser, smtpPassword, smtpFrom },
+  config = mailerConfig,
 ) {
   return createServer(async (request, response) => {
     if (request.method === "GET" && request.url === "/health") {
