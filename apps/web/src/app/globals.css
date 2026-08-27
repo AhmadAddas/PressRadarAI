@@ -1759,6 +1759,10 @@ nav {
     justify-self: end;
   }
 
+  .opportunity-list .item-delete {
+    margin-top: 0.5rem;
+  }
+
   .client-list .item-checkbox {
     align-self: start;
     margin-top: 0.3rem;
