@@ -48,7 +48,11 @@ export function AuthForm({ mode }: Readonly<{ mode: AuthMode }>) {
       });
       if (!response.ok) {
         const payload = (await response.json()) as { detail?: string };
-        if (response.status === 428) setTotpRequired(true);
+        if (!isSignup && response.status === 428 && !totpRequired) {
+          setTotpRequired(true);
+          setError("");
+          return;
+        }
         setError(
           typeof payload.detail === "string"
             ? payload.detail

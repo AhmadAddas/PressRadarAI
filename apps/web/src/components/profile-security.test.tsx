@@ -60,4 +60,26 @@ describe("ProfileSecurity", () => {
       }),
     );
   });
+
+  it("explains and centers email verification before changing 2FA", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ challenge_id: "challenge-1" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    render(<ProfileSecurity totpEnabled />);
+
+    expect(
+      screen.getByText(/requires a code sent to your verified email address/i),
+    ).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Change 2FA" }));
+
+    const firstDigit = await screen.findByLabelText(
+      "Email verification code, digit 1",
+    );
+    expect(firstDigit.closest("form")).toHaveClass(
+      "profile-email-verification",
+    );
+  });
 });

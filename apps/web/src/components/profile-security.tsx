@@ -149,6 +149,10 @@ export function ProfileSecurity({
       <section>
         <h2>Two-factor authentication</h2>
         <p>Status: {totpEnabled ? "Active" : "Inactive"}</p>
+        <p>
+          Changing or deactivating two-factor authentication requires a code
+          sent to your verified email address.
+        </p>
         <div className="actions">
           <button
             className="button-secondary"
@@ -171,7 +175,7 @@ export function ProfileSecurity({
           SMS is unavailable until Twilio API keys are configured.
         </p>
         {purpose && challenge ? (
-          <form onSubmit={confirmEmail}>
+          <form className="profile-email-verification" onSubmit={confirmEmail}>
             <OTPInput label="Email verification code" name="code" />
             <button type="submit">Verify email</button>
           </form>

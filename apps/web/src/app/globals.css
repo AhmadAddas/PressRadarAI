@@ -140,6 +140,15 @@ label {
   font-weight: 700;
 }
 
+.profile-email-verification {
+  justify-items: center;
+  text-align: center;
+}
+
+.profile-email-verification .otp-inputs {
+  justify-content: center;
+}
+
 input {
   width: 100%;
   min-width: 0;

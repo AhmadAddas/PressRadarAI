@@ -74,14 +74,15 @@ describe("AuthForm", () => {
   });
 
   it("does not submit or warn when password autofill submits the form", async () => {
-    const request = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({ detail: "A valid authenticator code is required" }),
-        {
-          status: 428,
-          headers: { "Content-Type": "application/json" },
-        },
-      ),
+    const request = vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () =>
+        new Response(
+          JSON.stringify({ detail: "A valid authenticator code is required" }),
+          {
+            status: 428,
+            headers: { "Content-Type": "application/json" },
+          },
+        ),
     );
     const { container } = render(<AuthForm mode="signin" />);
 
@@ -100,11 +101,16 @@ describe("AuthForm", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    await screen.findByLabelText("Authenticator code, digit 1");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Password")).toBeVisible();
+    fireEvent.paste(screen.getByLabelText("Authenticator code, digit 1"), {
+      clipboardData: { getData: () => "123456" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "A valid authenticator code is required",
     );
-    expect(screen.getByLabelText("Password")).toBeVisible();
-    expect(screen.getByLabelText("Authenticator code, digit 1")).toBeVisible();
   });
 
   it("rejects a first name longer than 25 characters before submission", () => {
