@@ -192,6 +192,7 @@ class AuthService:
 
     def request_security_otp(self, identity: Identity, purpose: str) -> str:
         challenge_id = secrets.token_urlsafe(24)
+        challenge_reference = challenge_id[-6:].upper()
         code = f"{secrets.randbelow(1_000_000):06d}"
         issued_at = datetime.now(UTC)
         email_context = {
@@ -210,10 +211,11 @@ class AuthService:
         self._email_sender.send(
             EmailMessage(
                 recipient=identity.email,
-                subject=f"PressRadar {email_context[0]} code",
+                subject=f"PressRadar {email_context[0]} code [{challenge_reference}]",
                 text=(
                     f"Use code {code} to {email_context[1]}. "
-                    "This code expires in 10 minutes. Use only the newest code for this action."
+                    f"Reference: {challenge_reference}. This code expires in 10 minutes. "
+                    "Use only the newest code for this action."
                 ),
             )
         )
