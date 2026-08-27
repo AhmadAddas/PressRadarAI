@@ -17,7 +17,7 @@ describe("AuthForm", () => {
     refresh.mockReset();
   });
 
-  it("shows and verifies a received mock email before entering the application", async () => {
+  it("submits signup credentials and enters the protected application", async () => {
     const request = vi
       .spyOn(globalThis, "fetch")
       .mockImplementation(async (url) =>
@@ -40,30 +40,6 @@ describe("AuthForm", () => {
       target: { value: "secure-passphrase" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Create account" }));
-
-    const email = await screen.findByRole("alertdialog", {
-      name: "Verification email received",
-    });
-    expect(email).toHaveTextContent("amina@example.com");
-    expect(email).toHaveTextContent("123456");
-    expect(push).not.toHaveBeenCalled();
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "Enter verification code" }),
-    );
-    fireEvent.change(screen.getByLabelText("Email verification code"), {
-      target: { value: "000000" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Verify email" }));
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Invalid mock verification code.",
-    );
-    expect(push).not.toHaveBeenCalled();
-
-    fireEvent.change(screen.getByLabelText("Email verification code"), {
-      target: { value: "123456" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Verify email" }));
 
     await waitFor(() => expect(push).toHaveBeenCalledWith("/app"));
     expect(request).toHaveBeenCalledWith(

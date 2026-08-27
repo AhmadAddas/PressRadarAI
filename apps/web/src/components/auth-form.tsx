@@ -5,11 +5,9 @@ import { useRouter } from "next/navigation";
 import { FormEvent, startTransition, useState } from "react";
 
 import { publicApiUrl } from "@/lib/api";
-import { AccessibleDialog } from "@/components/accessible-dialog";
 import { PublicAIControls } from "@/components/public-ai-controls";
 
 type AuthMode = "signin" | "signup";
-const mockVerificationCode = "123456";
 
 export function AuthForm({ mode }: Readonly<{ mode: AuthMode }>) {
   const router = useRouter();
@@ -20,11 +18,6 @@ export function AuthForm({ mode }: Readonly<{ mode: AuthMode }>) {
     user_id: string;
     challenge_id: string;
   } | null>(null);
-  const [mockSignup, setMockSignup] = useState<{
-    email: string;
-    onboardingCompleted: boolean;
-  } | null>(null);
-  const [showMockEmail, setShowMockEmail] = useState(false);
   const isSignup = mode === "signup";
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -79,14 +72,6 @@ export function AuthForm({ mode }: Readonly<{ mode: AuthMode }>) {
         });
         return;
       }
-      if (isSignup && response.status === 201) {
-        setMockSignup({
-          email: String(body.email),
-          onboardingCompleted: payload.onboarding_completed !== false,
-        });
-        setShowMockEmail(true);
-        return;
-      }
       router.push(
         payload.onboarding_completed === false ? "/onboarding" : "/app",
       );
@@ -96,19 +81,6 @@ export function AuthForm({ mode }: Readonly<{ mode: AuthMode }>) {
     } finally {
       setSubmitting(false);
     }
-  }
-
-  function verifyMockSignup(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!mockSignup) return;
-    setError("");
-    const code = String(new FormData(event.currentTarget).get("code") ?? "");
-    if (code !== mockVerificationCode) {
-      setError("Invalid mock verification code.");
-      return;
-    }
-    router.push(mockSignup.onboardingCompleted ? "/app" : "/onboarding");
-    startTransition(() => router.refresh());
   }
 
   async function verifySignup(event: FormEvent<HTMLFormElement>) {
@@ -146,29 +118,7 @@ export function AuthForm({ mode }: Readonly<{ mode: AuthMode }>) {
         <h1 id="auth-title">
           {isSignup ? "Create your workspace" : "Welcome back"}
         </h1>
-        {mockSignup ? (
-          <form onSubmit={verifyMockSignup}>
-            <p>Enter the six-digit code from the received mock email.</p>
-            <label>
-              Email verification code
-              <input
-                name="code"
-                inputMode="numeric"
-                pattern="[0-9]{6}"
-                maxLength={6}
-                required
-                autoFocus
-              />
-            </label>
-            {error ? <p role="alert">{error}</p> : null}
-            <div className="actions">
-              <button type="button" onClick={() => setShowMockEmail(true)}>
-                View received email
-              </button>
-              <button type="submit">Verify email</button>
-            </div>
-          </form>
-        ) : signupChallenge ? (
+        {signupChallenge ? (
           <form onSubmit={verifySignup}>
             <p>Enter the six-digit code sent to your email address.</p>
             <label>
@@ -241,38 +191,6 @@ export function AuthForm({ mode }: Readonly<{ mode: AuthMode }>) {
           </Link>
         </p>
       </section>
-      {mockSignup && showMockEmail ? (
-        <AccessibleDialog
-          title="Verification email received"
-          description={`This simulated email was delivered to ${mockSignup.email}.`}
-          onClose={() => setShowMockEmail(false)}
-        >
-          <article className="mock-email">
-            <dl>
-              <div>
-                <dt>From</dt>
-                <dd>PressRadar</dd>
-              </div>
-              <div>
-                <dt>To</dt>
-                <dd>{mockSignup.email}</dd>
-              </div>
-              <div>
-                <dt>Subject</dt>
-                <dd>Verify your PressRadar account</dd>
-              </div>
-            </dl>
-            <p>Your mock verification code is:</p>
-            <strong className="mock-verification-code">
-              {mockVerificationCode}
-            </strong>
-            <p>This mock message does not send a real email.</p>
-          </article>
-          <button type="button" onClick={() => setShowMockEmail(false)}>
-            Enter verification code
-          </button>
-        </AccessibleDialog>
-      ) : null}
     </main>
   );
 }

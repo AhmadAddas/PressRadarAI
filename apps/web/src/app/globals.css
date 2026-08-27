@@ -853,44 +853,6 @@ nav {
   background: transparent;
 }
 
-.mock-email {
-  margin: 1rem 0;
-  padding: 1rem;
-  border: 1px solid #dce1e7;
-  border-radius: 0.5rem;
-  background: #f6f8fc;
-}
-
-.mock-email dl {
-  display: grid;
-  gap: 0.4rem;
-  margin: 0 0 1rem;
-}
-
-.mock-email dl div {
-  display: grid;
-  grid-template-columns: 4rem minmax(0, 1fr);
-  gap: 0.5rem;
-}
-
-.mock-email dt {
-  font-weight: 700;
-}
-
-.mock-email dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-
-.mock-verification-code {
-  display: block;
-  margin-bottom: 1rem;
-  color: #244ca7;
-  font-size: 1.5rem;
-  letter-spacing: 0.2em;
-  text-align: center;
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
