@@ -186,6 +186,11 @@ class AuthService:
     def request_security_otp(self, identity: Identity, purpose: str) -> str:
         challenge_id = secrets.token_urlsafe(24)
         code = f"{secrets.randbelow(1_000_000):06d}"
+        email_context = {
+            "verify_email": ("email verification", "verify your email address"),
+            "setup_2fa": ("2FA setup", "set up or change two-factor authentication"),
+            "disable_2fa": ("2FA deactivation", "deactivate two-factor authentication"),
+        }.get(purpose, ("security verification", "complete your security request"))
         self._repository.save_email_challenge(
             challenge_id=challenge_id,
             user_id=identity.user_id,
@@ -196,8 +201,11 @@ class AuthService:
         self._email_sender.send(
             EmailMessage(
                 recipient=identity.email,
-                subject="PressRadar security verification code",
-                text=f"Your PressRadar verification code is {code}. It expires in 10 minutes.",
+                subject=f"PressRadar {email_context[0]} code",
+                text=(
+                    f"Use code {code} to {email_context[1]}. "
+                    "This code expires in 10 minutes. Use only the newest code for this action."
+                ),
             )
         )
         return challenge_id

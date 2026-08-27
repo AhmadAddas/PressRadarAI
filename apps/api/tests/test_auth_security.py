@@ -100,6 +100,8 @@ async def test_verified_signup_totp_password_and_email_authorized_deactivation(
         assert signed_in.status_code == 200
 
         requested = await client.post("/auth/2fa/email-code", json={"purpose": "disable_2fa"})
+        assert sender.messages[-1].subject == "PressRadar 2FA deactivation code"
+        assert "Use only the newest code for this action" in sender.messages[-1].text
         disabled = await client.post(
             "/auth/2fa/disable",
             json={
