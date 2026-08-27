@@ -1740,6 +1740,10 @@ nav {
 }
 
 @media (max-width: 700px) {
+  .selection-toolbar input[type="checkbox"] {
+    transform: translateY(-0.1rem);
+  }
+
   .form-grid,
   .client-card-content {
     grid-template-columns: 1fr;
@@ -1761,6 +1765,10 @@ nav {
 
   .opportunity-list .item-delete {
     margin-top: 0.5rem;
+  }
+
+  .media-list .item-checkbox {
+    transform: translateY(-0.4rem);
   }
 
   .client-list .item-checkbox {
