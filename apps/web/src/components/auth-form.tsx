@@ -125,7 +125,7 @@ export function AuthForm({ mode }: Readonly<{ mode: AuthMode }>) {
           {isSignup ? "Create your workspace" : "Welcome back"}
         </h1>
         {signupChallenge ? (
-          <form onSubmit={verifySignup}>
+          <form className="signup-email-verification" onSubmit={verifySignup}>
             <p>Enter the six-digit code sent to your email address.</p>
             <OTPInput label="Email verification code" name="code" autoFocus />
             {error ? <p role="alert">{error}</p> : null}

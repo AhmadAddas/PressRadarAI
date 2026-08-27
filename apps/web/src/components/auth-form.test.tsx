@@ -173,6 +173,7 @@ describe("AuthForm", () => {
     const firstDigit = await screen.findByLabelText(
       "Email verification code, digit 1",
     );
+    expect(firstDigit.closest("form")).toHaveClass("signup-email-verification");
     expect(firstDigit).toHaveAttribute("autocomplete", "one-time-code");
     expect(firstDigit).toHaveAttribute("inputmode", "numeric");
     fireEvent.paste(firstDigit, {
