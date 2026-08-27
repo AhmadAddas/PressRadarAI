@@ -49,4 +49,27 @@ describe("TOTPOnboarding", () => {
     await act(async () => Promise.resolve());
     expect(replace).toHaveBeenCalledWith("/app");
   });
+
+  it("distributes a pasted numeric authenticator code across six cells", async () => {
+    render(<TOTPOnboarding />);
+    await screen.findByText("MANUALKEY123");
+
+    const firstDigit = screen.getByLabelText(
+      "Six-digit authenticator code, digit 1",
+    );
+    fireEvent.paste(firstDigit, {
+      clipboardData: { getData: () => "12a3456" },
+    });
+
+    expect(firstDigit).toHaveValue("1");
+    expect(
+      screen.getByLabelText("Six-digit authenticator code, digit 6"),
+    ).toHaveValue("6");
+    fireEvent.click(screen.getByRole("button", { name: "Activate 2FA" }));
+
+    expect(globalThis.fetch).toHaveBeenLastCalledWith(
+      "http://localhost:8000/auth/2fa/enable",
+      expect.objectContaining({ body: JSON.stringify({ code: "123456" }) }),
+    );
+  });
 });

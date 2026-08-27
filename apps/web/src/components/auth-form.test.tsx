@@ -36,6 +36,9 @@ describe("AuthForm", () => {
     fireEvent.change(screen.getByLabelText("Email"), {
       target: { value: "amina@example.com" },
     });
+    expect(
+      screen.getByText(/Check spam for the OTP from pressradarai@gmail.com/),
+    ).toBeVisible();
     fireEvent.change(screen.getByLabelText("Password"), {
       target: { value: "secure-passphrase" },
     });
@@ -127,12 +130,18 @@ describe("AuthForm", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Create account" }));
 
-    const code = await screen.findByLabelText("Email verification code");
-    expect(code).toHaveAttribute("autocomplete", "one-time-code");
-    expect(code).toHaveAttribute("inputmode", "numeric");
-    fireEvent.input(code, { target: { value: "12ab34" } });
-    expect(code).toHaveValue("1234");
-    fireEvent.change(code, { target: { value: "123456" } });
+    const firstDigit = await screen.findByLabelText(
+      "Email verification code, digit 1",
+    );
+    expect(firstDigit).toHaveAttribute("autocomplete", "one-time-code");
+    expect(firstDigit).toHaveAttribute("inputmode", "numeric");
+    fireEvent.paste(firstDigit, {
+      clipboardData: { getData: () => "12ab3456" },
+    });
+    expect(firstDigit).toHaveValue("1");
+    expect(
+      screen.getByLabelText("Email verification code, digit 6"),
+    ).toHaveValue("6");
     fireEvent.click(screen.getByRole("button", { name: "Verify email" }));
 
     await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding"));
@@ -147,5 +156,38 @@ describe("AuthForm", () => {
         }),
       }),
     );
+  });
+
+  it("shows progress while sending the signup verification email", async () => {
+    let resolveRequest: ((response: Response) => void) | undefined;
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveRequest = resolve;
+        }),
+    );
+    render(<AuthForm mode="signup" />);
+
+    fireEvent.change(screen.getByLabelText("Name"), {
+      target: { value: "Amina" },
+    });
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "amina@example.com" },
+    });
+    fireEvent.change(screen.getByLabelText("Password"), {
+      target: { value: "secure-passphrase" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+
+    expect(
+      screen.getByRole("button", { name: "Sending verification email…" }),
+    ).toBeDisabled();
+    resolveRequest?.(
+      new Response(JSON.stringify({ user_id: "user-1" }), {
+        status: 201,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/app"));
   });
 });

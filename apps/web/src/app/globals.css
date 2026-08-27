@@ -96,6 +96,50 @@ label {
   font-weight: 600;
 }
 
+.auth-field-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.auth-field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.auth-field-heading small {
+  color: #53606d;
+  font-weight: 400;
+  text-align: right;
+}
+
+.otp-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.otp-fieldset legend {
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+}
+
+.otp-inputs {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 3.25rem));
+  gap: clamp(0.35rem, 1.5vw, 0.65rem);
+}
+
+.otp-inputs input {
+  aspect-ratio: 1;
+  padding: 0;
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
 input {
   width: 100%;
   min-width: 0;
@@ -1826,6 +1870,16 @@ nav {
 
   h1 {
     font-size: clamp(1.8rem, 10vw, 2.35rem);
+  }
+
+  .auth-field-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .auth-field-heading small {
+    text-align: left;
   }
 
   .language-list {

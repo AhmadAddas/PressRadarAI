@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, startTransition, useState } from "react";
 
 import { publicApiUrl } from "@/lib/api";
+import { OTPInput } from "@/components/otp-input";
 import { PublicAIControls } from "@/components/public-ai-controls";
 
 type AuthMode = "signin" | "signup";
@@ -121,24 +122,7 @@ export function AuthForm({ mode }: Readonly<{ mode: AuthMode }>) {
         {signupChallenge ? (
           <form onSubmit={verifySignup}>
             <p>Enter the six-digit code sent to your email address.</p>
-            <label>
-              Email verification code
-              <input
-                name="code"
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                pattern="[0-9]{6}"
-                maxLength={6}
-                required
-                autoFocus
-                onInput={(event) => {
-                  event.currentTarget.value = event.currentTarget.value
-                    .replace(/\D/g, "")
-                    .slice(0, 6);
-                }}
-              />
-            </label>
+            <OTPInput label="Email verification code" name="code" autoFocus />
             {error ? <p role="alert">{error}</p> : null}
             <button type="submit" disabled={submitting} aria-busy={submitting}>
               Verify email
@@ -157,21 +141,26 @@ export function AuthForm({ mode }: Readonly<{ mode: AuthMode }>) {
                 />
               </label>
             ) : null}
-            <label>
-              Email
-              <input name="email" type="email" autoComplete="email" required />
-            </label>
+            <div className="auth-field">
+              <span className="auth-field-heading">
+                <label htmlFor="auth-email">Email</label>
+                {isSignup ? (
+                  <small>
+                    Use a valid email. Check spam for the OTP from
+                    pressradarai@gmail.com.
+                  </small>
+                ) : null}
+              </span>
+              <input
+                id="auth-email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+              />
+            </div>
             {totpRequired ? (
-              <label>
-                Authenticator code
-                <input
-                  name="totp_code"
-                  inputMode="numeric"
-                  pattern="[0-9]{6}"
-                  maxLength={6}
-                  required
-                />
-              </label>
+              <OTPInput label="Authenticator code" name="totp_code" />
             ) : null}
             <label>
               Password
@@ -187,7 +176,11 @@ export function AuthForm({ mode }: Readonly<{ mode: AuthMode }>) {
             {isSignup ? <small>Use at least 12 characters.</small> : null}
             {error ? <p role="alert">{error}</p> : null}
             <button type="submit" disabled={submitting} aria-busy={submitting}>
-              {isSignup ? "Create account" : "Sign in"}
+              {submitting && isSignup
+                ? "Sending verification email…"
+                : isSignup
+                  ? "Create account"
+                  : "Sign in"}
             </button>
           </form>
         )}

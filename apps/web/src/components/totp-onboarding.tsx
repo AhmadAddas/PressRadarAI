@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { publicApiUrl } from "@/lib/api";
 import { AccessibleDialog } from "@/components/accessible-dialog";
+import { OTPInput } from "@/components/otp-input";
 
 type Setup = { secret: string; provisioning_uri: string };
 
@@ -103,16 +104,7 @@ export function TOTPOnboarding() {
         </div>
       ) : null}
       <form onSubmit={enable}>
-        <label>
-          Six-digit authenticator code
-          <input
-            name="code"
-            inputMode="numeric"
-            pattern="[0-9]{6}"
-            maxLength={6}
-            required
-          />
-        </label>
+        <OTPInput label="Six-digit authenticator code" name="code" />
         <button type="submit" disabled={!setup}>
           Activate 2FA
         </button>

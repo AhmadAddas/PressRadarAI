@@ -6,6 +6,7 @@ import { FormEvent, useState } from "react";
 import { toast } from "sonner";
 
 import { publicApiUrl } from "@/lib/api";
+import { OTPInput } from "@/components/otp-input";
 
 export function ProfileSecurity({
   totpEnabled,
@@ -171,16 +172,7 @@ export function ProfileSecurity({
         </p>
         {purpose && challenge ? (
           <form onSubmit={confirmEmail}>
-            <label>
-              Email verification code
-              <input
-                name="code"
-                inputMode="numeric"
-                pattern="[0-9]{6}"
-                maxLength={6}
-                required
-              />
-            </label>
+            <OTPInput label="Email verification code" name="code" />
             <button type="submit">Verify email</button>
           </form>
         ) : null}
@@ -199,16 +191,7 @@ export function ProfileSecurity({
               <code>{setup.secret}</code>
             </div>
             <form onSubmit={activate}>
-              <label>
-                Authenticator code
-                <input
-                  name="code"
-                  inputMode="numeric"
-                  pattern="[0-9]{6}"
-                  maxLength={6}
-                  required
-                />
-              </label>
+              <OTPInput label="Authenticator code" name="code" />
               <button type="submit">Activate 2FA</button>
             </form>
           </div>
