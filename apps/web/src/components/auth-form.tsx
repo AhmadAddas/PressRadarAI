@@ -125,11 +125,18 @@ export function AuthForm({ mode }: Readonly<{ mode: AuthMode }>) {
               Email verification code
               <input
                 name="code"
+                type="text"
                 inputMode="numeric"
+                autoComplete="one-time-code"
                 pattern="[0-9]{6}"
                 maxLength={6}
                 required
                 autoFocus
+                onInput={(event) => {
+                  event.currentTarget.value = event.currentTarget.value
+                    .replace(/\D/g, "")
+                    .slice(0, 6);
+                }}
               />
             </label>
             {error ? <p role="alert">{error}</p> : null}

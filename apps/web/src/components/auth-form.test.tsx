@@ -128,6 +128,10 @@ describe("AuthForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create account" }));
 
     const code = await screen.findByLabelText("Email verification code");
+    expect(code).toHaveAttribute("autocomplete", "one-time-code");
+    expect(code).toHaveAttribute("inputmode", "numeric");
+    fireEvent.input(code, { target: { value: "12ab34" } });
+    expect(code).toHaveValue("1234");
     fireEvent.change(code, { target: { value: "123456" } });
     fireEvent.click(screen.getByRole("button", { name: "Verify email" }));
 
