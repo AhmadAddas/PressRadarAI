@@ -209,9 +209,15 @@ class SQLiteAuthRepository:
         user_id: str,
         purpose: str,
         code_hash: str,
+        issued_at: datetime,
         expires_at: datetime,
     ) -> None:
         with self._connect() as connection:
+            connection.execute(
+                """UPDATE email_otp_challenges SET consumed_at = ?
+                WHERE user_id = ? AND consumed_at IS NULL""",
+                (issued_at.isoformat(), user_id),
+            )
             connection.execute(
                 """INSERT INTO email_otp_challenges
                 (id, user_id, purpose, code_hash, expires_at)

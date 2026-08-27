@@ -227,13 +227,6 @@ export function ProfileSecurity({
         </p>
         {purpose && challenge ? (
           <form className="profile-email-verification" onSubmit={confirmEmail}>
-            <p>
-              Enter the newest code from the
-              {purpose === "setup_2fa"
-                ? " 2FA setup"
-                : " 2FA deactivation"}{" "}
-              email. Older codes will not match this request.
-            </p>
             <OTPInput label="Email verification code" name="code" />
             <button
               type="submit"

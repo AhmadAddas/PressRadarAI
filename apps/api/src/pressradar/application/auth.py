@@ -53,7 +53,14 @@ class AuthRepository(Protocol):
     def update_password(self, *, user_id: str, password_hash: str) -> None: ...
 
     def save_email_challenge(
-        self, *, challenge_id: str, user_id: str, purpose: str, code_hash: str, expires_at: datetime
+        self,
+        *,
+        challenge_id: str,
+        user_id: str,
+        purpose: str,
+        code_hash: str,
+        issued_at: datetime,
+        expires_at: datetime,
     ) -> None: ...
 
     def consume_email_challenge(
@@ -186,6 +193,7 @@ class AuthService:
     def request_security_otp(self, identity: Identity, purpose: str) -> str:
         challenge_id = secrets.token_urlsafe(24)
         code = f"{secrets.randbelow(1_000_000):06d}"
+        issued_at = datetime.now(UTC)
         email_context = {
             "verify_email": ("email verification", "verify your email address"),
             "setup_2fa": ("2FA setup", "set up or change two-factor authentication"),
@@ -196,7 +204,8 @@ class AuthService:
             user_id=identity.user_id,
             purpose=purpose,
             code_hash=self._session_tokens.hash(code),
-            expires_at=datetime.now(UTC) + timedelta(minutes=10),
+            issued_at=issued_at,
+            expires_at=issued_at + timedelta(minutes=10),
         )
         self._email_sender.send(
             EmailMessage(

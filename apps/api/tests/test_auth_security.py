@@ -131,3 +131,45 @@ async def test_email_verification_code_is_single_use(tmp_path: Path) -> None:
         }
         assert (await client.post("/auth/signup/verify", json=request)).status_code == 200
         assert (await client.post("/auth/signup/verify", json=request)).status_code == 400
+
+
+async def test_new_security_code_invalidates_previous_active_code(tmp_path: Path) -> None:
+    sender = RecordingEmailSender()
+    async with secure_client(tmp_path / "superseded-code.db", sender) as client:
+        started = await client.post(
+            "/auth/signup",
+            json={
+                "email": "superseded@example.com",
+                "name": "Superseded Code",
+                "password": "secure-passphrase",
+            },
+        )
+        assert (
+            await client.post(
+                "/auth/signup/verify",
+                json={
+                    "user_id": started.json()["user_id"],
+                    "challenge_id": started.json()["challenge_id"],
+                    "code": otp(sender.messages[-1]),
+                },
+            )
+        ).status_code == 200
+        assert (await client.post("/auth/2fa/skip")).status_code == 204
+
+        first = await client.post("/auth/2fa/email-code", json={"purpose": "setup_2fa"})
+        first_code = otp(sender.messages[-1])
+        second = await client.post("/auth/2fa/email-code", json={"purpose": "setup_2fa"})
+        second_code = otp(sender.messages[-1])
+
+        assert (
+            await client.post(
+                "/auth/2fa/setup",
+                json={"challenge_id": first.json()["challenge_id"], "code": first_code},
+            )
+        ).status_code == 400
+        assert (
+            await client.post(
+                "/auth/2fa/setup",
+                json={"challenge_id": second.json()["challenge_id"], "code": second_code},
+            )
+        ).status_code == 200

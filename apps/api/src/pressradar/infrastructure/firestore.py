@@ -149,9 +149,22 @@ class FirestoreRepository:
         user_id: str,
         purpose: str,
         code_hash: str,
+        issued_at: datetime,
         expires_at: datetime,
     ) -> None:
-        self._db.collection("email_otp_challenges").document(challenge_id).create(
+        challenges = self._db.collection("email_otp_challenges")
+        active_reference = self._db.collection("active_email_otp_challenges").document(user_id)
+        challenge_reference = challenges.document(challenge_id)
+        transaction = self._db.transaction()
+        active = active_reference.get(transaction=transaction)
+        if active.exists:
+            previous_id = active.get("challenge_id")
+            if previous_id:
+                transaction.update(
+                    challenges.document(str(previous_id)), {"consumed_at": issued_at}
+                )
+        transaction.create(
+            challenge_reference,
             {
                 "user_id": user_id,
                 "purpose": purpose,
@@ -159,8 +172,10 @@ class FirestoreRepository:
                 "expires_at": expires_at,
                 "consumed_at": None,
                 "attempts": 0,
-            }
+            },
         )
+        transaction.set(active_reference, {"challenge_id": challenge_id})
+        transaction.commit()
 
     def consume_email_challenge(
         self,
