@@ -78,6 +78,7 @@ describe("ProfileSecurity", () => {
     const firstDigit = await screen.findByLabelText(
       "Email verification code, digit 1",
     );
+    expect(screen.getByText("ENGE-1")).toBeVisible();
     expect(firstDigit.closest("form")).toHaveClass(
       "profile-email-verification",
     );
