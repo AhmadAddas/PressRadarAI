@@ -127,6 +127,12 @@ export function AuthForm({ mode }: Readonly<{ mode: AuthMode }>) {
         {signupChallenge ? (
           <form className="signup-email-verification" onSubmit={verifySignup}>
             <p>Enter the six-digit code sent to your email address.</p>
+            <p>
+              Email reference:{" "}
+              <strong>
+                {signupChallenge.challenge_id.slice(-6).toUpperCase()}
+              </strong>
+            </p>
             <OTPInput label="Email verification code" name="code" autoFocus />
             {error ? <p role="alert">{error}</p> : null}
             <button type="submit" disabled={submitting} aria-busy={submitting}>
