@@ -23,6 +23,7 @@ export function AuthForm({ mode }: Readonly<{ mode: AuthMode }>) {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!(event.nativeEvent as SubmitEvent).submitter) return;
     setError("");
     setSubmitting(true);
     const body = Object.fromEntries(
@@ -159,9 +160,6 @@ export function AuthForm({ mode }: Readonly<{ mode: AuthMode }>) {
                 required
               />
             </div>
-            {totpRequired ? (
-              <OTPInput label="Authenticator code" name="totp_code" />
-            ) : null}
             <label>
               Password
               <input
@@ -173,6 +171,9 @@ export function AuthForm({ mode }: Readonly<{ mode: AuthMode }>) {
                 required
               />
             </label>
+            {totpRequired ? (
+              <OTPInput label="Authenticator code" name="totp_code" />
+            ) : null}
             {isSignup ? <small>Use at least 12 characters.</small> : null}
             {error ? <p role="alert">{error}</p> : null}
             <button type="submit" disabled={submitting} aria-busy={submitting}>

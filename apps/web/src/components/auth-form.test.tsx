@@ -73,6 +73,40 @@ describe("AuthForm", () => {
     );
   });
 
+  it("does not submit or warn when password autofill submits the form", async () => {
+    const request = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({ detail: "A valid authenticator code is required" }),
+        {
+          status: 428,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+    const { container } = render(<AuthForm mode="signin" />);
+
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "amina@example.com" },
+    });
+    fireEvent.change(screen.getByLabelText("Password"), {
+      target: { value: "secure-passphrase" },
+    });
+    fireEvent.submit(container.querySelector("form")!);
+
+    expect(request).not.toHaveBeenCalledWith(
+      expect.stringContaining("/auth/signin"),
+      expect.anything(),
+    );
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "A valid authenticator code is required",
+    );
+    expect(screen.getByLabelText("Password")).toBeVisible();
+    expect(screen.getByLabelText("Authenticator code, digit 1")).toBeVisible();
+  });
+
   it("rejects a first name longer than 25 characters before submission", () => {
     const request = vi.spyOn(globalThis, "fetch");
     render(<AuthForm mode="signup" />);
