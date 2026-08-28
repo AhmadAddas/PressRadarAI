@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@types/qrcode": "^1.5.6",
-    "next": "16.3.2",
+    "next": "16.3.3",
     "qrcode": "^1.5.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -32,7 +32,7 @@
     "@types/react-dom": "19.1.9",
     "axe-core": "^4.10.3",
     "eslint": "9.35.0",
-    "eslint-config-next": "16.3.2",
+    "eslint-config-next": "16.3.3",
     "jsdom": "26.1.0",
     "prettier": "3.6.2",
     "typescript": "5.9.2",

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=75"]
+requires = ["setuptools>=78.1.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -15,6 +15,7 @@ dependencies = [
   "google-cloud-bigquery>=3.35,<4",
   "google-cloud-firestore>=2.21,<3",
   "httpx>=0.28,<1",
+  "msgpack>=1.2.1,<2",
   "pydantic-settings>=2.10,<3",
   "uvicorn[standard]>=0.35,<1",
 ]
@@ -22,9 +23,10 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "mypy>=1.17,<2",
-  "pytest>=8.4,<9",
+  "pip-audit==2.10.1",
+  "pytest>=9.0.3,<10",
   "pytest-asyncio>=1.1,<2",
-  "pytest-cov>=6.2,<7",
+  "pytest-cov>=7.1,<8",
   "ruff>=0.12,<1",
 ]
 
