@@ -14,8 +14,9 @@ test:
 		-e NOTIFICATION_PROVIDER=fake \
 		-e CRM_PROVIDER=fake \
 		-e NEWSAPI_API_KEY= \
+		-e COVERAGE_FILE=/tmp/pressradar-coverage \
 		api pytest
-	docker compose run --rm web-tools npm test
+	docker compose run --rm web-tools npm run test:coverage
 	docker compose run --rm mailer npm test
 
 lint:

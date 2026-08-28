@@ -24,6 +24,7 @@ dev = [
   "mypy>=1.17,<2",
   "pytest>=8.4,<9",
   "pytest-asyncio>=1.1,<2",
+  "pytest-cov>=6.2,<7",
   "ruff>=0.12,<1",
 ]
 
@@ -31,7 +32,7 @@ dev = [
 where = ["src"]
 
 [tool.pytest.ini_options]
-addopts = "-q"
+addopts = "-q --cov=pressradar --cov-branch --cov-report=term-missing --cov-fail-under=70"
 asyncio_mode = "auto"
 pythonpath = ["src"]
 testpaths = ["tests"]
