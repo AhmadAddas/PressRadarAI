@@ -11,6 +11,7 @@ from pressradar.domain.analytics import (
     ProductEventName,
     SourcePerformance,
 )
+from pressradar.infrastructure.sqlite_connection import connect
 
 
 class SQLiteAnalyticsStore:
@@ -79,7 +80,7 @@ class SQLiteAnalyticsStore:
             raise AnalyticsError("Analytics reporting failed") from error
 
     def _connect(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(self._database_path, timeout=5)
+        connection = connect(self._database_path)
         connection.row_factory = sqlite3.Row
         return connection
 

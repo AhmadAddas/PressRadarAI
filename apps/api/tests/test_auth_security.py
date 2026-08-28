@@ -1,3 +1,4 @@
+import asyncio
 import re
 import time
 from pathlib import Path
@@ -132,6 +133,30 @@ async def test_email_verification_code_is_single_use(tmp_path: Path) -> None:
         }
         assert (await client.post("/auth/signup/verify", json=request)).status_code == 200
         assert (await client.post("/auth/signup/verify", json=request)).status_code == 400
+
+
+async def test_concurrent_email_verification_consumes_code_once(tmp_path: Path) -> None:
+    sender = RecordingEmailSender()
+    async with secure_client(tmp_path / "concurrent-code.db", sender) as client:
+        started = await client.post(
+            "/auth/signup",
+            json={
+                "email": "concurrent@example.com",
+                "name": "Concurrent User",
+                "password": "secure-passphrase",
+            },
+        )
+        request = {
+            "user_id": started.json()["user_id"],
+            "challenge_id": started.json()["challenge_id"],
+            "code": otp(sender.messages[-1]),
+        }
+        responses = await asyncio.gather(
+            client.post("/auth/signup/verify", json=request),
+            client.post("/auth/signup/verify", json=request),
+        )
+
+    assert sorted(response.status_code for response in responses) == [200, 400]
 
 
 async def test_new_security_code_invalidates_previous_active_code(tmp_path: Path) -> None:

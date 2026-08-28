@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from pressradar.application.media import MediaIngestionService
 from pressradar.domain.media import IncomingMediaItem, IngestionResult, MediaItem, MediaSourceType
+from pressradar.infrastructure.sqlite_connection import connect
 
 
 class SQLiteMediaRepository:
@@ -242,6 +243,6 @@ class SQLiteMediaRepository:
         )
 
     def _connect(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(self._database_path, timeout=5)
+        connection = connect(self._database_path)
         connection.row_factory = sqlite3.Row
         return connection

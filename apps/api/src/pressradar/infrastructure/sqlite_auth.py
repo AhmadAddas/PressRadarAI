@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from pressradar.application.auth import DuplicateEmailError
 from pressradar.domain.auth import Identity, WorkspaceKind
+from pressradar.infrastructure.sqlite_connection import connect
 
 
 class SQLiteAuthRepository:
@@ -235,6 +236,7 @@ class SQLiteAuthRepository:
         now: datetime,
     ) -> bool:
         with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
             row = connection.execute(
                 """SELECT code_hash, expires_at, consumed_at, attempts
                 FROM email_otp_challenges WHERE id = ? AND user_id = ? AND purpose = ?""",
@@ -260,7 +262,7 @@ class SQLiteAuthRepository:
             return True
 
     def _connect(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(self._database_path, timeout=5)
+        connection = connect(self._database_path)
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA foreign_keys = ON")
         return connection

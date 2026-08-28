@@ -4,6 +4,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from pressradar.domain.clients import Client, ClientDetails
+from pressradar.infrastructure.sqlite_connection import connect
 
 
 class SQLiteClientRepository:
@@ -188,7 +189,7 @@ class SQLiteClientRepository:
         )
 
     def _connect(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(self._database_path, timeout=5)
+        connection = connect(self._database_path)
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA foreign_keys = ON")
         return connection

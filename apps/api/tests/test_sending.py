@@ -1,4 +1,6 @@
+import asyncio
 import sqlite3
+import threading
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import cast
@@ -37,6 +39,20 @@ class FlakySender:
             provider="flaky-simulated",
             reference=f"retry:{request.opportunity_id}",
         )
+
+
+class BlockingSender:
+    def __init__(self) -> None:
+        self.calls = 0
+        self.started = threading.Event()
+        self.release = threading.Event()
+
+    def send(self, request: DeliveryRequest) -> DeliveryReceipt:
+        self.calls += 1
+        self.started.set()
+        if not self.release.wait(timeout=5):
+            raise PitchSendError("test delivery timed out")
+        return DeliveryReceipt(provider="blocking-simulated", reference=request.opportunity_id)
 
 
 def create_test_client(database_path: Path, sender: PitchSender) -> httpx.AsyncClient:
@@ -137,6 +153,21 @@ async def test_stale_send_claim_is_recovered_with_stable_idempotency_key(
     assert recovered.status_code == 200
     assert recovered.json()["status"] == "sent"
     assert sender.idempotency_keys == [f"pressradar-{opportunity_id}@delivery.local"]
+
+
+async def test_concurrent_send_requests_create_one_delivery(tmp_path: Path) -> None:
+    sender = BlockingSender()
+    async with create_test_client(tmp_path / "concurrent-send.db", sender) as client:
+        opportunity_id = await prepare_opportunity(client, "concurrent-send@example.com")
+        await client.post(f"/opportunities/{opportunity_id}/approve")
+        first = asyncio.create_task(client.post(f"/opportunities/{opportunity_id}/send"))
+        assert await asyncio.to_thread(sender.started.wait, 2)
+        second = await client.post(f"/opportunities/{opportunity_id}/send")
+        sender.release.set()
+        first_response = await first
+
+    assert sorted([first_response.status_code, second.status_code]) == [200, 409]
+    assert sender.calls == 1
 
 
 async def test_audit_history_records_workflow_and_is_workspace_scoped(tmp_path: Path) -> None:

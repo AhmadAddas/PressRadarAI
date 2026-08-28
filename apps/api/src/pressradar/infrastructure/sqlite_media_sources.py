@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from pressradar.application.media_sources import DuplicateMediaSourceError
 from pressradar.domain.media_sources import MediaSource, MediaSourceDetails, MediaSourceKind
+from pressradar.infrastructure.sqlite_connection import connect
 
 
 class SQLiteMediaSourceRepository:
@@ -69,7 +70,7 @@ class SQLiteMediaSourceRepository:
         return cursor.rowcount == 1
 
     def _connect(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(self._database_path, timeout=5)
+        connection = connect(self._database_path)
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA foreign_keys = ON")
         return connection
