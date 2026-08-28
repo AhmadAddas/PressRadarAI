@@ -6,6 +6,7 @@ import pytest
 from pydantic import SecretStr
 
 from pressradar.config import Settings
+from pressradar.infrastructure import configured_media
 from pressradar.main import create_app
 
 
@@ -187,8 +188,8 @@ async def test_rss_adapter_ingests_public_feed(
         lambda *args: [(2, 1, 6, "", ("93.184.216.34", 443))],
     )
     monkeypatch.setattr(
-        httpx,
-        "get",
+        configured_media,
+        "_request_pinned_rss",
         lambda *args, **kwargs: httpx.Response(
             200,
             request=httpx.Request("GET", "https://example.com/feed.xml"),
@@ -227,8 +228,8 @@ async def test_journalist_request_feed_uses_explicit_namespaced_deadline(
         lambda *args: [(2, 1, 6, "", ("93.184.216.34", 443))],
     )
     monkeypatch.setattr(
-        httpx,
-        "get",
+        configured_media,
+        "_request_pinned_rss",
         lambda *args, **kwargs: httpx.Response(
             200,
             request=httpx.Request("GET", "https://example.com/requests.xml"),
@@ -270,7 +271,7 @@ async def test_production_ingestion_caps_each_source_and_the_total_run(
     )
     requests: list[str] = []
 
-    def rss_response(url: str, **kwargs: object) -> httpx.Response:
+    def rss_response(url: str, *args: object, **kwargs: object) -> httpx.Response:
         requests.append(url)
         items = "".join(
             f"""<item><title>Story {index}</title><description>UAE story {index}</description>
@@ -283,7 +284,7 @@ async def test_production_ingestion_caps_each_source_and_the_total_run(
             content=f"<rss><channel>{items}</channel></rss>".encode(),
         )
 
-    monkeypatch.setattr(httpx, "get", rss_response)
+    monkeypatch.setattr(configured_media, "_request_pinned_rss", rss_response)
     async with create_test_client(tmp_path / "bounded-ingestion.db") as client:
         await sign_up(client)
         for index in range(5):
@@ -303,3 +304,33 @@ async def test_production_ingestion_caps_each_source_and_the_total_run(
     assert ingestion.json() == {"created": 100, "restored": 0, "duplicates": 0}
     assert len(media.json()) == 100
     assert len(requests) == 4
+
+
+async def test_rss_ingestion_rejects_oversized_response(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        socket,
+        "getaddrinfo",
+        lambda *args: [(2, 1, 6, "", ("93.184.216.34", 443))],
+    )
+
+    def oversized(url: str, *args: object, **kwargs: object) -> httpx.Response:
+        return httpx.Response(
+            200,
+            request=httpx.Request("GET", url),
+            headers={"content-length": str(3 * 1024 * 1024), "content-type": "application/rss+xml"},
+            content=b"<rss />",
+        )
+
+    monkeypatch.setattr(configured_media, "_request_pinned_rss", oversized)
+    async with create_test_client(tmp_path / "oversized-rss.db") as client:
+        await sign_up(client)
+        await client.post(
+            "/media/sources",
+            json={"name": "Large feed", "kind": "rss", "url": "https://example.com/feed.xml"},
+        )
+        response = await client.post("/media/ingest")
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "RSS response is too large"

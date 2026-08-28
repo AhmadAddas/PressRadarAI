@@ -5,7 +5,7 @@ from email.utils import parsedate_to_datetime
 from html.parser import HTMLParser
 from io import StringIO
 from typing import cast
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 from xml.etree import ElementTree
 
 import httpx
@@ -27,6 +27,7 @@ class MediaSourceConfigurationError(Exception):
 
 MAX_ITEMS_PER_SOURCE = 25
 MAX_ITEMS_PER_INGESTION = 100
+MAX_RSS_RESPONSE_BYTES = 2 * 1024 * 1024
 
 
 class ConfiguredMediaIngestionService:
@@ -62,12 +63,25 @@ class ConfiguredMediaIngestionService:
     def _fetch_rss(self, source: MediaSource, *, limit: int) -> tuple[IncomingMediaItem, ...]:
         if source.url is None:
             raise MediaSourceConfigurationError(f"{source.name} has no RSS URL")
-        _require_public_https(source.url)
+        hostname, address = _require_public_https(source.url)
+        parsed = urlparse(source.url)
+        address_literal = f"[{address}]" if ":" in address else address
+        pinned_url = urlunparse(parsed._replace(netloc=f"{address_literal}:{parsed.port or 443}"))
         try:
-            response = httpx.get(source.url, timeout=self._timeout_seconds, follow_redirects=False)
+            response = _request_pinned_rss(pinned_url, hostname, self._timeout_seconds)
             response.raise_for_status()
+            content_length = response.headers.get("content-length")
+            if content_length and int(content_length) > MAX_RSS_RESPONSE_BYTES:
+                raise MediaSourceConfigurationError("RSS response is too large")
+            if len(response.content) > MAX_RSS_RESPONSE_BYTES:
+                raise MediaSourceConfigurationError("RSS response is too large")
+            content_type = response.headers.get("content-type", "").casefold()
+            if content_type and not any(
+                allowed in content_type for allowed in ("xml", "rss", "atom")
+            ):
+                raise MediaSourceConfigurationError("RSS response has an unsupported content type")
             root = ElementTree.fromstring(response.content)
-        except (httpx.HTTPError, ElementTree.ParseError) as error:
+        except (httpx.HTTPError, ElementTree.ParseError, ValueError) as error:
             raise MediaSourceConfigurationError(f"Unable to fetch {source.name}") from error
         source_type = (
             MediaSourceType.JOURNALIST_REQUEST
@@ -179,7 +193,7 @@ def _newsapi_item(source: str, article: object) -> IncomingMediaItem:
     )
 
 
-def _require_public_https(url: str) -> None:
+def _require_public_https(url: str) -> tuple[str, str]:
     parsed = urlparse(url)
     if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
         raise MediaSourceConfigurationError("RSS URL must be public HTTPS")
@@ -189,6 +203,17 @@ def _require_public_https(url: str) -> None:
         raise MediaSourceConfigurationError("RSS hostname could not be resolved") from error
     if not addresses or any(not ipaddress.ip_address(item[4][0]).is_global for item in addresses):
         raise MediaSourceConfigurationError("RSS URL must resolve to a public network")
+    return parsed.hostname, str(addresses[0][4][0])
+
+
+def _request_pinned_rss(url: str, hostname: str, timeout_seconds: float) -> httpx.Response:
+    request = httpx.Request(
+        "GET", url,
+        headers={"Host": hostname},
+        extensions={"sni_hostname": hostname},
+    )
+    with httpx.Client(timeout=timeout_seconds, follow_redirects=False) as client:
+        return client.send(request)
 
 
 def _xml_text(item: ElementTree.Element, name: str) -> str:
