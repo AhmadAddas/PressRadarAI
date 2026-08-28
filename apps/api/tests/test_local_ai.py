@@ -93,7 +93,11 @@ async def authenticated_client(
     database_path: Path, runtime: OllamaRuntime
 ) -> AsyncIterator[httpx.AsyncClient]:
     app = create_app(
-        Settings(database_path=str(database_path), ai_provider="ollama"),
+        Settings(
+            database_path=str(database_path),
+            ai_provider="ollama",
+            local_ai_admin_emails="local-ai@example.com",
+        ),
         ollama_runtime=runtime,
     )
     async with httpx.AsyncClient(

@@ -45,6 +45,18 @@ class Settings(BaseSettings):
         str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)
     ] = "translategemma:4b"
     ollama_timeout_seconds: float = Field(default=30, gt=0, le=300)
+    local_ai_admin_emails: str = ""
+    auth_rate_limit_requests: int = Field(default=10, ge=1, le=1_000)
+    email_rate_limit_requests: int = Field(default=3, ge=1, le=100)
+    translation_rate_limit_requests: int = Field(default=10, ge=1, le=1_000)
+
+    @property
+    def local_ai_admin_email_set(self) -> frozenset[str]:
+        return frozenset(
+            email.strip().lower()
+            for email in self.local_ai_admin_emails.split(",")
+            if email.strip()
+        )
 
     @property
     def secure_cookies(self) -> bool:

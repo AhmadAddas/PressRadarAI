@@ -55,6 +55,7 @@ from pressradar.presentation.local_ai import create_local_ai_router
 from pressradar.presentation.media import create_media_router
 from pressradar.presentation.media_sources import create_media_sources_router
 from pressradar.presentation.opportunities import create_opportunities_router
+from pressradar.presentation.rate_limit import InMemoryRateLimiter
 
 
 def create_app(
@@ -232,6 +233,7 @@ def create_app(
         )
     )
     application = FastAPI(title="PressRadar API", version="0.1.0")
+    rate_limiter = InMemoryRateLimiter()
     application.add_middleware(
         CORSMiddleware,
         allow_origins=[settings.web_origin],
@@ -244,6 +246,9 @@ def create_app(
             auth_service,
             secure_cookies=settings.secure_cookies,
             session_max_age=settings.session_ttl_hours * 60 * 60,
+            rate_limiter=rate_limiter,
+            auth_rate_limit=settings.auth_rate_limit_requests,
+            email_rate_limit=settings.email_rate_limit_requests,
         )
     )
     application.include_router(
@@ -277,7 +282,15 @@ def create_app(
     application.include_router(
         create_opportunities_router(opportunity_service, identity_dependency)
     )
-    application.include_router(create_local_ai_router(ollama_runtime, identity_dependency))
+    application.include_router(
+        create_local_ai_router(
+            ollama_runtime,
+            identity_dependency,
+            admin_emails=settings.local_ai_admin_email_set,
+            rate_limiter=rate_limiter,
+            translation_limit=settings.translation_rate_limit_requests,
+        )
+    )
     application.include_router(create_analytics_router(analytics_service, identity_dependency))
     application.include_router(
         create_demo_router(

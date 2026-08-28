@@ -2,7 +2,7 @@ import json
 from collections.abc import Callable
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
@@ -13,6 +13,7 @@ from pressradar.infrastructure.ollama_runtime import (
     LocalAIStatus,
     OllamaRuntime,
 )
+from pressradar.presentation.rate_limit import InMemoryRateLimiter, request_source
 
 ModelName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
 
@@ -85,9 +86,22 @@ class PublicLocalAIResponse(BaseModel):
 
 
 def create_local_ai_router(
-    runtime: OllamaRuntime, current_identity: Callable[..., Identity]
+    runtime: OllamaRuntime,
+    current_identity: Callable[..., Identity],
+    *,
+    admin_emails: frozenset[str] = frozenset(),
+    rate_limiter: InMemoryRateLimiter | None = None,
+    translation_limit: int = 10,
 ) -> APIRouter:
     router = APIRouter(prefix="/local-ai", tags=["local AI"])
+    limiter = rate_limiter or InMemoryRateLimiter()
+
+    def require_operator(identity: Identity) -> None:
+        if identity.email.lower() not in admin_emails:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Local AI administration requires operator access",
+            )
 
     @router.get("/public-status", response_model=PublicLocalAIResponse)
     def public_status() -> PublicLocalAIResponse:
@@ -112,8 +126,9 @@ def create_local_ai_router(
     @router.post("/models", response_model=LocalAIResponse)
     def pull_model(
         request: PullModelRequest,
-        _identity: Annotated[Identity, Depends(current_identity)],
+        identity: Annotated[Identity, Depends(current_identity)],
     ) -> LocalAIStatus:
+        require_operator(identity)
         try:
             return runtime.pull_model(
                 request.model,
@@ -126,8 +141,9 @@ def create_local_ai_router(
     @router.post("/models/stream")
     def pull_model_stream(
         request: PullModelRequest,
-        _identity: Annotated[Identity, Depends(current_identity)],
+        identity: Annotated[Identity, Depends(current_identity)],
     ) -> StreamingResponse:
+        require_operator(identity)
         try:
             model = runtime.validate_pull(request.model, request.accepted_license)
         except LocalAIError as error:
@@ -141,8 +157,9 @@ def create_local_ai_router(
     @router.post("/models/active", response_model=LocalAIResponse)
     def activate_model(
         request: ModelRequest,
-        _identity: Annotated[Identity, Depends(current_identity)],
+        identity: Annotated[Identity, Depends(current_identity)],
     ) -> LocalAIStatus:
+        require_operator(identity)
         try:
             return runtime.activate_model(request.model)
         except LocalAIError as error:
@@ -151,8 +168,9 @@ def create_local_ai_router(
     @router.delete("/models", response_model=LocalAIResponse)
     def delete_model(
         model: ModelName,
-        _identity: Annotated[Identity, Depends(current_identity)],
+        identity: Annotated[Identity, Depends(current_identity)],
     ) -> LocalAIStatus:
+        require_operator(identity)
         try:
             return runtime.delete_model(model)
         except LocalAIError as error:
@@ -160,8 +178,9 @@ def create_local_ai_router(
 
     @router.post("/active", response_model=LocalAIResponse)
     def activate(
-        _identity: Annotated[Identity, Depends(current_identity)],
+        identity: Annotated[Identity, Depends(current_identity)],
     ) -> LocalAIStatus:
+        require_operator(identity)
         try:
             return runtime.activate()
         except LocalAIError as error:
@@ -169,14 +188,21 @@ def create_local_ai_router(
 
     @router.delete("/active", response_model=LocalAIResponse)
     def deactivate(
-        _identity: Annotated[Identity, Depends(current_identity)],
+        identity: Annotated[Identity, Depends(current_identity)],
     ) -> LocalAIStatus:
+        require_operator(identity)
         return runtime.deactivate()
 
     @router.post("/translate", response_model=TranslationResponse)
     def translate(
         request: TranslationRequest,
+        http_request: Request,
     ) -> TranslationResponse:
+        limiter.check(
+            f"translation:{request_source(http_request)}",
+            limit=translation_limit,
+            window_seconds=60,
+        )
         try:
             translations = runtime.translate(
                 texts=tuple(request.texts),

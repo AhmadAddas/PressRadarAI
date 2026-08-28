@@ -1,7 +1,7 @@
 from collections.abc import Callable
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, EmailStr, Field, StringConstraints, field_validator
 
 from pressradar.application.auth import (
@@ -13,6 +13,7 @@ from pressradar.application.auth import (
 )
 from pressradar.application.email import EmailDeliveryError
 from pressradar.domain.auth import Identity, WorkspaceKind
+from pressradar.presentation.rate_limit import InMemoryRateLimiter, request_source
 
 SESSION_COOKIE = "pressradar_session"
 WORKSPACE_COOKIE = "pressradar_workspace"
@@ -92,11 +93,18 @@ class WorkspaceSelectionRequest(BaseModel):
 
 
 def create_auth_router(
-    auth_service: AuthService, *, secure_cookies: bool, session_max_age: int
+    auth_service: AuthService,
+    *,
+    secure_cookies: bool,
+    session_max_age: int,
+    rate_limiter: InMemoryRateLimiter | None = None,
+    auth_rate_limit: int = 10,
+    email_rate_limit: int = 3,
 ) -> APIRouter:
     router = APIRouter(prefix="/auth", tags=["authentication"])
 
     current_identity = require_identity(auth_service)
+    limiter = rate_limiter or InMemoryRateLimiter()
 
     @router.post(
         "/signup",
@@ -104,8 +112,13 @@ def create_auth_router(
         status_code=status.HTTP_201_CREATED,
     )
     def sign_up(
-        request: SignUpRequest, response: Response
+        request: SignUpRequest, response: Response, http_request: Request
     ) -> Identity | SignupVerificationResponse:
+        source = request_source(http_request)
+        limiter.check(f"signup-ip:{source}", limit=auth_rate_limit, window_seconds=60)
+        limiter.check(
+            f"signup-email:{request.email.lower()}", limit=email_rate_limit, window_seconds=600
+        )
         try:
             if auth_service.requires_email_verification:
                 user_id, challenge_id = auth_service.begin_sign_up(
@@ -129,7 +142,14 @@ def create_auth_router(
         return session.identity
 
     @router.post("/signup/verify", response_model=IdentityResponse)
-    def verify_signup(request: SignupVerificationRequest, response: Response) -> Identity:
+    def verify_signup(
+        request: SignupVerificationRequest, response: Response, http_request: Request
+    ) -> Identity:
+        limiter.check(
+            f"signup-verify:{request_source(http_request)}:{request.user_id}",
+            limit=auth_rate_limit,
+            window_seconds=60,
+        )
         try:
             session = auth_service.verify_sign_up(
                 user_id=request.user_id,
@@ -144,7 +164,12 @@ def create_auth_router(
         return session.identity
 
     @router.post("/signin", response_model=IdentityResponse)
-    def sign_in(request: SignInRequest, response: Response) -> Identity:
+    def sign_in(request: SignInRequest, response: Response, http_request: Request) -> Identity:
+        source = request_source(http_request)
+        limiter.check(f"signin-ip:{source}", limit=auth_rate_limit, window_seconds=60)
+        limiter.check(
+            f"signin-email:{request.email.lower()}", limit=auth_rate_limit, window_seconds=60
+        )
         try:
             session = auth_service.sign_in(
                 email=str(request.email),
@@ -230,8 +255,14 @@ def create_auth_router(
     @router.post("/2fa/email-code", response_model=SecurityOTPResponse)
     def request_2fa_email_code(
         request: SecurityOTPRequest,
+        http_request: Request,
         identity: Annotated[Identity, Depends(current_identity)],
     ) -> SecurityOTPResponse:
+        limiter.check(
+            f"security-email:{request_source(http_request)}:{identity.user_id}",
+            limit=email_rate_limit,
+            window_seconds=600,
+        )
         try:
             challenge_id = auth_service.request_security_otp(identity, request.purpose)
         except EmailDeliveryError as error:
