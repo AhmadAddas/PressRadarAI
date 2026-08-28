@@ -4,3 +4,9 @@ api_image       = "me-central1-docker.pkg.dev/your-gcp-project/pressradar/api@sh
 web_image       = "me-central1-docker.pkg.dev/your-gcp-project/pressradar/web@sha256:replace-me"
 web_origin      = "https://pressradar.example.com"
 ollama_base_url = "https://ollama.example.com"
+
+# Optional existing Secret Manager secret IDs. Terraform grants the API service
+# account access but never reads or stores the secret values in configuration.
+api_secret_ids = {
+  NEWSAPI_API_KEY = "pressradar-newsapi-api-key"
+}

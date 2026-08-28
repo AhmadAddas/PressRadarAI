@@ -38,3 +38,24 @@ variable "ollama_base_url" {
     error_message = "ollama_base_url must use HTTPS."
   }
 }
+
+variable "api_secret_ids" {
+  description = "Secret Manager secret IDs exposed to the API by environment-variable name. Values are secret IDs, never secret values."
+  type        = map(string)
+  default     = {}
+
+  validation {
+    condition = alltrue([
+      for name, secret_id in var.api_secret_ids :
+      contains([
+        "HUBSPOT_ACCESS_TOKEN",
+        "MAILER_INTERNAL_TOKEN",
+        "NEWSAPI_API_KEY",
+        "TWILIO_ACCOUNT_SID",
+        "TWILIO_AUTH_TOKEN",
+        "TWILIO_FROM_NUMBER",
+      ], name) && can(regex("^[A-Za-z0-9_-]+$", secret_id))
+    ])
+    error_message = "api_secret_ids contains an unsupported environment name or invalid Secret Manager secret ID."
+  }
+}

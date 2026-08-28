@@ -78,6 +78,20 @@ resource "google_service_account" "web" {
   display_name = "PressRadar web"
 }
 
+data "google_secret_manager_secret" "api" {
+  for_each  = var.api_secret_ids
+  project   = var.project_id
+  secret_id = each.value
+}
+
+resource "google_secret_manager_secret_iam_member" "api" {
+  for_each  = data.google_secret_manager_secret.api
+  project   = var.project_id
+  secret_id = each.value.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.api.email}"
+}
+
 resource "google_project_iam_member" "api_firestore" {
   project = var.project_id
   role    = "roles/datastore.user"
@@ -161,10 +175,25 @@ resource "google_cloud_run_v2_service" "api" {
         name  = "OLLAMA_BASE_URL"
         value = var.ollama_base_url
       }
+      dynamic "env" {
+        for_each = data.google_secret_manager_secret.api
+        content {
+          name = env.key
+          value_source {
+            secret_key_ref {
+              secret  = env.value.secret_id
+              version = "latest"
+            }
+          }
+        }
+      }
     }
   }
 
-  depends_on = [google_project_service.required]
+  depends_on = [
+    google_project_service.required,
+    google_secret_manager_secret_iam_member.api,
+  ]
 }
 
 resource "google_cloud_run_v2_service_iam_member" "api_public" {

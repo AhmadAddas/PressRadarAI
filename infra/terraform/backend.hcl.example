@@ -1,0 +1,2 @@
+bucket = "your-gcp-project-terraform-state"
+prefix = "pressradar/prod"

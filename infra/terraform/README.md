@@ -6,11 +6,11 @@ This configuration provisions the MVP production foundation: public Cloud Run se
 
 - A GCP project with billing enabled
 - Permission to enable APIs, manage IAM, and create the declared resources
-- `gcloud`, Docker, and Terraform 1.8 or newer
+- `gcloud`, Docker, and Terraform 1.16 or newer
 - Application Default Credentials: `gcloud auth application-default login`
 - An HTTPS Ollama-compatible endpoint reachable from Cloud Run
 
-Use a remote, access-controlled Terraform backend for a team or production deployment. Do not commit state, variable files, credentials, or provider tokens.
+Create a dedicated, versioned GCS bucket for Terraform state before initialization. Grant state-bucket access only to deployment identities. Do not commit state, variable files, credentials, provider tokens, or a populated backend configuration.
 
 ## Validate
 
@@ -24,13 +24,13 @@ This runs Terraform formatting checks, initialization without a backend, and con
 
 ## Deploy
 
-Copy `terraform.tfvars.example` to an untracked `terraform.tfvars` and replace every placeholder. Use immutable image digests for normal deployments.
+Copy `backend.hcl.example` to an untracked `backend.hcl`, set the state bucket, and initialize the partial GCS backend. Copy `terraform.tfvars.example` to an untracked `terraform.tfvars` and replace every placeholder. Use immutable image digests for normal deployments.
 
 The first deployment has a bootstrap step because Artifact Registry must exist before images can be pushed, while the frontend embeds the public API URL at build time:
 
 ```bash
 cd infra/terraform
-terraform init
+terraform init -backend-config=backend.hcl
 terraform apply -target=google_artifact_registry_repository.pressradar
 gcloud auth configure-docker REGION-docker.pkg.dev
 ```
@@ -50,7 +50,7 @@ terraform output -raw web_url
 
 Rebuild the web image with the reported API URL, set `web_origin` to the reported web URL, replace both image tags with registry digests, review a new plan, and apply it. Subsequent releases only require immutable image builds and a reviewed plan/apply.
 
-The API uses Application Default Credentials through its Cloud Run service account. GCP mode refuses to start unless Firestore, BigQuery, the GCP project, and an HTTPS web origin are explicitly configured. Optional Twilio and HubSpot adapters remain disabled by default; if enabled, create their values in Secret Manager, grant only the API service account `roles/secretmanager.secretAccessor`, and add Cloud Run secret environment references without placing values in Terraform variables.
+The API uses Application Default Credentials through its Cloud Run service account. GCP mode refuses to start unless Firestore, BigQuery, the GCP project, and an HTTPS web origin are explicitly configured. Optional integration secrets remain disabled by default. Create required values in Secret Manager and map environment names to existing secret IDs through `api_secret_ids`; Terraform grants the API service account access and creates Cloud Run secret references without accepting secret values.
 
 ## Verify
 
