@@ -214,7 +214,25 @@ def _request_pinned_rss(url: str, hostname: str, timeout_seconds: float) -> http
         extensions={"sni_hostname": hostname},
     )
     with httpx.Client(timeout=timeout_seconds, follow_redirects=False) as client:
-        return client.send(request)
+        response = client.send(request, stream=True)
+        try:
+            response.raise_for_status()
+            content_length = response.headers.get("content-length")
+            if content_length and int(content_length) > MAX_RSS_RESPONSE_BYTES:
+                raise MediaSourceConfigurationError("RSS response is too large")
+            content = bytearray()
+            for chunk in response.iter_bytes():
+                if len(content) + len(chunk) > MAX_RSS_RESPONSE_BYTES:
+                    raise MediaSourceConfigurationError("RSS response is too large")
+                content.extend(chunk)
+            return httpx.Response(
+                response.status_code,
+                headers=response.headers,
+                content=bytes(content),
+                request=request,
+            )
+        finally:
+            response.close()
 
 
 def _xml_text(item: ElementTree.Element, name: str) -> str:
