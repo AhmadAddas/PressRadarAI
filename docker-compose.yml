@@ -2,8 +2,8 @@ services:
   api:
     build:
       context: ./apps/api
-      target: development
-    environment:
+      target: production
+    environment: &api-environment
       APP_MODE: ${APP_MODE:-local}
       API_HOST: 0.0.0.0
       API_PORT: 8000
@@ -49,6 +49,26 @@ services:
         condition: service_healthy
     ports:
       - "8000:8000"
+    volumes:
+      - api-data:/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=3)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  api-tools:
+    profiles: ["tools"]
+    build:
+      context: ./apps/api
+      target: development
+    environment: *api-environment
     volumes:
       - ./apps/api/src:/app/src
       - ./apps/api/tests:/app/tests
@@ -96,7 +116,7 @@ services:
       - "3000:3000"
     depends_on:
       api:
-        condition: service_started
+        condition: service_healthy
 
   web-tools:
     profiles: ["tools"]
