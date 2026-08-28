@@ -5,7 +5,15 @@ from pressradar.config import Settings
 
 
 def test_settings_use_safe_local_defaults() -> None:
-    settings = Settings()
+    settings = Settings(
+        ai_provider="ollama",
+        pitch_sender="simulated",
+        email_provider="fake",
+        notification_provider="fake",
+        crm_provider="fake",
+        analytics_provider="sqlite",
+        operational_provider="sqlite",
+    )
 
     assert settings.app_mode == "local"
     assert settings.api_port == 8000
@@ -33,8 +41,19 @@ def test_settings_reject_unknown_runtime_mode() -> None:
     ],
 )
 def test_settings_require_credentials_for_real_providers(values: dict[str, str]) -> None:
+    isolated = {
+        "notification_provider": "fake",
+        "crm_provider": "fake",
+        "email_provider": "fake",
+        "pitch_sender": "simulated",
+        "twilio_account_sid": None,
+        "twilio_auth_token": None,
+        "twilio_from_number": None,
+        "hubspot_access_token": None,
+        "mailer_internal_token": None,
+    } | values
     with pytest.raises(ValidationError):
-        Settings(**values)  # type: ignore[arg-type]
+        Settings(**isolated)  # type: ignore[arg-type]
 
 
 def test_settings_accept_explicit_real_provider_credentials() -> None:

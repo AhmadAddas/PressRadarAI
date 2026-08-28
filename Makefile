@@ -4,7 +4,17 @@ dev:
 	docker compose up --build
 
 test:
-	docker compose run --rm -e AI_PROVIDER=ollama -e NEWSAPI_API_KEY= api pytest
+	docker compose run --rm \
+		-e APP_MODE=local \
+		-e OPERATIONAL_PROVIDER=sqlite \
+		-e ANALYTICS_PROVIDER=sqlite \
+		-e AI_PROVIDER=fake \
+		-e EMAIL_PROVIDER=fake \
+		-e PITCH_SENDER=simulated \
+		-e NOTIFICATION_PROVIDER=fake \
+		-e CRM_PROVIDER=fake \
+		-e NEWSAPI_API_KEY= \
+		api pytest
 	docker compose run --rm web-tools npm test
 	docker compose run --rm mailer npm test
 
