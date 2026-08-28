@@ -22,5 +22,6 @@ COPY tests ./tests
 CMD ["uvicorn", "pressradar.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
 FROM base AS production
+RUN python -m pip uninstall --yes pip setuptools
 USER pressradar
 CMD ["uvicorn", "pressradar.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -37,9 +37,9 @@ security:
 	docker compose run --rm --no-deps web-tools npm audit --audit-level=high
 	docker compose run --rm --no-deps mailer-tools npm audit --audit-level=high
 	docker compose run --rm --no-deps api-tools pip-audit --local
-	docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v pressradar-trivy-cache:/root/.cache/ -v $(CURDIR)/.trivyignore.yaml:/workspace/.trivyignore.yaml:ro \
+	docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v pressradar-trivy-cache:/root/.cache/ \
 		ghcr.io/aquasecurity/trivy:0.74.0@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969 \
-		image --ignorefile /workspace/.trivyignore.yaml --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 pressradarai-api:latest
+		image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 pressradarai-api:latest
 	docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v pressradar-trivy-cache:/root/.cache/ \
 		ghcr.io/aquasecurity/trivy:0.74.0@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969 \
 		image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 pressradarai-web:latest
