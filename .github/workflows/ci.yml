@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      AI_PROVIDER: fake
+      EMAIL_PROVIDER: fake
+      PITCH_SENDER: simulated
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build validation images
+        run: docker compose build api api-tools web-tools mailer
+      - name: Lint
+        run: make lint
+      - name: Type check
+        run: make typecheck
+      - name: Unit and integration tests with coverage
+        run: make test
+      - name: Production build
+        run: make build
+      - name: Validate Compose configuration
+        run: docker compose config --quiet
+      - name: Install browser smoke dependencies
+        working-directory: apps/web
+        run: npm ci && npx playwright install --with-deps chromium
+      - name: Start production web for browser smoke tests
+        run: docker compose up -d --no-deps web
+      - name: Browser and accessibility smoke tests
+        working-directory: apps/web
+        run: npm run test:e2e
