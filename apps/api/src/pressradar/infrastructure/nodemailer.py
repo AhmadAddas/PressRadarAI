@@ -18,6 +18,7 @@ class NodemailerEmailSender:
                     "to": message.recipient,
                     "subject": message.subject,
                     "text": message.text,
+                    "message_id": message.message_id,
                 },
                 timeout=self._timeout,
             )

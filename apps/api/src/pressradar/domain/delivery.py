@@ -7,6 +7,7 @@ class DeliveryRequest:
     opportunity_id: str
     recipient: str
     content: str
+    idempotency_key: str | None = None
 
 
 @dataclass(frozen=True)

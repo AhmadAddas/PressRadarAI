@@ -96,3 +96,30 @@ test("rejects newline injection in email headers", async () => {
 
   assert.equal(response.status, 422);
 });
+
+test("forwards a stable message id for idempotent pitch retries", async () => {
+  let delivered;
+  server = createMailerServer(async (message) => {
+    delivered = message;
+    return { messageId: message.messageId };
+  }, config);
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const { port } = server.address();
+
+  const response = await fetch(`http://127.0.0.1:${port}/send`, {
+    method: "POST",
+    headers: {
+      authorization: "Bearer test-token",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      to: "recipient@example.com",
+      subject: "PressRadar pitch",
+      text: "Pitch body",
+      message_id: "pressradar-opportunity-1@delivery.local",
+    }),
+  });
+
+  assert.equal(response.status, 202);
+  assert.equal(delivered.messageId, "pressradar-opportunity-1@delivery.local");
+});

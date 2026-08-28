@@ -33,6 +33,7 @@ class SQLiteOpportunityRepository:
                     pitch_error TEXT,
                     display_headline TEXT,
                     send_error TEXT,
+                    send_claimed_at TEXT,
                     status TEXT NOT NULL,
                     detected_at TEXT NOT NULL,
                     UNIQUE(client_id, media_item_id)
@@ -336,11 +337,20 @@ class SQLiteOpportunityRepository:
             )
         return self.get(workspace_id=workspace_id, opportunity_id=opportunity_id)
 
-    def claim_send(self, *, workspace_id: str, opportunity_id: str) -> Opportunity | None:
+    def claim_send(
+        self,
+        *,
+        workspace_id: str,
+        opportunity_id: str,
+        claimed_at: datetime,
+        stale_before: datetime,
+    ) -> Opportunity | None:
         with self._connect() as connection:
             cursor = connection.execute(
-                """UPDATE opportunities SET status = ?, send_error = NULL
-                WHERE id = ? AND workspace_id = ? AND status = ?
+                """UPDATE opportunities
+                SET status = ?, send_error = NULL, send_claimed_at = ?
+                WHERE id = ? AND workspace_id = ?
+                AND (status = ? OR (status = ? AND send_claimed_at <= ?))
                 AND EXISTS (SELECT 1 FROM pitches WHERE opportunity_id = opportunities.id)
                 AND NOT EXISTS (
                     SELECT 1 FROM pitch_deliveries
@@ -348,9 +358,12 @@ class SQLiteOpportunityRepository:
                 )""",
                 (
                     OpportunityStatus.SENDING.value,
+                    claimed_at.isoformat(),
                     opportunity_id,
                     workspace_id,
                     OpportunityStatus.APPROVED.value,
+                    OpportunityStatus.SENDING.value,
+                    stale_before.isoformat(),
                 ),
             )
             if cursor.rowcount == 0:
@@ -386,7 +399,8 @@ class SQLiteOpportunityRepository:
                 ),
             )
             connection.execute(
-                "UPDATE opportunities SET status = ?, send_error = NULL WHERE id = ?",
+                """UPDATE opportunities
+                SET status = ?, send_error = NULL, send_claimed_at = NULL WHERE id = ?""",
                 (OpportunityStatus.SENT.value, opportunity_id),
             )
             self._audit(
@@ -401,7 +415,7 @@ class SQLiteOpportunityRepository:
     def fail_send(self, *, workspace_id: str, opportunity_id: str) -> None:
         with self._connect() as connection:
             cursor = connection.execute(
-                """UPDATE opportunities SET status = ?, send_error = ?
+                """UPDATE opportunities SET status = ?, send_error = ?, send_claimed_at = NULL
                 WHERE id = ? AND workspace_id = ? AND status = ?""",
                 (
                     OpportunityStatus.APPROVED.value,
@@ -531,6 +545,7 @@ class SQLiteOpportunityRepository:
             "pitch_error": "TEXT",
             "display_headline": "TEXT",
             "send_error": "TEXT",
+            "send_claimed_at": "TEXT",
         }
         for name, data_type in additions.items():
             if name not in columns:

@@ -1,3 +1,5 @@
+import sqlite3
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import cast
 
@@ -12,9 +14,11 @@ from pressradar.main import create_app
 class CountingSender:
     def __init__(self) -> None:
         self.calls = 0
+        self.idempotency_keys: list[str | None] = []
 
     def send(self, request: DeliveryRequest) -> DeliveryReceipt:
         self.calls += 1
+        self.idempotency_keys.append(request.idempotency_key)
         return DeliveryReceipt(
             provider="counting-simulated",
             reference=f"delivery:{request.opportunity_id}",
@@ -109,6 +113,30 @@ async def test_failed_send_preserves_approval_and_can_be_retried(tmp_path: Path)
     assert retried.status_code == 200
     assert retried.json()["status"] == "sent"
     assert sender.calls == 2
+
+
+async def test_stale_send_claim_is_recovered_with_stable_idempotency_key(
+    tmp_path: Path,
+) -> None:
+    database = tmp_path / "recover-send.db"
+    sender = CountingSender()
+    async with create_test_client(database, sender) as client:
+        opportunity_id = await prepare_opportunity(client)
+        await client.post(f"/opportunities/{opportunity_id}/approve")
+        with sqlite3.connect(database) as connection:
+            connection.execute(
+                """UPDATE opportunities SET status = ?, send_claimed_at = ? WHERE id = ?""",
+                (
+                    "sending",
+                    (datetime.now(UTC) - timedelta(minutes=6)).isoformat(),
+                    opportunity_id,
+                ),
+            )
+        recovered = await client.post(f"/opportunities/{opportunity_id}/send")
+
+    assert recovered.status_code == 200
+    assert recovered.json()["status"] == "sent"
+    assert sender.idempotency_keys == [f"pressradar-{opportunity_id}@delivery.local"]
 
 
 async def test_audit_history_records_workflow_and_is_workspace_scoped(tmp_path: Path) -> None:

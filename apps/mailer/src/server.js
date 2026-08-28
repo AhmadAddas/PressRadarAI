@@ -81,6 +81,10 @@ export function createMailerServer(
         typeof payload.to !== "string" ||
         typeof payload.subject !== "string" ||
         typeof payload.text !== "string" ||
+        (payload.message_id !== null &&
+          payload.message_id !== undefined &&
+          (typeof payload.message_id !== "string" ||
+            !/^[A-Za-z0-9@._-]{1,200}$/.test(payload.message_id))) ||
         !payload.to ||
         !payload.subject ||
         !payload.text ||
@@ -93,12 +97,14 @@ export function createMailerServer(
         respond(response, 422, { detail: "Invalid email payload" });
         return;
       }
-      const result = await sendMail({
+      const message = {
         from: config.smtpFrom,
         to: payload.to,
         subject: payload.subject,
         text: payload.text,
-      });
+      };
+      if (payload.message_id) message.messageId = payload.message_id;
+      const result = await sendMail(message);
       respond(response, 202, { message_id: result.messageId });
     } catch (error) {
       const status = error instanceof SyntaxError ? 400 : 502;

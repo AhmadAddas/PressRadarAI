@@ -1,6 +1,6 @@
 import builtins
 import re
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Protocol
 
 from pressradar.application.analytics import AnalyticsService
@@ -109,7 +109,14 @@ class OpportunityRepository(Protocol):
 
     def approve(self, *, workspace_id: str, opportunity_id: str) -> Opportunity | None: ...
 
-    def claim_send(self, *, workspace_id: str, opportunity_id: str) -> Opportunity | None: ...
+    def claim_send(
+        self,
+        *,
+        workspace_id: str,
+        opportunity_id: str,
+        claimed_at: datetime,
+        stale_before: datetime,
+    ) -> Opportunity | None: ...
 
     def complete_send(
         self,
@@ -263,11 +270,17 @@ class OpportunityService:
         opportunity = self._get(workspace_id=workspace_id, opportunity_id=opportunity_id)
         if opportunity.status is OpportunityStatus.SENT:
             return opportunity
-        if opportunity.status is not OpportunityStatus.APPROVED or opportunity.pitch is None:
+        if opportunity.status not in {OpportunityStatus.APPROVED, OpportunityStatus.SENDING} or (
+            opportunity.pitch is None
+        ):
             raise PitchApprovalError
         client = self._clients.get(workspace_id=workspace_id, client_id=opportunity.client_id)
+        claimed_at = datetime.now(UTC)
         claimed = self._opportunities.claim_send(
-            workspace_id=workspace_id, opportunity_id=opportunity_id
+            workspace_id=workspace_id,
+            opportunity_id=opportunity_id,
+            claimed_at=claimed_at,
+            stale_before=claimed_at - timedelta(minutes=5),
         )
         if claimed is None:
             raise PitchApprovalError
@@ -281,6 +294,7 @@ class OpportunityService:
                         else opportunity.journalist or opportunity.source
                     ),
                     content=opportunity.pitch.content,
+                    idempotency_key=f"pressradar-{opportunity.id}@delivery.local",
                 )
             )
         except PitchSendError as error:

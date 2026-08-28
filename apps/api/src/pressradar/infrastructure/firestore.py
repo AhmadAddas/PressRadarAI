@@ -639,16 +639,45 @@ class FirestoreRepository:
             else None
         )
 
-    def claim_send(self, *, workspace_id: str, opportunity_id: str) -> Opportunity | None:
-        current = self.get_opportunity(workspace_id=workspace_id, opportunity_id=opportunity_id)
-        if current is None or current.pitch is None or current.delivery is not None:
-            return None
-        updated = self._conditional_update(
-            workspace_id,
-            opportunity_id,
-            OpportunityStatus.APPROVED,
-            {"status": OpportunityStatus.SENDING.value, "send_error": None},
+    def claim_send(
+        self,
+        *,
+        workspace_id: str,
+        opportunity_id: str,
+        claimed_at: datetime,
+        stale_before: datetime,
+    ) -> Opportunity | None:
+        reference = self._db.collection("opportunities").document(opportunity_id)
+        transaction = self._db.transaction()
+        snapshot = reference.get(transaction=transaction)
+        status_value = snapshot.get("status") if snapshot.exists else None
+        previous_claim = snapshot.get("send_claimed_at") if snapshot.exists else None
+        claimable = status_value == OpportunityStatus.APPROVED.value or (
+            status_value == OpportunityStatus.SENDING.value
+            and previous_claim is not None
+            and _datetime(previous_claim) <= stale_before
         )
+        if (
+            not snapshot.exists
+            or snapshot.get("workspace_id") != workspace_id
+            or snapshot.get("pitch") is None
+            or snapshot.get("delivery") is not None
+            or not claimable
+        ):
+            return None
+        transaction.update(
+            reference,
+            {
+                "status": OpportunityStatus.SENDING.value,
+                "send_error": None,
+                "send_claimed_at": claimed_at,
+            },
+        )
+        try:
+            transaction.commit()
+            updated = True
+        except GoogleAPICallError:
+            updated = False
         return (
             self.get_opportunity(workspace_id=workspace_id, opportunity_id=opportunity_id)
             if updated
@@ -666,6 +695,7 @@ class FirestoreRepository:
             {
                 "status": OpportunityStatus.SENT.value,
                 "send_error": None,
+                "send_claimed_at": None,
                 "delivery": {
                     "provider": receipt.provider,
                     "reference": receipt.reference,
@@ -689,6 +719,7 @@ class FirestoreRepository:
             {
                 "status": OpportunityStatus.APPROVED.value,
                 "send_error": "Simulated delivery failed. The approved pitch can be retried.",
+                "send_claimed_at": None,
             },
         ):
             self._audit(workspace_id, opportunity_id, AuditAction.SEND_FAILED)

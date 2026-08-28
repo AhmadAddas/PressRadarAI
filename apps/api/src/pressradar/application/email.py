@@ -11,6 +11,7 @@ class EmailMessage:
     recipient: str
     subject: str
     text: str
+    message_id: str | None = None
 
 
 class EmailSender(Protocol):

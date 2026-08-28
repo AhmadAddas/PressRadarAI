@@ -23,6 +23,7 @@ def test_email_pitch_sender_delivers_the_approved_content() -> None:
             opportunity_id="opportunity-1",
             recipient="client@example.com",
             content="Approved pitch content.",
+            idempotency_key="pressradar-opportunity-1@delivery.local",
         )
     )
 
@@ -30,6 +31,7 @@ def test_email_pitch_sender_delivers_the_approved_content() -> None:
         recipient="client@example.com",
         subject="PressRadar pitch",
         text="Approved pitch content.",
+        message_id="pressradar-opportunity-1@delivery.local",
     )
     assert receipt.provider == "email"
     assert receipt.reference == "outlook-message-1"

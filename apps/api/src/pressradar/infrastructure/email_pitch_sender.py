@@ -14,6 +14,7 @@ class EmailPitchSender:
                     recipient=request.recipient,
                     subject="PressRadar pitch",
                     text=request.content,
+                    message_id=request.idempotency_key,
                 )
             )
         except EmailDeliveryError as error:
