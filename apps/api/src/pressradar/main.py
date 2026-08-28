@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from pressradar.application.analytics import AnalyticsError, AnalyticsService, AnalyticsStore
@@ -54,6 +54,7 @@ from pressradar.presentation.demo import create_demo_router
 from pressradar.presentation.local_ai import create_local_ai_router
 from pressradar.presentation.media import create_media_router
 from pressradar.presentation.media_sources import create_media_sources_router
+from pressradar.presentation.observability import observe_request
 from pressradar.presentation.opportunities import create_opportunities_router
 from pressradar.presentation.rate_limit import InMemoryRateLimiter
 
@@ -233,6 +234,7 @@ def create_app(
         )
     )
     application = FastAPI(title="PressRadar API", version="0.1.0")
+    application.middleware("http")(observe_request)
     rate_limiter = InMemoryRateLimiter()
     application.add_middleware(
         CORSMiddleware,
@@ -302,6 +304,16 @@ def create_app(
     @application.get("/health", tags=["system"])
     def health() -> dict[str, str]:
         return {"status": "ok", "mode": settings.app_mode}
+
+    @application.get("/ready", tags=["system"])
+    def ready() -> dict[str, str]:
+        try:
+            client_repository.list(workspace_id="__readiness__")
+        except Exception as error:
+            raise HTTPException(
+                status_code=503, detail="Operational persistence is unavailable"
+            ) from error
+        return {"status": "ready", "mode": settings.app_mode}
 
     return application
 

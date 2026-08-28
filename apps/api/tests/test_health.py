@@ -19,3 +19,18 @@ def test_health_reports_ready_local_api(tmp_path: Path) -> None:
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok", "mode": "local"}
+
+
+def test_readiness_checks_persistence_and_propagates_request_id(tmp_path: Path) -> None:
+    app = create_app(Settings(database_path=str(tmp_path / "ready.db")))
+
+    async def request_ready() -> httpx.Response:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            return await client.get("/ready", headers={"x-request-id": "health-check-1"})
+
+    response = asyncio.run(request_ready())
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ready", "mode": "local"}
+    assert response.headers["x-request-id"] == "health-check-1"
