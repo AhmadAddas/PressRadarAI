@@ -17,6 +17,7 @@ to `.env` only when enabling the suggested UAE NewsAPI source.
 
 ```bash
 cp .env.example .env
+chmod 600 .env
 docker compose up --build
 ```
 

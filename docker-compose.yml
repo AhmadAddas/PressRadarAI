@@ -1,5 +1,6 @@
 services:
   api:
+    init: true
     build:
       context: ./apps/api
       target: production
@@ -39,6 +40,8 @@ services:
       EMAIL_RATE_LIMIT_REQUESTS: ${EMAIL_RATE_LIMIT_REQUESTS:-3}
       TRANSLATION_RATE_LIMIT_REQUESTS: ${TRANSLATION_RATE_LIMIT_REQUESTS:-10}
     depends_on:
+      api-data-init:
+        condition: service_completed_successfully
       ollama:
         condition: service_healthy
       ollama-models:
@@ -48,9 +51,19 @@ services:
       mailer:
         condition: service_healthy
     ports:
-      - "8000:8000"
+      - "${API_BIND_ADDRESS:-127.0.0.1}:8000:8000"
     volumes:
       - api-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    mem_limit: 1g
+    cpus: 2.0
     healthcheck:
       test:
         [
@@ -62,6 +75,23 @@ services:
       interval: 10s
       timeout: 5s
       retries: 6
+
+  api-data-init:
+    build:
+      context: ./apps/api
+      target: production
+    user: root
+    command: ["chown", "-R", "pressradar:pressradar", "/data"]
+    volumes:
+      - api-data:/data
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+    restart: "no"
 
   api-tools:
     profiles: ["tools"]
@@ -105,6 +135,7 @@ services:
     restart: "no"
 
   web:
+    init: true
     build:
       context: ./apps/web
       target: production
@@ -114,9 +145,30 @@ services:
       API_INTERNAL_URL: ${API_INTERNAL_URL:-http://api:8000}
     ports:
       - "3000:3000"
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    mem_limit: 768m
+    cpus: 1.0
     depends_on:
       api:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
 
   web-tools:
     profiles: ["tools"]
@@ -127,8 +179,10 @@ services:
       - ./apps/web/src:/app/src
 
   mailer:
+    init: true
     build:
       context: ./apps/mailer
+      target: production
     environment:
       PORT: 3001
       MAILER_INTERNAL_TOKEN: ${MAILER_INTERNAL_TOKEN:-}
@@ -140,11 +194,27 @@ services:
       SMTP_FROM: ${SMTP_FROM:-}
     expose:
       - "3001"
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 0.5
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3001/health"]
       interval: 5s
       timeout: 3s
       retries: 12
+
+  mailer-tools:
+    profiles: ["tools"]
+    build:
+      context: ./apps/mailer
+      target: development
 
 volumes:
   api-data:
