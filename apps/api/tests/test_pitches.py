@@ -1,5 +1,4 @@
 import json
-import sqlite3
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -18,6 +17,7 @@ from pressradar.domain.clients import Client
 from pressradar.domain.media import MediaItem, MediaSourceType
 from pressradar.domain.pitches import GeneratedPitch
 from pressradar.infrastructure.ollama_pitch import OllamaPitchGenerator
+from pressradar.infrastructure.sqlite_connection import connect
 from pressradar.main import create_app
 
 
@@ -140,7 +140,7 @@ async def test_failed_generation_keeps_media_display_headline(tmp_path: Path) ->
     database = tmp_path / "headline-fallback.db"
     async with create_test_client(database, pitch_generator=FailingPitchGenerator()) as client:
         opportunity = await prepare_opportunity(client)
-        with sqlite3.connect(database) as connection:
+        with connect(str(database)) as connection:
             connection.execute(
                 "UPDATE media_items SET display_headline = ? WHERE id = ?",
                 ("Concise nine word media headline", opportunity["media_item_id"]),

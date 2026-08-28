@@ -1,9 +1,9 @@
-import sqlite3
 from pathlib import Path
 
 import httpx
 
 from pressradar.config import Settings
+from pressradar.infrastructure.sqlite_connection import connect
 from pressradar.main import create_app
 
 
@@ -32,7 +32,7 @@ async def test_demo_setup_builds_ranked_workspace_and_is_idempotent(tmp_path: Pa
         ingestion = await client.post("/media/ingest")
         opportunities = await client.get("/opportunities")
         opportunity_by_client = {item["client_name"]: item["id"] for item in opportunities.json()}
-        with sqlite3.connect(database) as connection:
+        with connect(str(database)) as connection:
             connection.execute(
                 "UPDATE opportunities SET relevance_score = 80, detected_at = ? WHERE id = ?",
                 ("2026-08-22T10:00:00+00:00", opportunity_by_client["Samir Qureshi"]),

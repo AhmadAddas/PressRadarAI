@@ -1,4 +1,3 @@
-import sqlite3
 from pathlib import Path
 from typing import cast
 
@@ -7,6 +6,7 @@ import httpx
 from pressradar.application.analytics import AnalyticsError, AnalyticsStore
 from pressradar.config import Settings
 from pressradar.domain.analytics import AnalyticsSummary, ProductEvent
+from pressradar.infrastructure.sqlite_connection import connect
 from pressradar.main import create_app
 
 
@@ -71,14 +71,14 @@ async def test_product_events_feed_workspace_scoped_summary(tmp_path: Path) -> N
     assert sum(source["opportunities"] for source in payload["sources"]) == 3
     assert len(payload["clients"]) == 3
     assert isolated.json()["opportunities_detected"] == 0
-    with sqlite3.connect(operational) as connection:
+    with connect(str(operational)) as connection:
         assert (
             connection.execute(
                 "SELECT name FROM sqlite_master WHERE name = 'product_events'"
             ).fetchone()
             is None
         )
-    with sqlite3.connect(analytics) as connection:
+    with connect(str(analytics)) as connection:
         assert (
             connection.execute(
                 "SELECT name FROM sqlite_master WHERE name = 'opportunities'"

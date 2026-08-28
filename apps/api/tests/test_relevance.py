@@ -1,4 +1,3 @@
-import sqlite3
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +10,7 @@ from pressradar.domain.clients import Client
 from pressradar.domain.media import MediaItem, MediaSourceType
 from pressradar.domain.relevance import RelevanceAnalysis
 from pressradar.infrastructure.ollama_relevance import OllamaRelevanceAnalyzer
+from pressradar.infrastructure.sqlite_connection import connect
 from pressradar.infrastructure.sqlite_opportunities import SQLiteOpportunityRepository
 from pressradar.main import create_app
 
@@ -167,7 +167,7 @@ def test_ollama_analyzer_rejects_invalid_provider_output(
 
 def test_existing_opportunity_table_receives_additive_relevance_columns(tmp_path: Path) -> None:
     database = tmp_path / "migration.db"
-    with sqlite3.connect(database) as connection:
+    with connect(str(database)) as connection:
         connection.executescript(
             """
             CREATE TABLE opportunities (
@@ -185,7 +185,7 @@ def test_existing_opportunity_table_receives_additive_relevance_columns(tmp_path
 
     SQLiteOpportunityRepository(str(database)).initialize()
 
-    with sqlite3.connect(database) as connection:
+    with connect(str(database)) as connection:
         columns = {row[1] for row in connection.execute("PRAGMA table_info(opportunities)")}
         pitch_table = connection.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'pitches'"

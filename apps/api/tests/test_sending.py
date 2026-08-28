@@ -1,5 +1,4 @@
 import asyncio
-import sqlite3
 import threading
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -10,6 +9,7 @@ import httpx
 from pressradar.application.delivery import PitchSender, PitchSendError
 from pressradar.config import Settings
 from pressradar.domain.delivery import DeliveryReceipt, DeliveryRequest
+from pressradar.infrastructure.sqlite_connection import connect
 from pressradar.main import create_app
 
 
@@ -139,7 +139,7 @@ async def test_stale_send_claim_is_recovered_with_stable_idempotency_key(
     async with create_test_client(database, sender) as client:
         opportunity_id = await prepare_opportunity(client)
         await client.post(f"/opportunities/{opportunity_id}/approve")
-        with sqlite3.connect(database) as connection:
+        with connect(str(database)) as connection:
             connection.execute(
                 """UPDATE opportunities SET status = ?, send_claimed_at = ? WHERE id = ?""",
                 (
