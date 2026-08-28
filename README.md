@@ -88,3 +88,12 @@ infra/      Terraform and production deployment guidance
 See [infra/terraform/README.md](infra/terraform/README.md) for the production deployment and rollback runbook.
 
 Product requirements live in `PROJECT.md`, technology decisions in `TECHSTACK.md`, and agent workflow rules in `AGENTS.md`.
+
+## License
+
+PressRadarAI is © 2026 Ahmad Addas and is licensed under the
+[Apache License 2.0](LICENSE).
+
+Third-party dependencies, hosted services, and optional AI models retain their own licenses and
+terms. In particular, TranslateGemma is governed by the Gemma Terms of Use and is not licensed
+under Apache-2.0. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for details.
