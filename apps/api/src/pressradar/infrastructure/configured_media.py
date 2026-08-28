@@ -208,7 +208,8 @@ def _require_public_https(url: str) -> tuple[str, str]:
 
 def _request_pinned_rss(url: str, hostname: str, timeout_seconds: float) -> httpx.Response:
     request = httpx.Request(
-        "GET", url,
+        "GET",
+        url,
         headers={"Host": hostname},
         extensions={"sni_hostname": hostname},
     )
